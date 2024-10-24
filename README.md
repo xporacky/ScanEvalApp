@@ -5,3 +5,6 @@
 ### Build a spustenie
 `go build` \
 `./main`
+
+### Class Diagram
+![Class Diagram](images/class-diagram-tp.png)
