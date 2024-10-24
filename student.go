@@ -1,15 +1,20 @@
 package main
 
-import "time"
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
 
 // Student reprezentuje študenta
 type Student struct {
-	ID                 uint      `gorm:"primaryKey"`
+	gorm.Model
 	Name               string    `gorm:"not null"`
 	Surname            string    `gorm:"not null"`
 	BirthDate          time.Time `gorm:"not null"`
 	RegistrationNumber string    `gorm:"not null;unique"`
 	Room               string    `gorm:"not null"`
 	Score              int
-	Answers            map[int]rune
+	Answers            string
+	TestID             uint `gorm:"not null"`
 }

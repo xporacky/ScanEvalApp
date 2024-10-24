@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"time"
+
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -32,24 +33,16 @@ func CreateTest(db *gorm.DB) {
 		Title:         "Matematický test",
 		SchoolYear:    "2024/2025",
 		QuestionCount: 3,
-		Questions: map[int]rune{
-			1: 'A',
-			2: 'B',
-			3: 'C',
-		},
+		Questions:     "abc",
 		Students: []Student{
 			{
-				Name:              "Ján",
-				Surname:           "Novák",
-				BirthDate:         time.Date(2001, 5, 15, 0, 0, 0, 0, time.UTC),
+				Name:               "Ján",
+				Surname:            "Novák",
+				BirthDate:          time.Date(2001, 5, 15, 0, 0, 0, 0, time.UTC),
 				RegistrationNumber: "20210001",
-				Room:              "A101",
-				Score:             85,
-				Answers: map[int]rune{
-					1: 'A',
-					2: 'B',
-					3: 'C',
-				},
+				Room:               "A101",
+				Score:              85,
+				Answers:            "abc",
 			},
 		},
 	}
@@ -62,14 +55,14 @@ func CreateTest(db *gorm.DB) {
 }
 
 func main() {
-/*	latexFilePath := "./latexFiles/main.tex"
-	err := CompileLatexToPDF(latexFilePath)
-	if err != nil {
-		fmt.Println("Error:", err)
-	} else {
-		fmt.Println("PDF compiled successfully.")
-	}
-*/
+	/*	latexFilePath := "./latexFiles/main.tex"
+		err := CompileLatexToPDF(latexFilePath)
+		if err != nil {
+			fmt.Println("Error:", err)
+		} else {
+			fmt.Println("PDF compiled successfully.")
+		}
+	*/
 	db, err := gorm.Open(sqlite.Open("scan-eval-db.db"), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect to database")
