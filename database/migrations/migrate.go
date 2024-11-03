@@ -3,7 +3,7 @@ package migrations
 import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-	"ScanEvalApp/models"
+	"ScanEvalApp/database/models"
 )
 
 func MigrateDB() (*gorm.DB, error) {

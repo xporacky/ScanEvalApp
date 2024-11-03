@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"ScanEvalApp/migrations"
-	"ScanEvalApp/seed"
+	"ScanEvalApp/database/migrations"
+	"ScanEvalApp/database/seed"
 )
 
 func CompileLatexToPDF(latexFilePath string) error {

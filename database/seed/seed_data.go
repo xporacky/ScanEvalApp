@@ -3,8 +3,8 @@ package seed
 import (
 	"time"
 	"gorm.io/gorm"
-	"ScanEvalApp/models"
-	"ScanEvalApp/repository"
+	"ScanEvalApp/database/models"
+	"ScanEvalApp/database/repository"
 )
 
 func SeedTestData(db *gorm.DB) {

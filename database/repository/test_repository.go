@@ -2,7 +2,7 @@ package repository
 
 import (
 	"gorm.io/gorm"
-	"ScanEvalApp/models"
+	"ScanEvalApp/database/models"
 )
 
 func CreateTest(db *gorm.DB, test *models.Test) error {
