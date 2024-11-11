@@ -1,6 +1,8 @@
 package main
 
 import (
+	"ScanEvalApp/database/migrations"
+	"ScanEvalApp/database/seed"
 	"fmt"
 	"os"
 	"os/exec"
@@ -25,11 +27,21 @@ func CompileLatexToPDF(latexFilePath string) error {
 }
 
 func main() {
-	latexFilePath := "./latexFiles/main.tex"
-	err := CompileLatexToPDF(latexFilePath)
+	/*	latexFilePath := "./latexFiles/main.tex"
+		err := CompileLatexToPDF(latexFilePath)
+		if err != nil {
+			fmt.Println("Error:", err)
+		} else {
+			fmt.Println("PDF compiled successfully.")
+		}
+	*/
+
+	db, err := migrations.MigrateDB()
 	if err != nil {
-		fmt.Println("Error:", err)
-	} else {
-		fmt.Println("PDF compiled successfully.")
+		panic("failed to connect to database")
 	}
+
+	seed.Seed(db)
+
+	fmt.Println("Database setup and seeding complete.")
 }
