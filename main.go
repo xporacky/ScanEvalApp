@@ -1,11 +1,11 @@
 package main
 
 import (
+	"ScanEvalApp/database/migrations"
+	"ScanEvalApp/database/seed"
 	"fmt"
 	"os"
 	"os/exec"
-	"ScanEvalApp/database/migrations"
-	"ScanEvalApp/database/seed"
 )
 
 func CompileLatexToPDF(latexFilePath string) error {
@@ -26,7 +26,6 @@ func CompileLatexToPDF(latexFilePath string) error {
 	return nil
 }
 
-
 func main() {
 	/*	latexFilePath := "./latexFiles/main.tex"
 		err := CompileLatexToPDF(latexFilePath)
@@ -37,13 +36,12 @@ func main() {
 		}
 	*/
 
-
 	db, err := migrations.MigrateDB()
 	if err != nil {
 		panic("failed to connect to database")
 	}
 
-	seed.SeedTestData(db)
+	seed.Seed(db)
 
 	fmt.Println("Database setup and seeding complete.")
 }
