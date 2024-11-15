@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"io/ioutil"
 	"path/filepath"
+	"text/template"
+	"bytes"
 )
 
 func CompileLatexToPDF(latexContent []byte) ([]byte, error) {
@@ -66,7 +68,39 @@ func SaveFile(filePath string, data []byte) error {
 	return nil
 }
 
+
+// LaTeX pdf generation
+
+// štruktúra na prácu s nahrádzaním hodnôt v šablóne
+type TemplateData struct {
+	ID        string
+	Meno      string
+	Datum     string
+	Miestnost string
+	Cas       string
+	Bloky     int
+}
+
+// Funkcia na nahradenie place holderov v LaTeX súbore
+func ReplaceTemplatePlaceholders(templateContent []byte, data TemplateData) ([]byte, error) {
+	tmpl, err := template.New("latex").Parse(string(templateContent))
+	if err != nil {
+		return nil, fmt.Errorf("chyba pri parsovaní šablóny: %v", err)
+	}
+
+	var output bytes.Buffer
+	err = tmpl.Execute(&output, data)
+	if err != nil {
+		return nil, fmt.Errorf("chyba pri nahrádzaní hodnôt v šablóne: %v", err)
+	}
+
+	return output.Bytes(), nil
+}
+
+
+
 func main() {
+	// Načítanie LaTeX súboru a jeho otvorenie
 	latexFilePath := "./latexFiles/main.tex"
 	latexContent, err := OpenFile(latexFilePath)
 	if err != nil {
@@ -74,22 +108,22 @@ func main() {
 		return
 	}
 
-	// Compile LaTeX to PDF
-	pdfBytes, err := CompileLatexToPDF(latexContent)
-	if err != nil {
-		fmt.Println("Error:", err)
-		return
-	}
+	// // Compile LaTeX to PDF
+	// pdfBytes, err := CompileLatexToPDF(latexContent)
+	// if err != nil {
+	// 	fmt.Println("Error:", err)
+	// 	return
+	// }
 	
-	// Uloženie PDF
-	outputFilePath := "./tmp/output.pdf"
-	err = SaveFile(outputFilePath, pdfBytes)
-	if err != nil {
-		fmt.Println("Chyba pri ukladaní PDF súboru:", err)
-		return
-	}
+	// // Uloženie PDF
+	// outputFilePath := "./tmp/output.pdf"
+	// err = SaveFile(outputFilePath, pdfBytes)
+	// if err != nil {
+	// 	fmt.Println("Chyba pri ukladaní PDF súboru:", err)
+	// 	return
+	// }
 
-	fmt.Println("PDF úspešne vytvorený a uložený ako:", outputFilePath)
+	// fmt.Println("PDF úspešne vytvorený a uložený ako:", outputFilePath)
 
 //	db, err := migrations.MigrateDB()
 //	if err != nil {
@@ -99,4 +133,43 @@ func main() {
 //	seed.Seed(db)
 
 //	fmt.Println("Database setup and seeding complete.")
+
+
+	// LaTeX generation pdf test
+
+	// Hodnoty na nahradenie kvôli testovaniu funkcionality
+	data := TemplateData{
+		ID:        "120345",
+		Meno:      "Jožko Alexander Mrkvička",
+		Datum:     "15. 11. 2024",
+		Miestnost: "CD300",
+		Cas:       "10:30",
+		Bloky:     50,
+	}
+	
+
+	// Nahradenie placeholderov
+	updatedLatex, err := ReplaceTemplatePlaceholders(latexContent, data)
+	if err != nil {
+		fmt.Println("Error replacing placeholders:", err)
+		return
+	}	
+
+	// Kompilácia upraveného LaTeX na PDF
+	pdfBytes, err := CompileLatexToPDF(updatedLatex)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}	
+
+	// Uloženie výsledného PDF
+	outputFilePath := "./tmp/output.pdf"
+	err = SaveFile(outputFilePath, pdfBytes)
+	if err != nil {
+		fmt.Println("Chyba pri ukladaní PDF súboru:", err)
+		return
+	}
+
+	fmt.Println("PDF úspešne vytvorený a uložený ako:", outputFilePath)
+
 }

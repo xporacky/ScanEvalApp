@@ -1,3 +1,6 @@
 main
 ScanEvalApp
 scan-eval-db.db
+main.aux
+main.log
+tmp/output.pdf

@@ -37,11 +37,11 @@
 \fancyhead[C]{ % Centered text with details
     \parbox{1\textwidth}{ % Adjusted width
         \centering % Center alignment
-        \textbf{Meno: {{meno}}} \hspace{2em}
-        \textbf{ID: {{id}}} \\
-        \textbf{Dátum: {{datum}}} \hspace{2em}
-        \textbf{Miestnosť: {{miestnost}}} \hspace{2em}
-        \textbf{Čas: {{cas}}}
+        \textbf{Meno: {{.Meno}} } \hspace{2em}
+        \textbf{ID: {{.ID}} } \\
+        \textbf{Dátum: {{.Datum}} } \hspace{2em}
+        \textbf{Miestnosť: {{.Miestnost}} } \hspace{2em}
+        \textbf{Čas: {{.Cas}} }
     }
 }
 
@@ -244,7 +244,7 @@
 \begin{document}
 
 \begin{center}
-    \generateMultipleBlocks{45}
+    \generateMultipleBlocks{ {{.Bloky}} }
 \end{center}
 
 \end{document}
