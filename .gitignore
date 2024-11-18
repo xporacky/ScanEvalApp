@@ -3,5 +3,5 @@ ScanEvalApp
 scan-eval-db.db
 main.aux
 main.log
-tmp/output.pdf
-tmp/scan-images/*
+assets/tmp/output.pdf
+assets/tmp/scan-images/*
