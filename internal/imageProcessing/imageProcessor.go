@@ -1,14 +1,9 @@
 package imageprocessing
 
 import (
-	"bytes"
-	"fmt"
 	"image"
-	"image/jpeg"
 	"os"
-	"path"
 	"path/filepath"
-	"strings"
 
 	"github.com/gen2brain/go-fitz"
 	"gocv.io/x/gocv"
@@ -34,32 +29,35 @@ func Pdf2Img(scanPath string, outputPath string) {
 		if err != nil {
 			panic(err)
 		}
-		folder := strings.TrimSuffix(path.Base(file), filepath.Ext(path.Base(file)))
+		//folder := strings.TrimSuffix(path.Base(file), filepath.Ext(path.Base(file)))
 
 		// Extract pages as images
 		for n := 0; n < doc.NumPage(); n++ {
 			img, err := doc.Image(n)
+			if err != nil {
+				panic(err)
+			}
+			mat := imageToMat(img)
+			showMat(mat)
 			//img = increaseDPI(img, DPI)
-			if err != nil {
-				panic(err)
-			}
-			err = os.MkdirAll(outputPath, 0755)
-			if err != nil {
-				panic(err)
-			}
+			/*
+				err = os.MkdirAll(outputPath, 0755)
+				if err != nil {
+					panic(err)
+				}
 
-			f, err := os.Create(filepath.Join(outputPath+"/", fmt.Sprintf("%s-image-%05d.jpg", folder, n)))
-			if err != nil {
-				panic(err)
-			}
+				f, err := os.Create(filepath.Join(outputPath+"/", fmt.Sprintf("%s-image-%05d.jpg", folder, n)))
+				if err != nil {
+					panic(err)
+				}
 
-			err = jpeg.Encode(f, img, &jpeg.Options{Quality: jpeg.DefaultQuality})
-			if err != nil {
-				panic(err)
-			}
+				err = jpeg.Encode(f, img, &jpeg.Options{Quality: jpeg.DefaultQuality})
+				if err != nil {
+					panic(err)
+				}
 
-			f.Close()
-
+				f.Close()
+			*/
 		}
 	}
 }
@@ -75,16 +73,30 @@ func increaseDPI(img *image.RGBA, dpi int) *image.RGBA {
 }
 
 func imageToMat(imgRGBA *image.RGBA) gocv.Mat {
-	width := imgRGBA.Bounds().Dx()
-	height := imgRGBA.Bounds().Dy()
-	buffer := new(bytes.Buffer)
-	err := jpeg.Encode(buffer, imgRGBA, &jpeg.Options{Quality: jpeg.DefaultQuality})
+	bounds := imgRGBA.Bounds()
+	x := bounds.Dx()
+	y := bounds.Dy()
+	bytes := make([]byte, 0, x*y)
+	for j := bounds.Min.Y; j < bounds.Max.Y; j++ {
+		for i := bounds.Min.X; i < bounds.Max.X; i++ {
+			r, g, b, _ := imgRGBA.At(i, j).RGBA()
+			bytes = append(bytes, byte(b>>8))
+			bytes = append(bytes, byte(g>>8))
+			bytes = append(bytes, byte(r>>8))
+		}
+	}
+
+	mat, err := gocv.NewMatFromBytes(y, x, gocv.MatTypeCV8UC3, bytes)
+	//img, err := gocv.NewMatFromBytes(height, width, gocv.MatTypeCV8UC3, buffer.Bytes())
 	if err != nil {
 		panic(err)
 	}
-	img, err := gocv.NewMatFromBytes(height, width, gocv.MatTypeCV8UC3, buffer.Bytes())
-	if err != nil {
-		panic(err)
-	}
-	return img
+	return mat
+}
+
+func showMat(mat gocv.Mat) {
+	window := gocv.NewWindow("Image")
+	defer window.Close()
+	window.IMShow(mat)
+	window.WaitKey(0)
 }
