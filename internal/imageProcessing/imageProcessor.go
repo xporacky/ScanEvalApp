@@ -1,6 +1,7 @@
 package imageprocessing
 
 import (
+	"bytes"
 	"fmt"
 	"image"
 	"image/jpeg"
@@ -10,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/gen2brain/go-fitz"
+	"gocv.io/x/gocv"
 	"golang.org/x/image/draw"
 )
 
@@ -70,4 +72,19 @@ func increaseDPI(img *image.RGBA, dpi int) *image.RGBA {
 	newImg := image.NewRGBA(image.Rect(0, 0, newWidth, newHeight))
 	draw.BiLinear.Scale(newImg, newImg.Rect, img, img.Bounds(), draw.Over, nil)
 	return newImg
+}
+
+func imageToMat(imgRGBA *image.RGBA) gocv.Mat {
+	width := imgRGBA.Bounds().Dx()
+	height := imgRGBA.Bounds().Dy()
+	buffer := new(bytes.Buffer)
+	err := jpeg.Encode(buffer, imgRGBA, &jpeg.Options{Quality: jpeg.DefaultQuality})
+	if err != nil {
+		panic(err)
+	}
+	img, err := gocv.NewMatFromBytes(height, width, gocv.MatTypeCV8UC3, buffer.Bytes())
+	if err != nil {
+		panic(err)
+	}
+	return img
 }
