@@ -1,9 +1,13 @@
 package imageprocessing
 
 import (
+	"fmt"
 	"image"
+	"image/color"
 	"os"
+	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/gen2brain/go-fitz"
 	"gocv.io/x/gocv"
@@ -29,7 +33,7 @@ func Pdf2Img(scanPath string, outputPath string) {
 		if err != nil {
 			panic(err)
 		}
-		//folder := strings.TrimSuffix(path.Base(file), filepath.Ext(path.Base(file)))
+		folder := strings.TrimSuffix(path.Base(file), filepath.Ext(path.Base(file)))
 
 		// Extract pages as images
 		for n := 0; n < doc.NumPage(); n++ {
@@ -38,7 +42,12 @@ func Pdf2Img(scanPath string, outputPath string) {
 				panic(err)
 			}
 			mat := imageToMat(img)
+			mat = proccessMat(mat)
+
+			path := filepath.Join("./"+outputPath+"/", fmt.Sprintf("%s-image-%05d.png", folder, n))
+			SaveMat(path, mat)
 			showMat(mat)
+			return
 			//img = increaseDPI(img, DPI)
 			/*
 				err = os.MkdirAll(outputPath, 0755)
@@ -97,6 +106,51 @@ func imageToMat(imgRGBA *image.RGBA) gocv.Mat {
 func showMat(mat gocv.Mat) {
 	window := gocv.NewWindow("Image")
 	defer window.Close()
+	window.ResizeWindow(1100, 1400)
 	window.IMShow(mat)
 	window.WaitKey(0)
+}
+
+func proccessMat(mat gocv.Mat) gocv.Mat {
+	// Convert image to grayscale
+	gray := gocv.NewMat()
+	defer gray.Close()
+	gocv.CvtColor(mat, &gray, gocv.ColorBGRToGray)
+
+	// Use Canny edge detection
+	canny := gocv.NewMat()
+	defer canny.Close()
+	gocv.Canny(gray, &canny, 100, 200)
+
+	// Use morphological closing
+	kernel := gocv.GetStructuringElement(gocv.MorphRect, image.Pt(3, 3))
+	defer kernel.Close()
+	gocv.Dilate(canny, &canny, kernel)
+	gocv.Erode(canny, &canny, kernel)
+
+	// Find contours
+	contours := gocv.FindContours(canny, gocv.RetrievalExternal, gocv.ChainApproxNone)
+	fmt.Println("Found", contours.Size(), "contours")
+
+	// Draw contours
+	for i := 0; i < contours.Size(); i++ {
+		//c := contours.At(i)
+		color := color.RGBA{255, 0, 0, 255}
+		gocv.DrawContours(&mat, contours, i, color, 1)
+	}
+
+	// Show the result
+	return mat
+}
+
+func SaveMat(path string, mat gocv.Mat) {
+	if _, err := os.Stat(path); err == nil {
+		// File exists, attempt to remove it
+		err = os.Remove(path)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println("Successfully deleted file:", path)
+	}
+	gocv.IMWrite(path, mat)
 }
