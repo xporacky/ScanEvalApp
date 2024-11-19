@@ -19,6 +19,7 @@ require (
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/jupiterrider/ffi v0.2.0 // indirect
 	github.com/mattn/go-sqlite3 v1.14.22 // indirect
+	gocv.io/x/gocv v0.39.0 // indirect
 	golang.org/x/image v0.22.0 // indirect
 	golang.org/x/net v0.0.0-20191209160850-c0dbc17a3553 // indirect
 	golang.org/x/text v0.20.0 // indirect

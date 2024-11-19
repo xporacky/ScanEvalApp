@@ -15,3 +15,16 @@ Dokumentácia dostupná [TU](https://docs.google.com/document/d/1oPEVyG-Ius-a9JK
 
 ### Install OCR
 `sudo apt-get install tesseract-ocr tesseract-ocr-eng`
+### Run OCR
+`tesseract assets/tmp/scan-images/auto-scan-multiple-pages-image-00000.jpg out --psm 6 -l slk --oem 1`
+
+### Install goCV
+`sudo apt update && sudo apt install build-essential cmake git pkg-config libgtk-3-dev libavcodec-dev libavformat-dev libswscale-dev libv4l-dev libxvidcore-dev libx264-dev libjpeg-dev libpng-dev libtiff-dev gfortran openexr libatlas-base-dev python3-dev python3-numpy libtbbmalloc2 libtbb-dev`
+`cd /usr/local/bin/go/src && sudo git clone https://github.com/hybridgroup/gocv.git`
+`cd gocv && make install`
+
+#### Verify goCV installation
+`go run ./cmd/version/main.go`
+##### Expected output:
+`gocv version: 0.38.0` \
+`opencv lib version: 4.10.0`
