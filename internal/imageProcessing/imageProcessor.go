@@ -2,6 +2,7 @@ package imageprocessing
 
 import (
 	"fmt"
+	"image"
 	"image/jpeg"
 	"os"
 	"path"
@@ -9,7 +10,10 @@ import (
 	"strings"
 
 	"github.com/gen2brain/go-fitz"
+	"golang.org/x/image/draw"
 )
+
+const DPI = 300
 
 func Pdf2Img(scanPath string, outputPath string) {
 	var files []string
@@ -33,6 +37,7 @@ func Pdf2Img(scanPath string, outputPath string) {
 		// Extract pages as images
 		for n := 0; n < doc.NumPage(); n++ {
 			img, err := doc.Image(n)
+			//img = increaseDPI(img, DPI)
 			if err != nil {
 				panic(err)
 			}
@@ -55,4 +60,14 @@ func Pdf2Img(scanPath string, outputPath string) {
 
 		}
 	}
+}
+
+// Increases image quality by increasing dpi bud does not change dpi in metadata
+func increaseDPI(img *image.RGBA, dpi int) *image.RGBA {
+	newWidth := int(float64(img.Bounds().Dx()) * float64(dpi) / 96.0)
+	newHeight := int(float64(img.Bounds().Dy()) * float64(dpi) / 96.0)
+
+	newImg := image.NewRGBA(image.Rect(0, 0, newWidth, newHeight))
+	draw.BiLinear.Scale(newImg, newImg.Rect, img, img.Bounds(), draw.Over, nil)
+	return newImg
 }
