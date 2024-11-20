@@ -14,9 +14,9 @@ Dokumentácia dostupná [TU](https://docs.google.com/document/d/1oPEVyG-Ius-a9JK
 ![Class Diagram](images/class-diagram-tp.png)
 
 ### Install OCR
-`sudo apt-get install tesseract-ocr tesseract-ocr-eng`
+`sudo apt-get install tesseract-ocr tesseract-ocr-slk`
 ### Run OCR
-`tesseract assets/tmp/scan-images/auto-scan-multiple-pages-image-00000.jpg out --psm 6 -l slk --oem 1`
+`tesseract assets/tmp/scan-images/auto-scan-multiple-pages-image-00000.jpg out --psm 3 -l slk`
 
 ### Install goCV
 `sudo apt update && sudo apt install build-essential cmake git pkg-config libgtk-3-dev libavcodec-dev libavformat-dev libswscale-dev libv4l-dev libxvidcore-dev libx264-dev libjpeg-dev libpng-dev libtiff-dev gfortran openexr libatlas-base-dev python3-dev python3-numpy libtbbmalloc2 libtbb-dev`
