@@ -31,7 +31,7 @@ cmake  ../opencv-4.10.0
 cmake --build .
 
 #goCV installation
-cd /usr/local/go/src && sudo git clone https://github.com/hybridgroup/gocv.git
+cd /usr/local/go/src && sudo git clone https://github.com/OndrejKocak/gocv.git
 cd gocv
 make install
 go run ./cmd/version/main.go

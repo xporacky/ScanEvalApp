@@ -27,7 +27,7 @@ Dokumentácia dostupná [TU](https://docs.google.com/document/d/1oPEVyG-Ius-a9JK
 `cmake  ../opencv-4.10.0`
 `cmake --build .`
 #### gocv installation
-`cd /usr/local/go/src && sudo git clone https://github.com/hybridgroup/gocv.git`
+`cd /usr/local/go/src && sudo git clone https://github.com/OndrejKocak/gocv.git`
 `cd gocv && make install`
 
 #### Verify goCV installation
