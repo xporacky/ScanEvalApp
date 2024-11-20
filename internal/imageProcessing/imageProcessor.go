@@ -1,6 +1,7 @@
 package imageprocessing
 
 import (
+	"ScanEvalApp/internal/ocr"
 	"fmt"
 	"image"
 	"image/color"
@@ -46,8 +47,10 @@ func Pdf2Img(scanPath string, outputPath string) {
 
 			path := filepath.Join("./"+outputPath+"/", fmt.Sprintf("%s-image-%05d.png", folder, n))
 			SaveMat(path, mat)
+			textInImg := ocr.OcrImage(path)
+			fmt.Println(textInImg)
 			showMat(mat)
-			return
+			//return
 			//img = increaseDPI(img, DPI)
 			/*
 				err = os.MkdirAll(outputPath, 0755)
