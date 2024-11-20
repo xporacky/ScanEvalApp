@@ -1,8 +1,6 @@
 package main
 
-import (
-	imageprocessing "ScanEvalApp/internal/imageProcessing"
-)
+import "ScanEvalApp/internal/scanprocessing"
 
 func main() {
 	// Načítanie LaTeX súboru a jeho otvorenie
@@ -78,5 +76,5 @@ func main() {
 		fmt.Println("PDF úspešne vytvorený a uložený ako:", outputFilePath)
 	*/
 
-	imageprocessing.Pdf2Img("assets/tmp/scan-pdfs", "assets/tmp/scan-images")
+	scanprocessing.ProcessPDF("assets/tmp/scan-pdfs", "assets/tmp/scan-images")
 }

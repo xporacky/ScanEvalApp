@@ -1,6 +1,7 @@
-package imageprocessing
+package scanprocessing
 
 import (
+	"ScanEvalApp/internal/files"
 	"ScanEvalApp/internal/ocr"
 	"fmt"
 	"image"
@@ -17,7 +18,8 @@ import (
 
 const DPI = 300
 
-func Pdf2Img(scanPath string, outputPath string) {
+// Process PDF
+func ProcessPDF(scanPath string, outputPath string) {
 	var files []string
 
 	err := filepath.Walk(scanPath, func(path string, info os.FileInfo, err error) error {
@@ -42,40 +44,21 @@ func Pdf2Img(scanPath string, outputPath string) {
 			if err != nil {
 				panic(err)
 			}
-			mat := imageToMat(img)
-			mat = proccessMat(mat)
-
-			path := filepath.Join("./"+outputPath+"/", fmt.Sprintf("%s-image-%05d.png", folder, n))
+			mat := ImageToMat(img)
+			mat = ProccessMat(mat)
+			path := filepath.Join("./"+outputPath+"/", fmt.Sprintf("%s-image-%05d.png", folder, n)) //na testovanie zatial takto
+			//path := filepath.Join("./"+outputPath+"/temp-image.png")
 			SaveMat(path, mat)
 			textInImg := ocr.OcrImage(path)
 			fmt.Println(textInImg)
-			showMat(mat)
+			ShowMat(mat)
 			//return
-			//img = increaseDPI(img, DPI)
-			/*
-				err = os.MkdirAll(outputPath, 0755)
-				if err != nil {
-					panic(err)
-				}
-
-				f, err := os.Create(filepath.Join(outputPath+"/", fmt.Sprintf("%s-image-%05d.jpg", folder, n)))
-				if err != nil {
-					panic(err)
-				}
-
-				err = jpeg.Encode(f, img, &jpeg.Options{Quality: jpeg.DefaultQuality})
-				if err != nil {
-					panic(err)
-				}
-
-				f.Close()
-			*/
 		}
 	}
 }
 
 // Increases image quality by increasing dpi bud does not change dpi in metadata
-func increaseDPI(img *image.RGBA, dpi int) *image.RGBA {
+func IncreaseDPI(img *image.RGBA, dpi int) *image.RGBA {
 	newWidth := int(float64(img.Bounds().Dx()) * float64(dpi) / 96.0)
 	newHeight := int(float64(img.Bounds().Dy()) * float64(dpi) / 96.0)
 
@@ -84,7 +67,8 @@ func increaseDPI(img *image.RGBA, dpi int) *image.RGBA {
 	return newImg
 }
 
-func imageToMat(imgRGBA *image.RGBA) gocv.Mat {
+// Converts image to gocv.Mat
+func ImageToMat(imgRGBA *image.RGBA) gocv.Mat {
 	bounds := imgRGBA.Bounds()
 	x := bounds.Dx()
 	y := bounds.Dy()
@@ -106,7 +90,8 @@ func imageToMat(imgRGBA *image.RGBA) gocv.Mat {
 	return mat
 }
 
-func showMat(mat gocv.Mat) {
+// Show image in window
+func ShowMat(mat gocv.Mat) {
 	window := gocv.NewWindow("Image")
 	defer window.Close()
 	window.ResizeWindow(1100, 1400)
@@ -114,10 +99,10 @@ func showMat(mat gocv.Mat) {
 	window.WaitKey(0)
 }
 
-func proccessMat(mat gocv.Mat) gocv.Mat {
+// Process image with OpenCV
+func ProccessMat(mat gocv.Mat) gocv.Mat {
 	// Convert image to grayscale
 	gray := gocv.NewMat()
-	defer gray.Close()
 	gocv.CvtColor(mat, &gray, gocv.ColorBGRToGray)
 
 	// Use Canny edge detection
@@ -139,21 +124,18 @@ func proccessMat(mat gocv.Mat) gocv.Mat {
 	for i := 0; i < contours.Size(); i++ {
 		//c := contours.At(i)
 		color := color.RGBA{255, 0, 0, 255}
-		gocv.DrawContours(&mat, contours, i, color, 1)
+		gocv.DrawContours(&gray, contours, i, color, 1)
 	}
 
 	// Show the result
-	return mat
+	return gray
 }
 
+// Save image in gocv.Mat to png file
 func SaveMat(path string, mat gocv.Mat) {
-	if _, err := os.Stat(path); err == nil {
-		// File exists, attempt to remove it
-		err = os.Remove(path)
-		if err != nil {
-			panic(err)
-		}
-		fmt.Println("Successfully deleted file:", path)
+	err := files.DeleteFile(path)
+	if err != nil {
+		panic(err)
 	}
 	gocv.IMWrite(path, mat)
 }
