@@ -1,11 +1,23 @@
 package main
 
 import (
+	"ScanEvalApp/internal/database/migrations"
+	"ScanEvalApp/internal/database/seed"
 	"ScanEvalApp/internal/files"
 	"ScanEvalApp/internal/latex"
 	"fmt"
 )
 
+func testDatabase() {
+	db, err := migrations.MigrateDB()
+	if err != nil {
+		panic("failed to connect to database")
+	}
+
+	seed.Seed(db)
+
+	fmt.Println("Database setup and seeding complete.")
+}
 func main() {
 	// Načítanie LaTeX súboru a jeho otvorenie
 	latexFilePath := "./assets/latex/main.tex"
@@ -32,14 +44,7 @@ func main() {
 
 	// fmt.Println("PDF úspešne vytvorený a uložený ako:", outputFilePath)
 
-	//	db, err := migrations.MigrateDB()
-	//	if err != nil {
-	//		panic("failed to connect to database")
-	//	}
-
-	//	seed.Seed(db)
-
-	//	fmt.Println("Database setup and seeding complete.")
+	// testDatabase()
 
 	// LaTeX generation pdf test
 

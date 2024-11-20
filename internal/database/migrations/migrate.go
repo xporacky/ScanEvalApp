@@ -1,13 +1,14 @@
 package migrations
 
 import (
+	"ScanEvalApp/internal/database/models"
+
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-	"ScanEvalApp/database/models"
 )
 
 func MigrateDB() (*gorm.DB, error) {
-	db, err := gorm.Open(sqlite.Open("scan-eval-db.db"), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open("internal/database/scan-eval-db.db"), &gorm.Config{})
 	if err != nil {
 		return nil, err
 	}

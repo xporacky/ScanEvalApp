@@ -1,7 +1,7 @@
 package seed
 
 import (
-	"ScanEvalApp/database/models"
+	"ScanEvalApp/internal/database/models"
 	"math/rand"
 	"strconv"
 	"time"

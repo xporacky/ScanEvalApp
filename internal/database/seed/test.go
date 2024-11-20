@@ -1,8 +1,6 @@
 package seed
 
-import (
-	"ScanEvalApp/database/models"
-)
+import "ScanEvalApp/internal/database/models"
 
 func TestGenerator(questionsCount int) *models.Test {
 	test := &models.Test{
