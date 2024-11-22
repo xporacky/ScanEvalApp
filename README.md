@@ -11,7 +11,7 @@ Dokumentácia dostupná [TU](https://docs.google.com/document/d/1oPEVyG-Ius-a9JK
 `./main`
 
 ### Class Diagram
-![Class Diagram](images/class-diagram-tp.png)
+![Class Diagram](assets/images/class-diagram-tp.png)
 
 ### Install OCR
 `sudo apt-get install tesseract-ocr tesseract-ocr-slk`
