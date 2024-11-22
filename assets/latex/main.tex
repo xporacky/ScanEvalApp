@@ -1,0 +1,258 @@
+\documentclass[12pt]{article}
+\usepackage{tikz}
+\usepackage{subfig}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage[margin=1.0in]{geometry}
+%\pagestyle{empty}
+
+\definecolor{mygray}{rgb}{0.9, 0.9, 0.9} % Light gray
+
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+% todo
+\setlength{\headheight}{45.90973pt}  % Nastavenie výšky hlavičky
+\addtolength{\topmargin}{-3.20332pt} % Kompenzácia horného okraja
+\pagestyle{fancy}
+
+\fancyhead[L]{ % Logo on the left
+   % \hspace{1cm} % Add horizontal space to push the logo to the right
+    % \parbox{\textwidth}{
+    \raisebox{1ex}{\includegraphics[width=2.1cm]{assets/latex/stu-fei-vector-logo.png}}
+    % }
+}
+
+\usepackage{qrcode}
+\fancyhead[R]{
+    \raisebox{5ex}{
+        \scalebox{0.6}{% Zmenši QR kód na 50 % pôvodnej veľkosti
+           \qrcode{ {{.QrCode}} }
+        }
+    }
+}
+
+% \fancyhead[C]{ % Centered text with details
+%     \parbox{1\textwidth}{ % Adjusted width
+%         \centering % Center alignment
+%         \textbf{Meno: Jozko Mrkvicka} \hspace{2em}
+%         \textbf{ID: 120120} \\
+%         \textbf{Dátum: \today} \hspace{2em}
+%         \textbf{Miestnosť: CD300} \hspace{2em}
+%         \textbf{Čas: 10:00}
+%     }
+% }
+
+\fancyhead[C]{ % Centered text with details
+    \parbox{1\textwidth}{ % Adjusted width
+        \centering % Center alignment
+        \textbf{Meno: {{.Meno}} } \hspace{1.5em}
+        \textbf{ID: {{.ID}} } \\ \hspace{1.5em}
+        \textbf{Dátum: {{.Datum}} } \hspace{1.5em}
+        \textbf{Miestnosť: {{.Miestnost}} } \hspace{1.5em}
+        \textbf{Čas: {{.Cas}} }
+    }
+}
+
+\fancyfoot[C]{\thepage} % Číslo strany v päte v strede
+
+
+%% DOBRY KOD
+% \begin{document}
+% \newcounter{rowCounter} % Create a new counter for rows
+
+% \begin{center} 
+%         % Function to generate rows for each block
+%         \def\generateBlock#1#2{
+%             \draw[thick, black] (-1, -22) rectangle (11.5, -0.5);
+            
+%                \foreach \position/\letter in {1/A, 2/B, 3/C, 4/D, 5/E} {
+%             \node at ({\position * 2}, -1.5) {\letter};
+%         }
+        
+%             \foreach \line in {#1,...,#2} {
+%                 \stepcounter{rowCounter} % Increment the counter
+%                 \begin{scope}[yshift=-\the\value{rowCounter}cm] % Position each row
+%                     \node at (0,-1.5) {\normalsize\textbf{\line}}; % Display row number
+%                     \foreach \position in {1,2,3,4,5} { 
+%                         \node[draw,rectangle,inner sep=8pt] at ({\position * 2},-1.5) {};
+%                     }
+%                 \end{scope}
+                
+%                 % Optional: Draw separator lines every 5 rows
+%                 \ifnum\value{rowCounter}=5 \draw[thin, black] (-1,-\the\value{rowCounter} cm-2cm) -- (11.5,-\the\value{rowCounter} cm-2cm);\fi
+%                 \ifnum\value{rowCounter}=10 \draw[thin, black] (-1,-\the\value{rowCounter} cm-2cm) -- (11.5,-\the\value{rowCounter} cm-2cm);\fi
+%                 \ifnum\value{rowCounter}=15 \draw[thin, black] (-1,-\the\value{rowCounter} cm-2cm) -- (11.5,-\the\value{rowCounter} cm-2cm);\fi
+%             }
+%         }
+% \begin{tikzpicture}[font=\small]
+%         % Block 1 (1-20)
+%         \generateBlock{1}{20}
+% \end{tikzpicture}   
+% \begin{tikzpicture}[font=\small]
+%         % Reset counter     
+%         \setcounter{rowCounter}{0}
+%         % Block 2 (21-40)
+%         \generateBlock{21}{40}
+%     \end{tikzpicture}
+%     \begin{tikzpicture}[font=\small]
+%         % Reset counter 
+%         \setcounter{rowCounter}{0}
+%         % Block 3 (41-60)
+%         \generateBlock{41}{60}
+%     \end{tikzpicture}
+% \end{center}
+
+
+% \end{document}
+
+
+%%% tiez dobry kod zautomatizovany
+% \usepackage{pgf} % For pgfmath calculations
+
+% % Define counters
+% \newcounter{rowCounter} % This will continuously count rows across block
+% \setcounter{rowCounter}{1}
+% \newcounter{rowPosition} % This will reset to 1 for each block
+% \newcounter{blocksNeeded} % To store the number of blocks needed
+% \newcounter{remainingQuestions} % Remaining questions to be processed
+
+% % Ceiling division function to calculate the number of blocks needed
+% \newcommand{\ceilDiv}[1]{%
+%     \setcounter{blocksNeeded}{\numexpr(#1 + 19) / 20\relax} % Use integer arithmetic for ceiling division
+% }
+
+% % Function to generate each block with a specified range of question numbers
+% \newcommand{\generateBlock}[2]{ % Takes `start` and `end` question numbers
+%     \setcounter{rowPosition}{1} % Reset rowPosition for each new block
+%     \begin{tikzpicture}[font=\small]
+%         \draw[thick, black] (-1, -22) rectangle (11.5, -0.5); % Outer rectangle
+
+%         % Header labels
+%         \foreach \position/\letter in {1/A, 2/B, 3/C, 4/D, 5/E} {
+%             \node at ({\position * 2}, -1.5) {\letter};
+%         }
+
+%         % Generate rows from `#1` (start) to `#2` (end)
+%         \foreach \line in {#1,...,#2} {
+%             \begin{scope}[yshift=-\the\value{rowPosition}cm] % Adjust row position
+%                 \node at (0, -1.5) {\normalsize\textbf{\the\value{rowCounter}}}; % Display question number as integer
+%                 \foreach \position in {1,2,3,4,5} {
+%                     \node[draw, rectangle, inner sep=8pt] at ({\position * 2}, -1.5) {}; % Draw boxes
+%                 }
+
+%                 \stepcounter{rowPosition} % Increment rowPosition within the block
+%                 \stepcounter{rowCounter} % Increment rowCounter across all blocks
+%             \end{scope}
+%         }
+%     \end{tikzpicture}
+% }
+
+% % Function to generate multiple blocks based on the total number of questions
+% \newcommand{\generateMultipleBlocks}[1]{ % Total number of questions as input
+%     \setcounter{remainingQuestions}{#1} % Initialize remaining questions
+%     \ceilDiv{#1} % Calculate blocks needed
+    
+%     % Generate blocks as per calculated blocksNeeded
+%     \foreach \blockIndex in {1,...,\the\value{blocksNeeded}} {
+%         % Determine the start and end numbers for this block
+%         \pgfmathsetmacro{\startQuestion}{\the\value{rowCounter}}
+%         \pgfmathsetmacro{\endQuestion}{min(\the\value{rowCounter} + 19, #1)}
+
+%         % Convert startQuestion and endQuestion to integer to avoid decimal display
+%         \generateBlock{\number\startQuestion}{\number\endQuestion}
+
+%         % Decrement remaining questions by the number of questions in this block
+%         \addtocounter{remainingQuestions}{-\the\value{rowPosition}}
+%     }
+% }
+
+% \begin{document}
+
+% \begin{center}
+%     \generateMultipleBlocks{60}
+% \end{center}
+
+% \end{document}
+
+
+\usepackage{pgf}
+
+% Define counters
+\newcounter{rowCounter} % This will continuously count rows across blocks
+\setcounter{rowCounter}{1}
+\newcounter{rowPosition} % This will reset to 1 for each block
+\newcounter{blocksNeeded} % To store the number of blocks needed
+\newcounter{remainingQuestions} % Remaining questions to be processed
+
+% Ceiling division function to calculate the number of blocks needed
+\newcommand{\ceilDiv}[1]{%
+    \pgfmathsetmacro{\tempResult}{int((#1 + 19) / 20)} % Calculate ceiling division
+    \setcounter{blocksNeeded}{\tempResult} % Store result in blocksNeeded
+    %\theblocksNeeded % Output the result
+}
+
+% Function to generate each block with a specified range of question numbers
+\newcommand{\generateBlock}[2]{ % Takes `start` and `end` question numbers
+    \setcounter{rowPosition}{1} % Reset rowPosition for each new block
+
+    \begin{tikzpicture}[font=\small]
+        \draw[thick, black] (-1, -22) rectangle (11.5, -1.5); % Outer rectangle
+
+
+        % Header labels
+        \foreach \position/\letter in {1/A, 2/B, 3/C, 4/D, 5/E} {
+            \node at ({\position * 2}, -1) {\letter};
+        }
+
+        % Generate rows from `#1` (start) to `#2` (end), but limit to the exact total number of questions
+        % todo - pridanie premennej co by prenasobila yshift tak, aby boli vacsie medzeri medzi riadkami, a tym padom lepsie by sa detekovali kruzky
+        \foreach \line in {#1,...,#2} {
+            \begin{scope}[yshift=-\the\value{rowPosition}cm - 1.5cm] % Adjust row position
+                \node at (0, 0) {\normalsize\textbf{\the\value{rowCounter}}}; % Display question number as integer
+                \foreach \position in {1,2,3,4,5} {
+                    \node[mygray] at ({\position * 2},0) {\scalebox{2}{\textbf{$\times$}}};
+                    \node[draw, rectangle, inner sep=5pt] at ({\position * 2}, 0) {}; % Draw boxes
+                }            
+        \ifnum\value{rowPosition}=5
+            \draw[thin, black] (-1, -\the\value{rowPosition} cm + 4.5cm) -- (11.5, -\the\value{rowPosition} cm + 4.5cm);
+        \fi
+        \ifnum\value{rowPosition}=10
+            \draw[thin, black] (-1, -\the\value{rowPosition} cm + 9.5cm) -- (11.5, -\the\value{rowPosition} cm + 9.5cm);
+        \fi
+        \ifnum\value{rowPosition}=15
+            \draw[thin, black] (-1, -\the\value{rowPosition} cm + 14.5cm) -- (11.5, -\the\value{rowPosition} cm + 14.5cm);
+        \fi
+                \stepcounter{rowPosition} % Increment rowPosition within the block
+                \stepcounter{rowCounter} % Increment rowCounter across all blocks
+                
+            \end{scope}
+        }
+    \end{tikzpicture}
+}
+
+% Function to generate multiple blocks based on the total number of questions
+\newcommand{\generateMultipleBlocks}[1]{ % Total number of questions as input
+    \setcounter{remainingQuestions}{#1} % Initialize remaining questions
+    \ceilDiv{#1} % Calculate blocks needed
+    
+    % Generate blocks as per calculated blocksNeeded
+    \foreach \blockIndex in {1,...,\the\value{blocksNeeded}} {
+        % Determine the start and end numbers for this block
+        \pgfmathsetmacro{\startQuestion}{\the\value{rowCounter}}
+        \pgfmathsetmacro{\endQuestion}{min(\the\value{rowCounter} + 19, #1)}
+
+        % Convert startQuestion and endQuestion to integer to avoid decimal display
+        \generateBlock{\number\startQuestion}{\number\endQuestion}
+
+        % Decrement remaining questions by the number of questions in this block
+        \addtocounter{remainingQuestions}{-\the\value{rowPosition}}
+    }
+}
+
+\begin{document}
+
+\begin{center}
+    \generateMultipleBlocks{ {{.Bloky}} }
+\end{center}
+
+\end{document}
