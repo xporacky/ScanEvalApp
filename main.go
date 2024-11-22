@@ -1,13 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
-	"io/ioutil"
 	"path/filepath"
 	"text/template"
-	"bytes"
 )
 
 func CompileLatexToPDF(latexContent []byte) ([]byte, error) {
@@ -16,7 +16,7 @@ func CompileLatexToPDF(latexContent []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temporary LaTeX file: %v", err)
 	}
-	defer os.Remove(texFile.Name()) 
+	defer os.Remove(texFile.Name())
 
 	// Write LaTeX content to the temporary file
 	if _, err = texFile.Write(latexContent); err != nil {
@@ -68,7 +68,6 @@ func SaveFile(filePath string, data []byte) error {
 	return nil
 }
 
-
 // LaTeX pdf generation
 
 // štruktúra na prácu s nahrádzaním hodnôt v šablóne
@@ -79,6 +78,7 @@ type TemplateData struct {
 	Miestnost string
 	Cas       string
 	Bloky     int
+	QrCode    string
 }
 
 // Funkcia na nahradenie place holderov v LaTeX súbore
@@ -97,8 +97,6 @@ func ReplaceTemplatePlaceholders(templateContent []byte, data TemplateData) ([]b
 	return output.Bytes(), nil
 }
 
-
-
 func main() {
 	// Načítanie LaTeX súboru a jeho otvorenie
 	latexFilePath := "./latexFiles/main.tex"
@@ -114,7 +112,7 @@ func main() {
 	// 	fmt.Println("Error:", err)
 	// 	return
 	// }
-	
+
 	// // Uloženie PDF
 	// outputFilePath := "./tmp/output.pdf"
 	// err = SaveFile(outputFilePath, pdfBytes)
@@ -125,15 +123,14 @@ func main() {
 
 	// fmt.Println("PDF úspešne vytvorený a uložený ako:", outputFilePath)
 
-//	db, err := migrations.MigrateDB()
-//	if err != nil {
-//		panic("failed to connect to database")
-//	}
+	//	db, err := migrations.MigrateDB()
+	//	if err != nil {
+	//		panic("failed to connect to database")
+	//	}
 
-//	seed.Seed(db)
+	//	seed.Seed(db)
 
-//	fmt.Println("Database setup and seeding complete.")
-
+	//	fmt.Println("Database setup and seeding complete.")
 
 	// LaTeX generation pdf test
 
@@ -145,22 +142,22 @@ func main() {
 		Miestnost: "CD300",
 		Cas:       "10:30",
 		Bloky:     50,
+		QrCode:    "www.google.com",
 	}
-	
 
 	// Nahradenie placeholderov
 	updatedLatex, err := ReplaceTemplatePlaceholders(latexContent, data)
 	if err != nil {
 		fmt.Println("Error replacing placeholders:", err)
 		return
-	}	
+	}
 
 	// Kompilácia upraveného LaTeX na PDF
 	pdfBytes, err := CompileLatexToPDF(updatedLatex)
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
-	}	
+	}
 
 	// Uloženie výsledného PDF
 	outputFilePath := "./tmp/output.pdf"
