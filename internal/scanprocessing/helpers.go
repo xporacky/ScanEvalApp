@@ -88,3 +88,13 @@ func SaveMat(path string, mat gocv.Mat) {
 	}
 	gocv.IMWrite(path, mat)
 }
+
+func readQR(mat *gocv.Mat) string {
+	qrDetector := gocv.NewQRCodeDetector()
+	points := gocv.NewMat()
+	defer points.Close()
+	qrCode := gocv.NewMat()
+	defer qrCode.Close()
+	text := qrDetector.DetectAndDecode(*mat, &points, &qrCode)
+	return text
+}
