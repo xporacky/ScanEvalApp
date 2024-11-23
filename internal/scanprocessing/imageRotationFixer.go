@@ -18,7 +18,7 @@ func FindBorderRectangle(mat gocv.Mat) gocv.RotatedRect {
 		if approx.Size() == 4 {
 			rect := gocv.MinAreaRect(approx)
 			rectPoints := rect.Points
-			if CalculatePointsDistance(rectPoints[0], rectPoints[1]) > 1000 || CalculatePointsDistance(rectPoints[0], rectPoints[3]) > 1000 {
+			if CalculatePointsDistance(rectPoints[0], rectPoints[1]) > 1000 && CalculatePointsDistance(rectPoints[0], rectPoints[3]) > 1000 {
 				//DrawRectangle(mat, rect)
 				return rect
 			}
