@@ -1,6 +1,7 @@
 package scanprocessing
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"math"
@@ -15,13 +16,11 @@ func FindBorderRectangle(mat gocv.Mat) gocv.RotatedRect {
 	for i := 0; i < contours.Size(); i++ {
 		c := contours.At(i)
 		approx := gocv.ApproxPolyDP(c, 0.01*gocv.ArcLength(c, true), true)
-		if approx.Size() == 4 {
+		if approx.Size() == 4 && gocv.ContourArea(approx) > 1000000 {
+			fmt.Println(gocv.ContourArea(approx))
 			rect := gocv.MinAreaRect(approx)
-			rectPoints := rect.Points
-			if CalculatePointsDistance(rectPoints[0], rectPoints[1]) > 1000 && CalculatePointsDistance(rectPoints[0], rectPoints[3]) > 1000 {
-				//DrawRectangle(mat, rect)
-				return rect
-			}
+			//DrawRotatedRectangle(mat, rect)
+			return rect
 		}
 	}
 	return gocv.RotatedRect{}
