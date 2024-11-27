@@ -4,6 +4,7 @@ import (
 	"ScanEvalApp/internal/files"
 	"fmt"
 	"image"
+	"image/color"
 	"math"
 
 	"gocv.io/x/gocv"
@@ -97,4 +98,19 @@ func readQR(mat *gocv.Mat) string {
 	defer qrCode.Close()
 	text := qrDetector.DetectAndDecode(*mat, &points, &qrCode)
 	return text
+}
+
+// Draw red rotated rectangle on image
+func DrawRotatedRectangle(mat *gocv.Mat, rect gocv.RotatedRect) {
+	color := color.RGBA{255, 0, 0, 255}
+	rectPoints := rect.Points
+	for i := 0; i < 4; i++ {
+		gocv.Line(mat, rectPoints[i], rectPoints[(i+1)%4], color, 10)
+	}
+}
+
+// Draw red rectangle on image
+func DrawRectangle(mat *gocv.Mat, rect image.Rectangle) {
+	color := color.RGBA{255, 0, 0, 255}
+	gocv.Rectangle(mat, rect, color, 10)
 }

@@ -3,14 +3,13 @@ package scanprocessing
 import (
 	"fmt"
 	"image"
-	"image/color"
 	"math"
 
 	"gocv.io/x/gocv"
 )
 
 // Finds border rectangle of asnwer sheet
-func FindBorderRectangle(mat gocv.Mat) gocv.RotatedRect {
+func FindBorderRotatedRectangle(mat gocv.Mat) gocv.RotatedRect {
 	contours := FindContours(mat)
 	// Find rectangle
 	for i := 0; i < contours.Size(); i++ {
@@ -28,7 +27,7 @@ func FindBorderRectangle(mat gocv.Mat) gocv.RotatedRect {
 
 // Rotate image by center
 func FixImageRotation(mat gocv.Mat) gocv.Mat {
-	rect := FindBorderRectangle(mat)
+	rect := FindBorderRotatedRectangle(mat)
 	// Rotate image
 	angle := rect.Angle - 90
 	if math.Abs(angle) > 45 {
@@ -42,16 +41,6 @@ func FixImageRotation(mat gocv.Mat) gocv.Mat {
 	size := mat.Size()
 	gocv.WarpAffine(mat, &rotated, rotationMatrix, image.Pt(size[1], size[0]))
 	return rotated
-}
-
-// Draw red rectangle on image
-func DrawRotatedRectangle(mat gocv.Mat, rect gocv.RotatedRect) gocv.Mat {
-	color := color.RGBA{255, 0, 0, 255}
-	rectPoints := rect.Points
-	for i := 0; i < 4; i++ {
-		gocv.Line(&mat, rectPoints[i], rectPoints[(i+1)%4], color, 10)
-	}
-	return mat
 }
 
 // Check if image is upside down
