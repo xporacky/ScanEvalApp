@@ -1,6 +1,7 @@
 package scanprocessing
 
 import (
+	"ScanEvalApp/internal/ocr"
 	"fmt"
 	"image"
 
@@ -9,17 +10,17 @@ import (
 
 // Evaluate answers
 func EvaluateAnswers(mat *gocv.Mat, numberOfQuestionsPerPage int) {
-	croppedMat := cropMatAnswersOnly(mat)
+	croppedMat := CropMatAnswersOnly(mat)
 	questionNumber := -1
 	//contours := FindContours(MatToGrayscale(croppedMat))
 	for i := 0; i < numberOfQuestionsPerPage; i++ {
 		if questionNumber == -1 {
-			questionNumber = getQuestionNumber(&croppedMat, i, numberOfQuestionsPerPage)
+			questionNumber = GetQuestionNumber(&croppedMat, i, numberOfQuestionsPerPage)
 		} else {
 			questionNumber++
 		}
-		rectAnswers := image.Rectangle{Min: image.Point{PADDING + (croppedMat.Cols() / (NUMBER_OF_CHOICES + 1)), PADDING + (i * croppedMat.Rows() / numberOfQuestionsPerPage)}, Max: image.Point{croppedMat.Cols() - PADDING, ((i + 1) * croppedMat.Rows() / numberOfQuestionsPerPage) - PADDING}}
-		questionMat := croppedMat.Region(rectAnswers)
+		rectCheckboxes := image.Rectangle{Min: image.Point{PADDING + (croppedMat.Cols() / (NUMBER_OF_CHOICES + 1)), PADDING + (i * croppedMat.Rows() / numberOfQuestionsPerPage)}, Max: image.Point{croppedMat.Cols() - PADDING, ((i + 1) * croppedMat.Rows() / numberOfQuestionsPerPage) - PADDING}}
+		questionMat := croppedMat.Region(rectCheckboxes)
 		ShowMat(questionMat)
 		//DrawRectangle(&croppedMat, rect)
 	}
@@ -27,7 +28,7 @@ func EvaluateAnswers(mat *gocv.Mat, numberOfQuestionsPerPage int) {
 }
 
 // Crop image to contain only answers
-func cropMatAnswersOnly(mat *gocv.Mat) gocv.Mat {
+func CropMatAnswersOnly(mat *gocv.Mat) gocv.Mat {
 	rect := FindBorderRectangle(mat)
 	rectSmaller := image.Rectangle{Min: image.Point{rect.Min.X + PADDING, rect.Min.Y + PADDING}, Max: image.Point{rect.Max.X - PADDING, rect.Max.Y - PADDING}}
 	croppedMat := mat.Region(rectSmaller)
@@ -51,10 +52,18 @@ func FindBorderRectangle(mat *gocv.Mat) image.Rectangle {
 	return image.Rectangle{}
 }
 
-func getQuestionNumber(mat *gocv.Mat, i int, numberOfQuestionsPerPage int) int {
+func GetQuestionNumber(mat *gocv.Mat, i int, numberOfQuestionsPerPage int) int {
 	rect := image.Rectangle{Min: image.Point{PADDING, PADDING + (i * mat.Rows() / numberOfQuestionsPerPage)}, Max: image.Point{(mat.Cols() / (NUMBER_OF_CHOICES + 1)) - PADDING, ((i + 1) * mat.Rows() / numberOfQuestionsPerPage) - PADDING}}
 	questionMat := mat.Region(rect)
+	defer questionMat.Close()
 	ShowMat(questionMat)
-	// Find number
-	return 1
+	SaveMat("", questionMat)
+	dt := ocr.OcrImage(TEMP_IMAGE_PATH, ocr.PSM_SINGLE_LINE)
+	var num int
+	_, err := fmt.Sscan(dt, &num)
+	if err != nil {
+		fmt.Println("Conversion error:", err)
+		return -1
+	}
+	return num
 }
