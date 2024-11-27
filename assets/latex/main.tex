@@ -6,13 +6,14 @@
 \usepackage[margin=1.0in]{geometry}
 %\pagestyle{empty}
 
-\definecolor{mygray}{rgb}{0.9, 0.9, 0.9} % Light gray
+\definecolor{mygray}{rgb}{0.8, 0.8, 0.8} % Light gray
 
 \usepackage{fancyhdr}
 \usepackage{graphicx}
 % todo
-\setlength{\headheight}{45.90973pt}  % Nastavenie výšky hlavičky
-\addtolength{\topmargin}{-3.20332pt} % Kompenzácia horného okraja
+\setlength{\headheight}{65.90973pt}  % Nastavenie výšky hlavičky
+% \setlength{\headsep}{15pt}        % Posun hlavičky od textu
+\addtolength{\topmargin}{5pt} % Kompenzácia horného okraja
 \pagestyle{fancy}
 
 \fancyhead[L]{ % Logo on the left
@@ -23,9 +24,10 @@
 }
 
 \usepackage{qrcode}
+
 \fancyhead[R]{
     \raisebox{5ex}{
-        \scalebox{0.6}{% Zmenši QR kód na 50 % pôvodnej veľkosti
+        \scalebox{0.5}{% Zmenši QR kód na 50 % pôvodnej veľkosti
            \qrcode{ {{.QrCode}} }
         }
     }
@@ -42,18 +44,21 @@
 %     }
 % }
 
+
+
+
 \fancyhead[C]{ % Centered text with details
     \parbox{1\textwidth}{ % Adjusted width
         \centering % Center alignment
-        \textbf{Meno: {{.Meno}} } \hspace{1.5em}
-        \textbf{ID: {{.ID}} } \\ \hspace{1.5em}
-        \textbf{Dátum: {{.Datum}} } \hspace{1.5em}
-        \textbf{Miestnosť: {{.Miestnost}} } \hspace{1.5em}
-        \textbf{Čas: {{.Cas}} }
+        \textbf{Meno: {{.Meno}}} \hspace{1.5em}
+        \textbf{ID: {{.ID}}} \\ \hspace{1.5em}
+        \textbf{Dátum: {{.Datum}}} \hspace{1.5em}
+        \textbf{Miestnosť: {{.Miestnost}}} \hspace{1.5em}
+        \textbf{Čas: {{.Cas}}}
     }
 }
 
-\fancyfoot[C]{\thepage} % Číslo strany v päte v strede
+% \fancyfoot[C]{\thepage} % Číslo strany v päte v strede
 
 
 %% DOBRY KOD
@@ -196,12 +201,12 @@
     \setcounter{rowPosition}{1} % Reset rowPosition for each new block
 
     \begin{tikzpicture}[font=\small]
-        \draw[thick, black] (-1, -22) rectangle (11.5, -1.5); % Outer rectangle
+        \draw[thick, black] (-1, -22) rectangle (11.5, -2); % Outer rectangle
 
 
         % Header labels
         \foreach \position/\letter in {1/A, 2/B, 3/C, 4/D, 5/E} {
-            \node at ({\position * 2}, -1) {\letter};
+            \node at ({\position * 2}, -1.5) {\letter};
         }
 
         % Generate rows from `#1` (start) to `#2` (end), but limit to the exact total number of questions
@@ -252,7 +257,7 @@
 \begin{document}
 
 \begin{center}
-    \generateMultipleBlocks{ {{.Bloky}} }
+    \generateMultipleBlocks{ {{.Bloky}}}
 \end{center}
 
 \end{document}
