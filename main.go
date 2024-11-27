@@ -5,6 +5,7 @@ import (
 	"ScanEvalApp/internal/database/seed"
 	"ScanEvalApp/internal/files"
 	"ScanEvalApp/internal/latex"
+	"ScanEvalApp/internal/scanprocessing"
 	"fmt"
 )
 
@@ -20,6 +21,7 @@ func testDatabase() {
 }
 func main() {
 	// Načítanie LaTeX súboru a jeho otvorenie
+
 	latexFilePath := "./assets/latex/main.tex"
 	latexContent, err := files.OpenFile(latexFilePath)
 	if err != nil {
@@ -27,27 +29,17 @@ func main() {
 		return
 	}
 
-	// // Compile LaTeX to PDF
-	// pdfBytes, err := CompileLatexToPDF(latexContent)
-	// if err != nil {
-	// 	fmt.Println("Error:", err)
-	// 	return
-	// }
 
-	// // Uloženie PDF
-	// outputFilePath := "./tmp/output.pdf"
-	// err = SaveFile(outputFilePath, pdfBytes)
-	// if err != nil {
-	// 	fmt.Println("Chyba pri ukladaní PDF súboru:", err)
-	// 	return
-	// }
+	//	db, err := migrations.MigrateDB()
+	//	if err != nil {
+	//		panic("failed to connect to database")
+	//	}
 
-	// fmt.Println("PDF úspešne vytvorený a uložený ako:", outputFilePath)
+	//	seed.Seed(db)
 
-	// testDatabase()
+	//	fmt.Println("Database setup and seeding complete.")
 
 	// LaTeX generation pdf test
-
 	// Hodnoty na nahradenie kvôli testovaniu funkcionality
 	data := latex.TemplateData{
 		ID:        "120345",
@@ -56,6 +48,7 @@ func main() {
 		Miestnost: "CD300",
 		Cas:       "10:30",
 		Bloky:     50,
+		QrCode:    "www.google.com",
 	}
 
 	// Nahradenie placeholderov
@@ -82,4 +75,5 @@ func main() {
 
 	fmt.Println("PDF úspešne vytvorený a uložený ako:", outputFilePath)
 
+	scanprocessing.ProcessPDF("assets/tmp/scan-pdfs", "assets/tmp/scan-images")
 }
