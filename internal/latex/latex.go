@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,7 +11,7 @@ import (
 
 func CompileLatexToPDF(latexContent []byte) ([]byte, error) {
 	// Create a temporary .tex file
-	texFile, err := ioutil.TempFile("", "*.tex")
+	texFile, err := os.CreateTemp("", "*.tex")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temporary LaTeX file: %v", err)
 	}
@@ -25,7 +24,7 @@ func CompileLatexToPDF(latexContent []byte) ([]byte, error) {
 	texFile.Close()
 
 	// Create a temporary directory for the output
-	outputDir, err := ioutil.TempDir("", "latex_output")
+	outputDir, err := os.MkdirTemp("", "latex_output")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temporary output directory: %v", err)
 	}
@@ -42,7 +41,7 @@ func CompileLatexToPDF(latexContent []byte) ([]byte, error) {
 
 	// Read the PDF file as bytes
 	pdfPath := filepath.Join(outputDir, filepath.Base(texFile.Name())[:len(filepath.Base(texFile.Name()))-4]+".pdf")
-	pdfBytes, err := ioutil.ReadFile(pdfPath)
+	pdfBytes, err := os.ReadFile(pdfPath)
 	if err != nil {
 		return nil, fmt.Errorf("error reading PDF file: %v", err)
 	}
