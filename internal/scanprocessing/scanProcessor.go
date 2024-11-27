@@ -1,6 +1,7 @@
 package scanprocessing
 
 import (
+	"ScanEvalApp/internal/ocr"
 	"fmt"
 	"os"
 	"path"
@@ -9,8 +10,6 @@ import (
 
 	"github.com/gen2brain/go-fitz"
 )
-
-const DPI = 300
 
 // Process PDF
 func ProcessPDF(scanPath string, outputPath string) {
@@ -48,11 +47,12 @@ func ProcessPDF(scanPath string, outputPath string) {
 			}
 			fmt.Println(qrText)
 			path := filepath.Join("./"+outputPath+"/", fmt.Sprintf("%s-image-%05d.png", folder, n)) //na testovanie zatial takto
+			EvaluateAnswers(&mat, NUMBER_OF_QUESTIONS_PER_PAGE)
 			//path := filepath.Join("./"+outputPath+"/temp-image.png")
 			SaveMat(path, mat)
-			//textInImg := ocr.OcrImage(path)
-			//fmt.Println(textInImg)
-			fmt.Println(path)
+			textInImg := ocr.OcrImage(path)
+			fmt.Println(textInImg)
+			//fmt.Println(path)
 			ShowMat(mat)
 			//return
 		}

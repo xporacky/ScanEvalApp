@@ -83,6 +83,9 @@ func MatToGrayscale(mat gocv.Mat) gocv.Mat {
 
 // Save image in gocv.Mat to png file
 func SaveMat(path string, mat gocv.Mat) {
+	if path == "" {
+		path = TEMP_IMAGE_PATH
+	}
 	err := files.DeleteFile(path)
 	if err != nil {
 		panic(err)
@@ -113,4 +116,10 @@ func DrawRotatedRectangle(mat *gocv.Mat, rect gocv.RotatedRect) {
 func DrawRectangle(mat *gocv.Mat, rect image.Rectangle) {
 	color := color.RGBA{255, 0, 0, 255}
 	gocv.Rectangle(mat, rect, color, 10)
+}
+
+func drawCountours(mat *gocv.Mat, contours gocv.PointsVector) {
+	for i := 0; i < contours.Size(); i++ {
+		gocv.DrawContours(mat, contours, i, color.RGBA{255, 0, 0, 255}, 10)
+	}
 }

@@ -7,8 +7,30 @@ import (
 	"gocv.io/x/gocv"
 )
 
+// Evaluate answers
+func EvaluateAnswers(mat *gocv.Mat, numberOfQuestionsPerPage int) {
+	croppedMat := cropMatAnswersOnly(mat)
+	questionNumber := -1
+	//contours := FindContours(MatToGrayscale(croppedMat))
+	for i := 0; i < numberOfQuestionsPerPage; i++ {
+		if questionNumber == -1 {
+			questionNumber = getQuestionNumber(&croppedMat, i, numberOfQuestionsPerPage)
+		} else {
+			questionNumber++
+		}
+		rectAnswers := image.Rectangle{Min: image.Point{PADDING + (croppedMat.Cols() / (NUMBER_OF_CHOICES + 1)), PADDING + (i * croppedMat.Rows() / numberOfQuestionsPerPage)}, Max: image.Point{croppedMat.Cols() - PADDING, ((i + 1) * croppedMat.Rows() / numberOfQuestionsPerPage) - PADDING}}
+		questionMat := croppedMat.Region(rectAnswers)
+		ShowMat(questionMat)
+		//DrawRectangle(&croppedMat, rect)
+	}
+	*mat = croppedMat
+}
+
+// Crop image to contain only answers
 func cropMatAnswersOnly(mat *gocv.Mat) gocv.Mat {
-	croppedMat := mat.Region(FindBorderRectangle(mat))
+	rect := FindBorderRectangle(mat)
+	rectSmaller := image.Rectangle{Min: image.Point{rect.Min.X + PADDING, rect.Min.Y + PADDING}, Max: image.Point{rect.Max.X - PADDING, rect.Max.Y - PADDING}}
+	croppedMat := mat.Region(rectSmaller)
 	return croppedMat
 }
 
@@ -27,4 +49,12 @@ func FindBorderRectangle(mat *gocv.Mat) image.Rectangle {
 		}
 	}
 	return image.Rectangle{}
+}
+
+func getQuestionNumber(mat *gocv.Mat, i int, numberOfQuestionsPerPage int) int {
+	rect := image.Rectangle{Min: image.Point{PADDING, PADDING + (i * mat.Rows() / numberOfQuestionsPerPage)}, Max: image.Point{(mat.Cols() / (NUMBER_OF_CHOICES + 1)) - PADDING, ((i + 1) * mat.Rows() / numberOfQuestionsPerPage) - PADDING}}
+	questionMat := mat.Region(rect)
+	ShowMat(questionMat)
+	// Find number
+	return 1
 }

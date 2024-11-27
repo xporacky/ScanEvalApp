@@ -1,7 +1,6 @@
 package scanprocessing
 
 import (
-	"fmt"
 	"image"
 	"math"
 
@@ -16,7 +15,6 @@ func FindBorderRotatedRectangle(mat gocv.Mat) gocv.RotatedRect {
 		c := contours.At(i)
 		approx := gocv.ApproxPolyDP(c, 0.01*gocv.ArcLength(c, true), true)
 		if approx.Size() == 4 && gocv.ContourArea(approx) > 1000000 {
-			fmt.Println(gocv.ContourArea(approx))
 			rect := gocv.MinAreaRect(approx)
 			//DrawRotatedRectangle(mat, rect)
 			return rect
