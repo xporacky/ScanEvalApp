@@ -8,4 +8,5 @@ type TemplateData struct {
 	Miestnost string
 	Cas       string
 	Bloky     int
+	QrCode    string
 }
