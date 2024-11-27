@@ -1,8 +1,9 @@
 package repository
 
 import (
+	"ScanEvalApp/internal/database/models"
+
 	"gorm.io/gorm"
-	"ScanEvalApp/database/models"
 )
 
 func CreateStudent(db *gorm.DB, student *models.Student) error {

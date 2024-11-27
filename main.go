@@ -1,12 +1,24 @@
 package main
 
 import (
+	"ScanEvalApp/internal/database/migrations"
+	"ScanEvalApp/internal/database/seed"
 	"ScanEvalApp/internal/files"
 	"ScanEvalApp/internal/latex"
 	"ScanEvalApp/internal/scanprocessing"
 	"fmt"
 )
 
+func testDatabase() {
+	db, err := migrations.MigrateDB()
+	if err != nil {
+		panic("failed to connect to database")
+	}
+
+	seed.Seed(db)
+
+	fmt.Println("Database setup and seeding complete.")
+}
 func main() {
 	// Načítanie LaTeX súboru a jeho otvorenie
 
@@ -16,6 +28,7 @@ func main() {
 		fmt.Println("Error while opening LaTeX file:", err)
 		return
 	}
+
 
 	//	db, err := migrations.MigrateDB()
 	//	if err != nil {
