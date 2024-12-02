@@ -46,9 +46,9 @@ func ProcessPDF(scanPath string, outputPath string) {
 			}
 			fmt.Println(qrText)
 			path := filepath.Join("./"+outputPath+"/", fmt.Sprintf("%s-image-%05d.png", folder, n)) //na testovanie zatial takto
-			EvaluateAnswers(&mat, NUMBER_OF_QUESTIONS_PER_PAGE)
+			EvaluateAnswers(&mat, 50)
 			SaveMat(path, mat)
-			ShowMat(mat)
+			//ShowMat(mat)
 			//return
 		}
 	}
