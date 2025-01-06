@@ -15,10 +15,10 @@ func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int) {
 	croppedMat := CropMatAnswersOnly(mat)
 	questionNumber := -1
 	for i := 0; i < NUMBER_OF_QUESTIONS_PER_PAGE; i++ {
-		answer := GetAnswer(&croppedMat, i, NUMBER_OF_QUESTIONS_PER_PAGE)
+		answer := GetAnswer(&croppedMat, i)
 		// if we dont have question number yet try to find it
 		if questionNumber == -1 {
-			questionNumber = GetQuestionNumber(&croppedMat, i, NUMBER_OF_QUESTIONS_PER_PAGE)
+			questionNumber = GetQuestionNumber(&croppedMat, i)
 			// if we didnt find question number yet add answer to unknown questions
 			if questionNumber == -1 {
 				unknownQuestionsAnswers = append(unknownQuestionsAnswers, answer)
@@ -30,6 +30,7 @@ func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int) {
 		} else {
 			// TODO priradit odpoved k odpovediam studenta
 		}
+		fmt.Println(questionNumber, " | ", answer)
 		questionNumber++
 		if questionNumber > numberOfQuestions {
 			fmt.Println("All questions found")
@@ -48,31 +49,34 @@ func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int) {
 
 // Crop image to contain only answers
 func CropMatAnswersOnly(mat *gocv.Mat) gocv.Mat {
-	rect := FindBorderRectangle(mat)
+	rect := FindRectangle(mat, BORDER_RECTANGLE_AREA_SIZE, -1)
 	rectSmaller := image.Rectangle{Min: image.Point{rect.Min.X + PADDING, rect.Min.Y + PADDING}, Max: image.Point{rect.Max.X - PADDING, rect.Max.Y - PADDING}}
 	croppedMat := mat.Region(rectSmaller)
 	return croppedMat
 }
 
-// Finds border rectangle of asnwer sheet
-func FindBorderRectangle(mat *gocv.Mat) image.Rectangle {
+// Finds rectangle on mat
+func FindRectangle(mat *gocv.Mat, minAreaSize float64, maxAreaSize float64) image.Rectangle {
 	contours := FindContours(*mat)
 	// Find rectangle
 	for i := 0; i < contours.Size(); i++ {
 		c := contours.At(i)
 		approx := gocv.ApproxPolyDP(c, 0.01*gocv.ArcLength(c, true), true)
-		if approx.Size() == 4 && gocv.ContourArea(approx) > 1000000 {
-			fmt.Println(gocv.ContourArea(approx))
+		//fmt.Println(gocv.ContourArea(approx), approx.Size())
+		if approx.Size() >= 4 && gocv.ContourArea(approx) > minAreaSize {
+			if maxAreaSize != -1 && gocv.ContourArea(approx) > maxAreaSize {
+				continue
+			}
 			rect := gocv.BoundingRect(approx)
 			//DrawRectangle(mat, rect)
 			return rect
 		}
 	}
-	return image.Rectangle{}
+	return image.Rectangle{image.Pt(0, 0), image.Pt(0, 0)}
 }
 
-func GetQuestionNumber(mat *gocv.Mat, i int, numberOfQuestionsPerPage int) int {
-	rect := image.Rectangle{Min: image.Point{PADDING, PADDING + (i * mat.Rows() / numberOfQuestionsPerPage)}, Max: image.Point{(mat.Cols() / (NUMBER_OF_CHOICES + 1)) - PADDING, ((i + 1) * mat.Rows() / numberOfQuestionsPerPage) - PADDING}}
+func GetQuestionNumber(mat *gocv.Mat, i int) int {
+	rect := image.Rectangle{Min: image.Point{PADDING, PADDING + (i * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE)}, Max: image.Point{(mat.Cols() / (NUMBER_OF_CHOICES + 1)) - PADDING, ((i + 1) * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE) - PADDING}}
 	questionMat := mat.Region(rect)
 	defer questionMat.Close()
 	//ShowMat(questionMat)
@@ -88,11 +92,44 @@ func GetQuestionNumber(mat *gocv.Mat, i int, numberOfQuestionsPerPage int) int {
 	return num
 }
 
-func GetAnswer(mat *gocv.Mat, i int, numberOfQuestionsPerPage int) string {
-	rectCheckboxes := image.Rectangle{Min: image.Point{PADDING + (mat.Cols() / (NUMBER_OF_CHOICES + 1)), PADDING + (i * mat.Rows() / numberOfQuestionsPerPage)}, Max: image.Point{mat.Cols() - PADDING, ((i + 1) * mat.Rows() / numberOfQuestionsPerPage) - PADDING}}
-	questionMat := mat.Region(rectCheckboxes)
-	drawCountours(&questionMat, FindContours(questionMat))
-	//ShowMat(questionMat)
-	defer questionMat.Close()
-	return ""
+func GetAnswer(mat *gocv.Mat, i int) string {
+	answer := ""
+	state := StateEmpty
+	rect := image.Rectangle{Min: image.Point{PADDING + (mat.Cols() / (NUMBER_OF_CHOICES + 1)), PADDING + (i * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE)}, Max: image.Point{mat.Cols() - PADDING, ((i + 1) * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE) - PADDING}}
+	line := mat.Region(rect)
+	for j := 1; j <= NUMBER_OF_CHOICES; j++ {
+		padding := CHECKBOX_PADDING
+		if i == 0 || i == NUMBER_OF_QUESTIONS_PER_PAGE-1 {
+			padding = 0
+		}
+		checkbox := image.Rectangle{Min: image.Point{(mat.Cols() / (NUMBER_OF_CHOICES + 1) * (j)), padding + (i * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE)}, Max: image.Point{(mat.Cols() / (NUMBER_OF_CHOICES + 1)) * (j + 1), ((i + 1) * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE) - padding}}
+		checkboxMat := mat.Region(checkbox)
+		rect := FindRectangle(&checkboxMat, ANSWER_SQUARE_MIN_AREA_SIZE, ANSWER_SQUARE_MAX_AREA_SIZE)
+		if rect.Empty() {
+			if state == StateCircleFound {
+				return ""
+			}
+			answer = string(rune('a' + (j - 1)))
+			state = StateCircleFound
+			continue
+		}
+		padding = 5
+		rectSmaller := image.Rectangle{Min: image.Point{rect.Min.X + padding, rect.Min.Y + padding}, Max: image.Point{rect.Max.X - padding, rect.Max.Y - padding}}
+		rectMat := checkboxMat.Region(rectSmaller)
+		meanIntensity := rectMat.Mean()
+		if meanIntensity.Val1 < 215 && meanIntensity.Val1 > 160 {
+			if state == StateEmpty {
+				answer = string(rune('a' + (j - 1)))
+				state = StateXFound
+				continue
+			} else if state == StateXFound {
+				answer = ""
+			}
+		}
+		//fmt.Println(meanIntensity.Val1)
+		defer checkboxMat.Close()
+		defer rectMat.Close()
+	}
+	defer line.Close()
+	return answer
 }

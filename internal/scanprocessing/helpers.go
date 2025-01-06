@@ -29,7 +29,15 @@ func FindContours(mat gocv.Mat) gocv.PointsVector {
 
 	// Find contours
 	contours := gocv.FindContours(canny, gocv.RetrievalExternal, gocv.ChainApproxNone)
-	fmt.Println("Found", contours.Size(), "contours")
+	//fmt.Println("Found", contours.Size(), "contours")
+	return contours
+}
+
+func CheckboxContours(mat *gocv.Mat) gocv.PointsVector {
+	thresh := gocv.NewMat()
+	defer thresh.Close()
+	gocv.AdaptiveThreshold(*mat, &thresh, 255, gocv.AdaptiveThresholdGaussian, gocv.ThresholdBinaryInv, 11, 2)
+	contours := gocv.FindContours(thresh, gocv.RetrievalExternal, gocv.ChainApproxSimple)
 	return contours
 }
 
@@ -91,6 +99,7 @@ func SaveMat(path string, mat gocv.Mat) {
 		panic(err)
 	}
 	gocv.IMWrite(path, mat)
+	fmt.Println("Succesfully saved file: ", TEMP_IMAGE_PATH)
 }
 
 func readQR(mat *gocv.Mat) string {
@@ -120,6 +129,6 @@ func DrawRectangle(mat *gocv.Mat, rect image.Rectangle) {
 
 func drawCountours(mat *gocv.Mat, contours gocv.PointsVector) {
 	for i := 0; i < contours.Size(); i++ {
-		gocv.DrawContours(mat, contours, i, color.RGBA{255, 0, 0, 255}, 10)
+		gocv.DrawContours(mat, contours, i, color.RGBA{255, 0, 0, 255}, 5)
 	}
 }
