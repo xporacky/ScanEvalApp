@@ -5,15 +5,9 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	"math"
 
 	"gocv.io/x/gocv"
-	"golang.org/x/image/draw"
 )
-
-func CalculatePointsDistance(p1, p2 image.Point) float64 {
-	return math.Sqrt(math.Pow(float64(p1.X-p2.X), 2) + math.Pow(float64(p1.Y-p2.Y), 2))
-}
 
 func FindContours(mat gocv.Mat) gocv.PointsVector {
 	// Use Canny edge detection
@@ -31,24 +25,6 @@ func FindContours(mat gocv.Mat) gocv.PointsVector {
 	contours := gocv.FindContours(canny, gocv.RetrievalExternal, gocv.ChainApproxNone)
 	//fmt.Println("Found", contours.Size(), "contours")
 	return contours
-}
-
-func CheckboxContours(mat *gocv.Mat) gocv.PointsVector {
-	thresh := gocv.NewMat()
-	defer thresh.Close()
-	gocv.AdaptiveThreshold(*mat, &thresh, 255, gocv.AdaptiveThresholdGaussian, gocv.ThresholdBinaryInv, 11, 2)
-	contours := gocv.FindContours(thresh, gocv.RetrievalExternal, gocv.ChainApproxSimple)
-	return contours
-}
-
-// Increases image quality by increasing dpi bud does not change dpi in metadata
-func IncreaseDPI(img *image.RGBA, dpi int) *image.RGBA {
-	newWidth := int(float64(img.Bounds().Dx()) * float64(dpi) / 96.0)
-	newHeight := int(float64(img.Bounds().Dy()) * float64(dpi) / 96.0)
-
-	newImg := image.NewRGBA(image.Rect(0, 0, newWidth, newHeight))
-	draw.BiLinear.Scale(newImg, newImg.Rect, img, img.Bounds(), draw.Over, nil)
-	return newImg
 }
 
 // Converts image to gocv.Mat

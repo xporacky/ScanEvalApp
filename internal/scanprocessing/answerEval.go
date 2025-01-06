@@ -5,6 +5,7 @@ import (
 	"ScanEvalApp/internal/ocr"
 	"fmt"
 	"image"
+	"log"
 
 	"gocv.io/x/gocv"
 )
@@ -30,7 +31,7 @@ func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int) {
 		} else {
 			// TODO priradit odpoved k odpovediam studenta
 		}
-		fmt.Println(questionNumber, " | ", answer)
+		log.Println(questionNumber, " | ", answer)
 		questionNumber++
 		if questionNumber > numberOfQuestions {
 			fmt.Println("All questions found")
@@ -38,7 +39,6 @@ func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int) {
 		}
 
 	}
-	files.DeleteFile(TEMP_IMAGE_PATH)
 	*mat = croppedMat
 	// if we didnt find question number in whole page
 	if questionNumber == -1 {
@@ -80,10 +80,11 @@ func GetQuestionNumber(mat *gocv.Mat, i int) int {
 	questionMat := mat.Region(rect)
 	defer questionMat.Close()
 	//ShowMat(questionMat)
-	SaveMat("", questionMat)
+	SaveMat(TEMP_IMAGE_PATH, questionMat)
 	dt := ocr.OcrImage(TEMP_IMAGE_PATH, ocr.PSM_SINGLE_LINE)
 	var num int
 	_, err := fmt.Sscan(dt, &num)
+	files.DeleteFile(TEMP_IMAGE_PATH)
 	if err != nil {
 		fmt.Println("Conversion error:", err)
 		return -1
@@ -95,10 +96,8 @@ func GetQuestionNumber(mat *gocv.Mat, i int) int {
 func GetAnswer(mat *gocv.Mat, i int) string {
 	answer := ""
 	state := StateEmpty
-	rect := image.Rectangle{Min: image.Point{PADDING + (mat.Cols() / (NUMBER_OF_CHOICES + 1)), PADDING + (i * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE)}, Max: image.Point{mat.Cols() - PADDING, ((i + 1) * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE) - PADDING}}
-	line := mat.Region(rect)
 	for j := 1; j <= NUMBER_OF_CHOICES; j++ {
-		padding := CHECKBOX_PADDING
+		padding := CHECKBOX_AREA_PADDING
 		if i == 0 || i == NUMBER_OF_QUESTIONS_PER_PAGE-1 {
 			padding = 0
 		}
@@ -113,11 +112,10 @@ func GetAnswer(mat *gocv.Mat, i int) string {
 			state = StateCircleFound
 			continue
 		}
-		padding = 5
-		rectSmaller := image.Rectangle{Min: image.Point{rect.Min.X + padding, rect.Min.Y + padding}, Max: image.Point{rect.Max.X - padding, rect.Max.Y - padding}}
-		rectMat := checkboxMat.Region(rectSmaller)
+		checkboxWithoutBorder := image.Rectangle{Min: image.Point{rect.Min.X + CHECKBOX_PADDING, rect.Min.Y + CHECKBOX_PADDING}, Max: image.Point{rect.Max.X - CHECKBOX_PADDING, rect.Max.Y - CHECKBOX_PADDING}}
+		rectMat := checkboxMat.Region(checkboxWithoutBorder)
 		meanIntensity := rectMat.Mean()
-		if meanIntensity.Val1 < 215 && meanIntensity.Val1 > 160 {
+		if meanIntensity.Val1 < MEAN_INTENSITY_X_HIGHEST && meanIntensity.Val1 > MEAN_INTENSITY_X_LOWEST {
 			if state == StateEmpty {
 				answer = string(rune('a' + (j - 1)))
 				state = StateXFound
@@ -130,6 +128,5 @@ func GetAnswer(mat *gocv.Mat, i int) string {
 		defer checkboxMat.Close()
 		defer rectMat.Close()
 	}
-	defer line.Close()
 	return answer
 }

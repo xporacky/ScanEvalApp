@@ -7,6 +7,7 @@ import (
 	"ScanEvalApp/internal/latex"
 	"ScanEvalApp/internal/scanprocessing"
 	"fmt"
+	"time"
 )
 
 func testDatabase() {
@@ -28,7 +29,6 @@ func main() {
 		fmt.Println("Error while opening LaTeX file:", err)
 		return
 	}
-
 
 	//	db, err := migrations.MigrateDB()
 	//	if err != nil {
@@ -74,6 +74,8 @@ func main() {
 	}
 
 	fmt.Println("PDF úspešne vytvorený a uložený ako:", outputFilePath)
-
+	start := time.Now()
 	scanprocessing.ProcessPDF("assets/tmp/scan-pdfs", "assets/tmp/scan-images")
+	elapsed := time.Since(start)
+	fmt.Printf("Function took %s\n", elapsed)
 }
