@@ -13,9 +13,12 @@ Dokumentácia dostupná [TU](https://docs.google.com/document/d/1oPEVyG-Ius-a9JK
 ### Class Diagram
 ![Class Diagram](assets/images/class-diagram-tp.png)
 
-### Pokyny pre kruzkovanie
+### Pokyny pre kruzkovanie a krizikovanie
 - kruzok sa nesmie dotykat svorceka ktory je kruzkovany a ani vedlajsich stvorcekov
 - kruzok nesmie vychadzat mimo ramceka v ktorom sa nachadzaju cisla otazok a policka na odpoved a ani sa dotykat oramovania
+- krizik by nemal vychadzat mimo stvorcek
+- vyfarbenie stvorceka by nemalo vychadzat mimo stvorcek
+- kruzok ma vacsiu prioritu ako krizik
 
 ## Rucna instalacia OCR A OPENCV
 
