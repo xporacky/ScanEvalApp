@@ -4,15 +4,10 @@ import (
 	"ScanEvalApp/internal/files"
 	"fmt"
 	"image"
-	"math"
+	"image/color"
 
 	"gocv.io/x/gocv"
-	"golang.org/x/image/draw"
 )
-
-func CalculatePointsDistance(p1, p2 image.Point) float64 {
-	return math.Sqrt(math.Pow(float64(p1.X-p2.X), 2) + math.Pow(float64(p1.Y-p2.Y), 2))
-}
 
 func FindContours(mat gocv.Mat) gocv.PointsVector {
 	// Use Canny edge detection
@@ -28,18 +23,8 @@ func FindContours(mat gocv.Mat) gocv.PointsVector {
 
 	// Find contours
 	contours := gocv.FindContours(canny, gocv.RetrievalExternal, gocv.ChainApproxNone)
-	fmt.Println("Found", contours.Size(), "contours")
+	//fmt.Println("Found", contours.Size(), "contours")
 	return contours
-}
-
-// Increases image quality by increasing dpi bud does not change dpi in metadata
-func IncreaseDPI(img *image.RGBA, dpi int) *image.RGBA {
-	newWidth := int(float64(img.Bounds().Dx()) * float64(dpi) / 96.0)
-	newHeight := int(float64(img.Bounds().Dy()) * float64(dpi) / 96.0)
-
-	newImg := image.NewRGBA(image.Rect(0, 0, newWidth, newHeight))
-	draw.BiLinear.Scale(newImg, newImg.Rect, img, img.Bounds(), draw.Over, nil)
-	return newImg
 }
 
 // Converts image to gocv.Mat
@@ -82,11 +67,15 @@ func MatToGrayscale(mat gocv.Mat) gocv.Mat {
 
 // Save image in gocv.Mat to png file
 func SaveMat(path string, mat gocv.Mat) {
+	if path == "" {
+		path = TEMP_IMAGE_PATH
+	}
 	err := files.DeleteFile(path)
 	if err != nil {
 		panic(err)
 	}
 	gocv.IMWrite(path, mat)
+	fmt.Println("Succesfully saved file: ", TEMP_IMAGE_PATH)
 }
 
 func readQR(mat *gocv.Mat) string {
@@ -97,4 +86,25 @@ func readQR(mat *gocv.Mat) string {
 	defer qrCode.Close()
 	text := qrDetector.DetectAndDecode(*mat, &points, &qrCode)
 	return text
+}
+
+// Draw red rotated rectangle on image
+func DrawRotatedRectangle(mat *gocv.Mat, rect gocv.RotatedRect) {
+	color := color.RGBA{255, 0, 0, 255}
+	rectPoints := rect.Points
+	for i := 0; i < 4; i++ {
+		gocv.Line(mat, rectPoints[i], rectPoints[(i+1)%4], color, 10)
+	}
+}
+
+// Draw red rectangle on image
+func DrawRectangle(mat *gocv.Mat, rect image.Rectangle) {
+	color := color.RGBA{255, 0, 0, 255}
+	gocv.Rectangle(mat, rect, color, 10)
+}
+
+func drawCountours(mat *gocv.Mat, contours gocv.PointsVector) {
+	for i := 0; i < contours.Size(); i++ {
+		gocv.DrawContours(mat, contours, i, color.RGBA{255, 0, 0, 255}, 5)
+	}
 }
