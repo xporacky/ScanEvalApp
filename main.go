@@ -3,11 +3,13 @@ package main
 import (
 	"ScanEvalApp/internal/database/migrations"
 	"ScanEvalApp/internal/database/seed"
-	"ScanEvalApp/internal/files"
-	"ScanEvalApp/internal/latex"
-	"ScanEvalApp/internal/scanprocessing"
+	//"ScanEvalApp/internal/files"
+	//"ScanEvalApp/internal/latex"
+	//"ScanEvalApp/internal/scanprocessing"
+	"ScanEvalApp/internal/gui"
+	"gioui.org/app"
 	"fmt"
-	"time"
+	//"time"
 )
 
 func testDatabase() {
@@ -21,6 +23,10 @@ func testDatabase() {
 	fmt.Println("Database setup and seeding complete.")
 }
 func main() {
+	go window.RunWindow() // Zavolanie funkcie na vytvorenie a správu okna
+    app.Main()
+
+	/*
 	// Načítanie LaTeX súboru a jeho otvorenie
 
 	latexFilePath := "./assets/latex/main.tex"
@@ -78,4 +84,5 @@ func main() {
 	scanprocessing.ProcessPDF("assets/tmp/scan-pdfs", "assets/tmp/scan-images")
 	elapsed := time.Since(start)
 	fmt.Printf("Function took %s\n", elapsed)
+	*/
 }
