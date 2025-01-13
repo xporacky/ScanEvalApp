@@ -76,7 +76,7 @@ func SaveMat(path string, mat gocv.Mat) {
 		panic(err)
 	}
 	gocv.IMWrite(path, mat)
-	fmt.Println("Succesfully saved file: ", TEMP_IMAGE_PATH)
+	fmt.Println("Succesfully saved file: ", path)
 }
 
 func ReadQR(mat *gocv.Mat) string {
