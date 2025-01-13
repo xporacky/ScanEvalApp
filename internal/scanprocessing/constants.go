@@ -4,6 +4,7 @@ const NUMBER_OF_CHOICES = 5
 const NUMBER_OF_QUESTIONS_PER_PAGE = 20
 const DPI = 300
 const TEMP_IMAGE_PATH = "./assets/tmp/temp-image.png"
+const TEMP_HEADER_IMAGE_PATH = "./assets/tmp/temp-header-image.png"
 const PADDING = 10
 const CHECKBOX_AREA_PADDING = -5
 const CHECKBOX_PADDING = 5

@@ -2,6 +2,7 @@ package scanprocessing
 
 import (
 	"ScanEvalApp/internal/files"
+	"ScanEvalApp/internal/ocr"
 	"fmt"
 	"image"
 	"image/color"
@@ -78,7 +79,7 @@ func SaveMat(path string, mat gocv.Mat) {
 	fmt.Println("Succesfully saved file: ", TEMP_IMAGE_PATH)
 }
 
-func readQR(mat *gocv.Mat) string {
+func ReadQR(mat *gocv.Mat) string {
 	qrDetector := gocv.NewQRCodeDetector()
 	points := gocv.NewMat()
 	defer points.Close()
@@ -103,8 +104,30 @@ func DrawRectangle(mat *gocv.Mat, rect image.Rectangle) {
 	gocv.Rectangle(mat, rect, color, 10)
 }
 
-func drawCountours(mat *gocv.Mat, contours gocv.PointsVector) {
+func DrawCountours(mat *gocv.Mat, contours gocv.PointsVector) {
 	for i := 0; i < contours.Size(); i++ {
 		gocv.DrawContours(mat, contours, i, color.RGBA{255, 0, 0, 255}, 5)
 	}
+}
+
+func GetStudentID(mat *gocv.Mat) (int, error) {
+	qrText := ReadQR(mat)
+	if qrText != "" {
+		var id int
+		_, err := fmt.Sscan(qrText, &id)
+		if err != nil {
+			return 0, fmt.Errorf("failed to convert ID to integer: %v", err)
+		}
+		return id, nil
+	}
+	rect := image.Rectangle{Min: image.Point{PADDING, PADDING}, Max: image.Point{mat.Cols() - PADDING, (mat.Rows() / 4) - PADDING}}
+	headerMat := mat.Region(rect)
+	defer headerMat.Close()
+	SaveMat(TEMP_HEADER_IMAGE_PATH, headerMat)
+	id, err := ocr.ExtractID(TEMP_HEADER_IMAGE_PATH)
+	files.DeleteFile(TEMP_IMAGE_PATH)
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
 }

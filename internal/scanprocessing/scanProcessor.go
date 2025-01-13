@@ -43,13 +43,12 @@ func ProcessPage(doc *fitz.Document, n int) {
 	mat := ImageToMat(img)
 	mat = MatToGrayscale(mat)
 	mat = FixImageRotation(mat)
-	qrText := readQR(&mat)
-	if qrText == "" {
-		// TODO
-		fmt.Println("QR code was not found trying to found student code from OCR")
+	studentID, err := GetStudentID(&mat)
+	if err != nil {
+		fmt.Println(err.Error())
 		return
 	}
-	fmt.Println("ID STUDENTA: ", qrText)
+	fmt.Println("ID STUDENTA: ", studentID)
 	//path := filepath.Join("./"+outputPath+"/", fmt.Sprintf("%s-image-%05d.png", folder, n)) //na testovanie zatial takto
 	EvaluateAnswers(&mat, 50)
 	//SaveMat("", mat)

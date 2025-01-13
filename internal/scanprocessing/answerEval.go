@@ -5,7 +5,6 @@ import (
 	"ScanEvalApp/internal/ocr"
 	"fmt"
 	"image"
-	"log"
 
 	"gocv.io/x/gocv"
 )
@@ -14,26 +13,30 @@ import (
 func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int) {
 	var unknownQuestionsAnswers []string
 	croppedMat := CropMatAnswersOnly(mat)
-	questionNumber := -1
+	questionNumber := 0
 	for i := 0; i < NUMBER_OF_QUESTIONS_PER_PAGE; i++ {
 		answer := GetAnswer(&croppedMat, i)
 		// if we dont have question number yet try to find it
-		if questionNumber == -1 {
-			questionNumber = GetQuestionNumber(&croppedMat, i)
+		if questionNumber == 0 {
+			var err error
+			questionNumber, err = GetQuestionNumber(&croppedMat, i)
 			// if we didnt find question number yet add answer to unknown questions
-			if questionNumber == -1 {
+			if err != nil {
+				fmt.Println(err.Error())
 				unknownQuestionsAnswers = append(unknownQuestionsAnswers, answer)
-			} else if questionNumber != -1 && unknownQuestionsAnswers != nil { // if we found question number and we have unknown questions answers assign them to question answers to student
+			} else if unknownQuestionsAnswers != nil { // if we found question number and we have unknown questions answers assign them to question answers to student
 				//TODO
 				fmt.Println("Unknown questions answers:", unknownQuestionsAnswers)
 			}
 
 		} else {
 			// TODO priradit odpoved k odpovediam studenta
+
+			questionNumber++
 		}
-		log.Println(questionNumber, " | ", answer)
-		questionNumber++
-		if questionNumber > numberOfQuestions {
+		fmt.Println(questionNumber, " | ", answer)
+
+		if questionNumber >= numberOfQuestions {
 			fmt.Println("All questions found")
 			break
 		}
@@ -75,22 +78,15 @@ func FindRectangle(mat *gocv.Mat, minAreaSize float64, maxAreaSize float64) imag
 	return image.Rectangle{image.Pt(0, 0), image.Pt(0, 0)}
 }
 
-func GetQuestionNumber(mat *gocv.Mat, i int) int {
+func GetQuestionNumber(mat *gocv.Mat, i int) (int, error) {
 	rect := image.Rectangle{Min: image.Point{PADDING, PADDING + (i * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE)}, Max: image.Point{(mat.Cols() / (NUMBER_OF_CHOICES + 1)) - PADDING, ((i + 1) * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE) - PADDING}}
 	questionMat := mat.Region(rect)
 	defer questionMat.Close()
 	//ShowMat(questionMat)
 	SaveMat(TEMP_IMAGE_PATH, questionMat)
-	dt := ocr.OcrImage(TEMP_IMAGE_PATH, ocr.PSM_SINGLE_LINE)
-	var num int
-	_, err := fmt.Sscan(dt, &num)
+	questionNum, err := ocr.ExtractQuestionNumber(TEMP_IMAGE_PATH)
 	files.DeleteFile(TEMP_IMAGE_PATH)
-	if err != nil {
-		fmt.Println("Conversion error:", err)
-		return -1
-	}
-	fmt.Println("Question number:", num)
-	return num
+	return questionNum, err
 }
 
 func GetAnswer(mat *gocv.Mat, i int) string {
