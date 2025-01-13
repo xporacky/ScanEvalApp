@@ -125,7 +125,7 @@ func GetStudentID(mat *gocv.Mat) (int, error) {
 	defer headerMat.Close()
 	SaveMat(TEMP_HEADER_IMAGE_PATH, headerMat)
 	id, err := ocr.ExtractID(TEMP_HEADER_IMAGE_PATH)
-	files.DeleteFile(TEMP_IMAGE_PATH)
+	files.DeleteFile(TEMP_HEADER_IMAGE_PATH)
 	if err != nil {
 		return 0, err
 	}
