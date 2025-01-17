@@ -11,9 +11,9 @@ func CreateStudent(db *gorm.DB, student *models.Student) error {
 	return result.Error
 }
 
-func GetStudent(db *gorm.DB, studentID uint, testID uint) (*models.Student, error) {
+func GetStudent(db *gorm.DB, registrationNumber uint, testID uint) (*models.Student, error) {
 	var student models.Student
-	result := db.Where("id = ? AND test_id = ?", studentID, testID).First(&student)
+	result := db.Where("registration_number = ? AND test_id = ?", registrationNumber, testID).First(&student)
 	if result.Error != nil {
 		return nil, result.Error
 	}
