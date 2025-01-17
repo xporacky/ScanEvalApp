@@ -5,7 +5,6 @@ import (
 	"ScanEvalApp/internal/database/seed"
 	"ScanEvalApp/internal/files"
 	"ScanEvalApp/internal/latex"
-	"ScanEvalApp/internal/scanprocessing"
 	"fmt"
 	"time"
 )
@@ -75,7 +74,8 @@ func main() {
 
 	fmt.Println("PDF úspešne vytvorený a uložený ako:", outputFilePath)
 	start := time.Now()
-	scanprocessing.ProcessPDF("assets/tmp/scan-pdfs", "assets/tmp/scan-images")
+	//test := repository.GetTest(db, 2)
+	//scanprocessing.ProcessPDF("assets/tmp/scan-pdfs", "assets/tmp/scan-images", test, db)
 	elapsed := time.Since(start)
 	fmt.Printf("Function took %s\n", elapsed)
 }

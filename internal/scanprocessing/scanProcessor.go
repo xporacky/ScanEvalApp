@@ -1,15 +1,18 @@
 package scanprocessing
 
 import (
+	"ScanEvalApp/internal/database/models"
+	"ScanEvalApp/internal/database/repository"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/gen2brain/go-fitz"
+	"gorm.io/gorm"
 )
 
 // Process PDF
-func ProcessPDF(scanPath string, outputPath string) {
+func ProcessPDF(scanPath string, outputPath string, test *models.Test, db *gorm.DB) {
 	var files []string
 
 	err := filepath.Walk(scanPath, func(path string, info os.FileInfo, err error) error {
@@ -30,12 +33,12 @@ func ProcessPDF(scanPath string, outputPath string) {
 
 		// Extract pages as images
 		for n := 0; n < doc.NumPage(); n++ {
-			ProcessPage(doc, n)
+			ProcessPage(doc, n, test, db)
 		}
 	}
 }
 
-func ProcessPage(doc *fitz.Document, n int) {
+func ProcessPage(doc *fitz.Document, n int, test *models.Test, db *gorm.DB) {
 	img, err := doc.Image(n)
 	if err != nil {
 		panic(err)
@@ -48,11 +51,23 @@ func ProcessPage(doc *fitz.Document, n int) {
 		fmt.Println(err.Error())
 		return
 	}
+	student, err := repository.GetStudent(db, uint(studentID), test.ID)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	fmt.Println("ID STUDENTA: ", studentID)
 	//path := filepath.Join("./"+outputPath+"/", fmt.Sprintf("%s-image-%05d.png", folder, n)) //na testovanie zatial takto
-	EvaluateAnswers(&mat, 50)
+	EvaluateAnswers(&mat, test.QuestionCount, student)
+	err = repository.UpdateStudent(db, student)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	println(student.Answers)
 	//SaveMat("", mat)
 	defer mat.Close()
-	//ShowMat(mat)
+	println(student.Answers)
+	ShowMat(mat)
 	//return
 }

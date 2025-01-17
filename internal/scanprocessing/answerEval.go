@@ -1,6 +1,7 @@
 package scanprocessing
 
 import (
+	"ScanEvalApp/internal/database/models"
 	"ScanEvalApp/internal/files"
 	"ScanEvalApp/internal/ocr"
 	"fmt"
@@ -10,8 +11,9 @@ import (
 )
 
 // Evaluate answers
-func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int) {
-	var unknownQuestionsAnswers []string
+func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int, student *models.Student) {
+	studentAnswers := []rune(student.Answers)
+	var unknownQuestionsAnswers []rune
 	croppedMat := CropMatAnswersOnly(mat)
 	questionNumber := 0
 	for i := 0; i < NUMBER_OF_QUESTIONS_PER_PAGE; i++ {
@@ -24,19 +26,19 @@ func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int) {
 			if err != nil {
 				fmt.Println(err.Error())
 				unknownQuestionsAnswers = append(unknownQuestionsAnswers, answer)
+				continue
 			} else if unknownQuestionsAnswers != nil { // if we found question number and we have unknown questions answers assign them to question answers to student
-				//TODO
+				fillUnknowQuestionsAnswers(questionNumber, &unknownQuestionsAnswers, &studentAnswers)
 				fmt.Println("Unknown questions answers:", unknownQuestionsAnswers)
 			}
-
-		} else {
-			// TODO priradit odpoved k odpovediam studenta
-
-			questionNumber++
 		}
-		fmt.Println(questionNumber, " | ", answer)
+		// TODO priradit odpoved k odpovediam studenta
+		studentAnswers[questionNumber-1] = answer
+		fmt.Println(questionNumber, " | ", string(answer))
 
-		if questionNumber >= numberOfQuestions {
+		questionNumber++
+
+		if questionNumber > numberOfQuestions {
 			fmt.Println("All questions found")
 			break
 		}
@@ -47,7 +49,9 @@ func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int) {
 	if questionNumber == -1 {
 		//TODO nejaky fail safe
 		fmt.Println("No question number found")
+		return
 	}
+	student.Answers = string(studentAnswers)
 }
 
 // Crop image to contain only answers
@@ -89,8 +93,8 @@ func GetQuestionNumber(mat *gocv.Mat, i int) (int, error) {
 	return questionNum, err
 }
 
-func GetAnswer(mat *gocv.Mat, i int) string {
-	answer := ""
+func GetAnswer(mat *gocv.Mat, i int) rune {
+	answer := rune('x')
 	state := StateEmpty
 	for j := 1; j <= NUMBER_OF_CHOICES; j++ {
 		padding := CHECKBOX_AREA_PADDING
@@ -102,9 +106,9 @@ func GetAnswer(mat *gocv.Mat, i int) string {
 		rect := FindRectangle(&checkboxMat, ANSWER_SQUARE_MIN_AREA_SIZE, ANSWER_SQUARE_MAX_AREA_SIZE)
 		if rect.Empty() {
 			if state == StateCircleFound {
-				return ""
+				return rune('x')
 			}
-			answer = string(rune('a' + (j - 1)))
+			answer = rune('a' + (j - 1))
 			state = StateCircleFound
 			continue
 		}
@@ -113,11 +117,11 @@ func GetAnswer(mat *gocv.Mat, i int) string {
 		meanIntensity := rectMat.Mean()
 		if meanIntensity.Val1 < MEAN_INTENSITY_X_HIGHEST && meanIntensity.Val1 > MEAN_INTENSITY_X_LOWEST {
 			if state == StateEmpty {
-				answer = string(rune('a' + (j - 1)))
+				answer = rune('a' + (j - 1))
 				state = StateXFound
 				continue
 			} else if state == StateXFound {
-				answer = ""
+				answer = rune('x')
 			}
 		}
 		//fmt.Println(meanIntensity.Val1)
@@ -125,4 +129,11 @@ func GetAnswer(mat *gocv.Mat, i int) string {
 		defer rectMat.Close()
 	}
 	return answer
+}
+
+func fillUnknowQuestionsAnswers(questionNumber int, unknownQuestionsAnswers *[]rune, studentAnswers *[]rune) {
+	for i, val := range *unknownQuestionsAnswers {
+		indexStudentAnswers := questionNumber - len(*unknownQuestionsAnswers) + i
+		(*studentAnswers)[indexStudentAnswers] = val
+	}
 }
