@@ -32,10 +32,8 @@ func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int, student *models.Stude
 				fmt.Println("Unknown questions answers:", unknownQuestionsAnswers)
 			}
 		}
-		// TODO priradit odpoved k odpovediam studenta
 		studentAnswers[questionNumber-1] = answer
 		fmt.Println(questionNumber, " | ", string(answer))
-
 		questionNumber++
 
 		if questionNumber > numberOfQuestions {
