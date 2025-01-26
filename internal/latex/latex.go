@@ -128,9 +128,9 @@ func ParallelGeneratePDFs(db *gorm.DB, templatePath, outputPDFPath string) error
 			data := TemplateData{
 				ID:        fmt.Sprintf("%d", student.ID),
 				Meno:      fmt.Sprintf("%s %s", student.Name, student.Surname),
-				Datum:     "25. 1. 2025",
+				Datum:     "25. 1. 2025", // TODO -> pri vytvarani testu tiez bude musiet admin zadat datum toho testu
 				Miestnost: student.Room,
-				Cas:       "10:30",
+				Cas:       "10:30", // TODO - beh treba dopocitat z noveho stlpca (Beh testu (budu asi 2 behy, a z kazdeho je vzdy jasny cas, napr 1.beh = 10:00))
 				Bloky:     test.QuestionCount,
 				QrCode:    fmt.Sprintf("%d", student.ID),
 			}
@@ -182,7 +182,7 @@ func ParallelGeneratePDFs(db *gorm.DB, templatePath, outputPDFPath string) error
 			// Zvýšenie počtu spracovaných PDF a výpis stavu
 			processedCount++
 			studentDuration := time.Since(studentStartTime)
-			fmt.Printf("(%d/%d) Generovanie PDF pre študenta %d dokončené za: %v\n", processedCount, totalStudents, student.ID, studentDuration)
+			fmt.Printf("(%d/%d) Generovanie PDF (Test: %s) s id študenta: %d, dokončené za: %v\n", processedCount, totalStudents, test.Title, student.ID, studentDuration)
 		}(student)
 	}
 
