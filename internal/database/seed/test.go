@@ -6,7 +6,7 @@ func TestGenerator(questionsCount int) *models.Test {
 	test := &models.Test{
 		Title:         "Matematický test",
 		SchoolYear:    "2024/2025",
-		QuestionCount: 3,
+		QuestionCount: 40,
 		Questions:     generateAnswers(questionsCount),
 		Students:      *StudentListGenerator(questionsCount),
 	}
