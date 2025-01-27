@@ -13,6 +13,7 @@ import (
 	"gorm.io/gorm"
 
 	"ScanEvalApp/internal/database/models"
+	"ScanEvalApp/internal/files"
 )
 
 // funkcia na kompilaciu LaTeX sablony do PDF
@@ -21,7 +22,7 @@ func CompileLatexToPDF(latexContent []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temporary LaTeX file: %v", err)
 	}
-	defer os.Remove(texFile.Name())
+	defer files.DeleteFile(texFile.Name())
 
 	if _, err = texFile.Write(latexContent); err != nil {
 		return nil, fmt.Errorf("error writing to .tex file: %v", err)
@@ -175,11 +176,13 @@ func ParallelGeneratePDFs(db *gorm.DB, templatePath, outputPDFPath string) error
 					return
 				}
 
-				// Odstranenie docasneho pdf studenta
-				if err := os.Remove(studentPDFPath); err != nil {
-					fmt.Printf("Error removing temporary PDF for student %d: %v\n", student.ID, err)
-					return
-				}
+				// Odstranenie docasneho pdf studenta s defer, ktore sa vykona vzdy na konci funkcie
+				defer func() {
+					if err := files.DeleteFile(studentPDFPath); err != nil {
+						fmt.Printf("Error removing temporary PDF for student %d: %v\n", student.ID, err)
+					}
+				}()
+
 			}
 
 			// Zvýšenie počtu spracovaných PDF a výpis stavu
