@@ -25,9 +25,9 @@ func StudentGenerator(questionsCount int) *models.Student {
 	return student
 }
 
-func StudentListGenerator(questionsCount int) *[]models.Student {
+func StudentListGenerator(questionsCount int, studentsCount int) *[]models.Student {
 	students := []models.Student{}
-	for i := 0; i < 50; i++ {
+	for i := 0; i < studentsCount; i++ {
 		students = append(students, *StudentGenerator(questionsCount))
 	}
 	return &students
