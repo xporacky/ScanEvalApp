@@ -3,10 +3,15 @@ package main
 import (
 	"ScanEvalApp/internal/database/migrations"
 	"ScanEvalApp/internal/database/seed"
+
+	//"ScanEvalApp/internal/files"
+	//"ScanEvalApp/internal/latex"
+	//"ScanEvalApp/internal/scanprocessing"
 	window "ScanEvalApp/internal/gui"
-	"fmt"
 
 	"gioui.org/app"
+
+	"fmt"
 	//"time"
 )
 
