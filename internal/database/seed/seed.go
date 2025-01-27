@@ -7,8 +7,8 @@ import (
 	"gorm.io/gorm"
 )
 
-func Seed(db *gorm.DB) {
-	test := TestGenerator(20)
+func Seed(db *gorm.DB, questionCount int) {
+	test := TestGenerator(questionCount)
 	if err := db.Create(test).Error; err != nil {
 		fmt.Printf("Could not seed test: %s\n", test.Title)
 	} else {
