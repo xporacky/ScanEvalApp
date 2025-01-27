@@ -22,7 +22,7 @@ func CheckIfDatabaseIsEmpty(db *gorm.DB) (bool, error) {
 }
 
 // pomocna funkcia, ktora robi seedovanie, pokial mame prazdnu databazu (kvoli testovaniu generovania pdf pre studentov)
-func testDatabase() {
+func testDatabase(questionsCount int) {
 	db, err := migrations.MigrateDB()
 	if err != nil {
 		panic("failed to connect to database")
@@ -35,7 +35,7 @@ func testDatabase() {
 	}
 
 	if isEmpty {
-		seed.Seed(db)
+		seed.Seed(db, questionsCount)
 		fmt.Println("Database was empty. Seeding complete.")
 	} else {
 		fmt.Println("Database is not empty. Skipping seeding.")
@@ -43,6 +43,8 @@ func testDatabase() {
 }
 
 func main() {
+	var questionsCount int = 40 // pocet otazok ktore pridelujeme do testu, na testovanie
+
 	// inicializacia a migracia db
 	db, err := migrations.MigrateDB()
 	if err != nil {
@@ -50,7 +52,7 @@ func main() {
 	}
 
 	// kontrola ci je prazdna databaza, kvoli seedovaniu
-	testDatabase()
+	testDatabase(questionsCount)
 
 	// Cesta k LaTeX sablone a cesta kam sa ma ulozit finalne pdf (pdf so studentami)
 	templatePath := "./assets/latex/main.tex"
