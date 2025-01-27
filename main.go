@@ -5,9 +5,9 @@ import (
 	"ScanEvalApp/internal/database/seed"
 	"ScanEvalApp/internal/files"
 	"ScanEvalApp/internal/latex"
-	//"ScanEvalApp/internal/files"
-	//"ScanEvalApp/internal/latex"
-	//"ScanEvalApp/internal/scanprocessing"
+	"ScanEvalApp/internal/files"
+	"ScanEvalApp/internal/latex"
+	"ScanEvalApp/internal/scanprocessing"
 	"ScanEvalApp/internal/gui"
 	"gioui.org/app"
 
