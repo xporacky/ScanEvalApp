@@ -17,7 +17,7 @@ import (
 
 // funkcia na kompilaciu LaTeX sablony do PDF
 func CompileLatexToPDF(latexContent []byte) ([]byte, error) {
-	texFile, err := os.CreateTemp("", "*.tex")
+	texFile, err := os.CreateTemp(TemporaryPDFPath, "*.tex")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temporary LaTeX file: %v", err)
 	}
@@ -28,7 +28,7 @@ func CompileLatexToPDF(latexContent []byte) ([]byte, error) {
 	}
 	texFile.Close()
 
-	outputDir, err := os.MkdirTemp("", "latex_output")
+	outputDir, err := os.MkdirTemp(TemporaryPDFPath, "latex_output")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temporary output directory: %v", err)
 	}
@@ -86,12 +86,6 @@ func ParallelGeneratePDFs(db *gorm.DB, templatePath, outputPDFPath string) error
 		return fmt.Errorf("error fetching students: %v", err)
 	}
 
-	mainPDFPath := filepath.Join(os.TempDir(), "main.pdf")
-	initialPDF := []byte("%PDF-1.4\n%âãÏÓ\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Count 1 /Kids [3 0 R] >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R >>\nendobj\n4 0 obj\n<< /Length 44 >>\nstream\n0 0 0 1 0 0 0 re\nf 0 0 0 1 0 0 0 Tm /F1 12 Tf 72 720 Td (Test) Tj\nendstream\nendobj\ntrailer\n<< /Root 1 0 R /Size 5 >>\n%%EOF")
-	if err := os.WriteFile(mainPDFPath, initialPDF, 0644); err != nil {
-		return fmt.Errorf("error creating initial PDF: %v", err)
-	}
-
 	// meranie celkoveho casu generovania a mergovania pdf
 	startTime := time.Now()
 
@@ -99,7 +93,10 @@ func ParallelGeneratePDFs(db *gorm.DB, templatePath, outputPDFPath string) error
 	var wg sync.WaitGroup
 	var pdfMergeMutex sync.Mutex
 	var processedCount int64
-	totalStudents := len(students)
+
+	// Premenná na udržanie cesty k hlavnému PDF
+	var mainPDFPath string
+	var mainPDFSet bool // označuje, či bolo už hlavné PDF nastavené
 
 	// paralelne generovanie pdf pre studentov
 	for _, student := range students {
@@ -150,54 +147,53 @@ func ParallelGeneratePDFs(db *gorm.DB, templatePath, outputPDFPath string) error
 			}
 
 			// ulozenie generovaneho/kompilovaneho pdf studenta do docasneho suboru
-			studentPDFPath := filepath.Join(os.TempDir(), fmt.Sprintf("student_%d.pdf", student.ID))
-			if err := os.WriteFile(studentPDFPath, studentPDF, 0644); err != nil {
+			studentPDFPath := filepath.Join(TemporaryPDFPath, fmt.Sprintf("student_%d.pdf", student.ID))
+			if err := os.WriteFile(studentPDFPath, studentPDF, FilePermission); err != nil {
 				fmt.Printf("Error saving PDF for student %d: %v\n", student.ID, err)
 				return
 			}
 
-			// zamok na zlucovanie pdf, aby sa predislo chybam pri zlucovani
 			pdfMergeMutex.Lock()
 			defer pdfMergeMutex.Unlock()
 
-			// zlucenie generovaneho pdf so zakladnym pdf
-			mergedPDFPath := filepath.Join(os.TempDir(), "merged.pdf")
-			if err := MergePDFs(mainPDFPath, studentPDFPath, mergedPDFPath); err != nil {
-				fmt.Printf("Error merging PDF for student %d: %v\n", student.ID, err)
-				return
-			}
+			// Ak ešte nie je nastavené hlavné PDF, použijeme toto ako hlavné
+			if !mainPDFSet {
+				mainPDFPath = studentPDFPath
+				mainPDFSet = true
+				fmt.Printf("Set initial main PDF for student %d\n", student.ID)
+			} else {
+				// zlucenie generovaneho pdf so zakladnym pdf
+				mergedPDFPath := filepath.Join(TemporaryPDFPath, "merged.pdf")
+				if err := MergePDFs(mainPDFPath, studentPDFPath, mergedPDFPath); err != nil {
+					fmt.Printf("Error merging PDF for student %d: %v\n", student.ID, err)
+					return
+				}
 
-			// nahradenie hlavneho pdf novym zlucenym pdf
-			if err := os.Rename(mergedPDFPath, mainPDFPath); err != nil {
-				fmt.Printf("Error updating main PDF for student %d: %v\n", student.ID, err)
-				return
-			}
+				// nahradenie hlavneho pdf novym zlucenym pdf
+				if err := os.Rename(mergedPDFPath, mainPDFPath); err != nil {
+					fmt.Printf("Error updating main PDF for student %d: %v\n", student.ID, err)
+					return
+				}
 
-			// Odstranenie docasneho pdf studenta
-			if err := os.Remove(studentPDFPath); err != nil {
-				fmt.Printf("Error removing temporary PDF for student %d: %v\n", student.ID, err)
-				return
+				// Odstranenie docasneho pdf studenta
+				if err := os.Remove(studentPDFPath); err != nil {
+					fmt.Printf("Error removing temporary PDF for student %d: %v\n", student.ID, err)
+					return
+				}
 			}
 
 			// Zvýšenie počtu spracovaných PDF a výpis stavu
 			processedCount++
 			studentDuration := time.Since(studentStartTime)
-			fmt.Printf("(%d/%d) Generovanie PDF (Test: %s) s id študenta: %d, dokončené za: %v\n", processedCount, totalStudents, test.Title, student.ID, studentDuration)
+			fmt.Printf("(%d/%d) Generovanie PDF (Test: %s) s id študenta: %d, dokončené za: %v\n", processedCount, len(students), test.Title, student.ID, studentDuration)
 		}(student)
 	}
 
 	// cakanie na vsetky goroutines
 	wg.Wait()
 
-	// odstranenie prvej stranky pdf (bez prazdnej vygenerovanej strany to robilo problemy pri mergovani)
-	finalPDFPath := filepath.Join(os.TempDir(), "final_output.pdf")
-	cmdRemoveFirstPage := exec.Command("pdftk", mainPDFPath, "cat", "2-end", "output", finalPDFPath)
-	if err := cmdRemoveFirstPage.Run(); err != nil {
-		return fmt.Errorf("error removing first page: %v", err)
-	}
-
-	// presun finalneho pdf na zadanu cestu
-	if err := os.Rename(finalPDFPath, outputPDFPath); err != nil {
+	// presun hlavného PDF na finálnu cestu
+	if err := os.Rename(mainPDFPath, outputPDFPath); err != nil {
 		return fmt.Errorf("error moving final PDF: %v", err)
 	}
 
