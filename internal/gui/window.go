@@ -9,10 +9,11 @@ import (
     "os"
     "ScanEvalApp/internal/gui/tabmanager"  // Import tabmanager balíka
     "ScanEvalApp/internal/gui/tabs"
+    "gorm.io/gorm"
     
 )
 
-func RunWindow() {
+func RunWindow(db *gorm.DB) {
     w := new(app.Window)
     w.Option(app.Title("ScanEvalApp"))
     var ops op.Ops
@@ -35,7 +36,7 @@ func RunWindow() {
                 layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
                     switch tm.ActiveTab {
                     case 0:
-                        return tabs.Exams(gtx, th)
+                        return tabs.Exams(gtx, th, db)
                     case 1:
                         return tabs.Students(gtx, th)
                     case 2:

@@ -24,7 +24,16 @@ func testDatabase() {
 	fmt.Println("Database setup and seeding complete.")
 }
 func main() {
-	go window.RunWindow() // Zavolanie funkcie na vytvorenie a správu okna
+	db, err := migrations.MigrateDB()
+	if err != nil {
+		panic("failed to connect to database")
+	}
+
+	//seed.Seed(db)
+
+	//fmt.Println("Database setup and seeding complete.")
+
+	go window.RunWindow(db) // Zavolanie funkcie na vytvorenie a správu okna
     app.Main()
 
 	/*
@@ -37,7 +46,7 @@ func main() {
 		return
 	}
 
-	//	db, err := migrations.MigrateDB()
+	//  db, err := migrations.MigrateDB()
 	//	if err != nil {
 	//		panic("failed to connect to database")
 	//	}
