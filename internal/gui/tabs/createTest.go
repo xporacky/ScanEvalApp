@@ -26,6 +26,8 @@ var (
 	showQuestions  bool
 )
 
+var questionList widget.List = widget.List{List: layout.List{Axis: layout.Vertical}}
+
 type questionForm struct {
 	selectedOption widget.Enum // Uchováva vybranú možnosť (A, B, C, D, E)
 }
@@ -82,19 +84,23 @@ func CreateTest(gtx layout.Context, th *material.Theme) layout.Dimensions {
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			if showQuestions {
-				return layout.Flex{
-					Axis: layout.Vertical,
-				}.Layout(gtx, renderQuestionForms(gtx, th)...) // Render questions.
-			}
-			return layout.Dimensions{}
-		}),
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			if showQuestions {
 				btn := material.Button(th, &submitButton, "Odoslať")
 				if submitButton.Clicked(gtx) {
 					submitForm()
 				}
 				return btn.Layout(gtx)
+			}
+			return layout.Dimensions{}
+		}),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			if showQuestions {
+				return material.List(th, &questionList).Layout(gtx, len(questionForms), func(gtx layout.Context, i int) layout.Dimensions {
+					qf := &questionForms[i]
+					return layout.Flex{
+						Axis:    layout.Horizontal,
+						Spacing: layout.SpaceAround,
+					}.Layout(gtx, renderOptions(gtx, th, i+1, qf)...)
+				})
 			}
 			return layout.Dimensions{}
 		}),
