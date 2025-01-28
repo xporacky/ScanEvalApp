@@ -27,7 +27,7 @@ var (
 )
 
 type questionForm struct {
-	options []widget.Bool
+	selectedOption widget.Enum // Uchováva vybranú možnosť (A, B, C, D, E)
 }
 
 // CreateTest renders the content for the "Vytvorenie Písomky" tab.
@@ -113,9 +113,7 @@ func parseNumber(input string) int {
 
 func updateQuestionForms(n int) {
 	for len(questionForms) < n {
-		questionForms = append(questionForms, questionForm{
-			options: make([]widget.Bool, 5), // A, B, C, D, E
-		})
+		questionForms = append(questionForms, questionForm{})
 	}
 	for len(questionForms) > n {
 		questionForms = questionForms[:len(questionForms)-1]
@@ -123,33 +121,37 @@ func updateQuestionForms(n int) {
 }
 func renderQuestionForms(gtx layout.Context, th *material.Theme) []layout.FlexChild {
 	children := make([]layout.FlexChild, len(questionForms))
-	for i, qf := range questionForms {
-		i, qf := i, qf
+	for i := range questionForms { // Prechádzame len indexy, aby sme pracovali priamo so slice-om
+		qf := &questionForms[i] // Uložíme si pointer na konkrétny prvok
 		children[i] = layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{
 				Axis:    layout.Horizontal,
 				Spacing: layout.SpaceAround,
-			}.Layout(gtx, renderOptions(gtx, th, i+1, qf.options)...) // Pass question number (i+1) to renderOptions
+			}.Layout(gtx, renderOptions(gtx, th, i+1, qf)...) // Odovzdávame pointer na správny prvok
 		})
-		
 	}
 	return children
 }
 
-func renderOptions(gtx layout.Context, th *material.Theme, questionIndex int, options []widget.Bool) []layout.FlexChild {
-	children := make([]layout.FlexChild, len(options)+1) // Add space for the question number
-	// Add the question number label
+
+
+func renderOptions(gtx layout.Context, th *material.Theme, questionIndex int, qf *questionForm) []layout.FlexChild {
+	options := []string{"A", "B", "C", "D", "E"}
+	children := make([]layout.FlexChild, len(options)+1) // Prvý prvok je číslo otázky
+
+	// Pridáme číslo otázky (napr. "01:")
 	children[0] = layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 		return material.Label(th, unit.Sp(15), fmt.Sprintf("%02d:", questionIndex)).Layout(gtx)
 	})
-	
-	// Render the options (A, B, C, D, E)
-	for i := range options {
-		i := i
+
+	// Vykreslíme rádio tlačidlá pre možnosti A–E
+	for i, option := range options {
+		i, option := i, option
 		children[i+1] = layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return material.CheckBox(th, &options[i], string(rune('A'+i))).Layout(gtx)
+			return material.RadioButton(th, &qf.selectedOption, option, option).Layout(gtx)
 		})
 	}
+
 	return children
 }
 
@@ -170,9 +172,9 @@ func submitForm() {
 	fmt.Println("Čas:", cas)
 	fmt.Println("Počet otázok:", pocetOtazok)
 		// Premenná pre uchovávanie zaškrtnutých možností
-	var selectedOptions string
+//	var selectedOptions string
 	// Prejdeme každú otázku a jej odpovede
-	for i, qf := range questionForms {
+/*	for i, qf := range questionForms {
 		fmt.Printf("otazka c. %d", i)
 		// Pre každú možnosť otázky (A, B, C, D, E) skontrolujeme, či je zaškrtnutá
 		for j, option := range qf.options {
@@ -197,5 +199,5 @@ func submitForm() {
 	}
 	
 
-
+*/
 }
