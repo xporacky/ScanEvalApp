@@ -8,7 +8,8 @@ import (
 	"gioui.org/widget/material"
 	"gorm.io/gorm"
 )
-
+	// Tlačidlo na tlač všetkých hárkov
+var printAllButton widget.Clickable
 // StudentsTab renders the "Students" tab with a table of students.
 func Students(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimensions {
 	students, err := repository.GetAllStudents(db)
@@ -20,8 +21,7 @@ func Students(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimens
 	columns := []string{"Meno", "Priezvisko", "Dátum narodenia", "Registračné číslo", "Miestnosť", "Skóre", "Tlačiť hárok"}
 	columnWidths := []float32{0.15, 0.15, 0.2, 0.2, 0.1, 0.1, 0.1} // Pomery šírok
 
-	// Tlačidlo na tlač všetkých hárkov
-	var printAllButton widget.Clickable
+
 
 	
 
