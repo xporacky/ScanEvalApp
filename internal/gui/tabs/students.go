@@ -13,6 +13,8 @@ import (
 var printAllButton widget.Clickable
 var printButtons []widget.Clickable
 var searchQuery widget.Editor
+// scrollovanie
+var studentList widget.List = widget.List{List: layout.List{Axis: layout.Vertical}}
 // StudentsTab renders the "Students" tab with a table of students.
 func Students(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimensions {
 	students, err := repository.GetAllStudents(db)
@@ -85,45 +87,37 @@ func Students(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimens
 			)
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			var rows []layout.FlexChild
-			for idx, student := range students {
-				// Check if button for current student is clicked
-				if printButtons[idx].Clicked(gtx) {
+			return material.List(th, &studentList).Layout(gtx, len(students), func(gtx layout.Context, i int) layout.Dimensions {
+				student := students[i]
+				if printButtons[i].Clicked(gtx) {
 					printSheet(student.RegistrationNumber)
 				}
-
-				// Adding student rows with button for printing sheet
-				rows = append(rows,
-					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
-							layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
-								return material.Body1(th, student.Name).Layout(gtx)
-							}),
-							layout.Flexed(columnWidths[1], func(gtx layout.Context) layout.Dimensions {
-								return material.Body1(th, student.Surname).Layout(gtx)
-							}),
-							layout.Flexed(columnWidths[2], func(gtx layout.Context) layout.Dimensions {
-								return material.Body1(th, student.BirthDate.Format("2006-01-02")).Layout(gtx)
-							}),
-							layout.Flexed(columnWidths[3], func(gtx layout.Context) layout.Dimensions {
-								return material.Body1(th, student.RegistrationNumber).Layout(gtx)
-							}),
-							layout.Flexed(columnWidths[4], func(gtx layout.Context) layout.Dimensions {
-								return material.Body1(th, student.Room).Layout(gtx)
-							}),
-							layout.Flexed(columnWidths[5], func(gtx layout.Context) layout.Dimensions {
-								return material.Body1(th, fmt.Sprintf("%d", student.Score)).Layout(gtx)
-							}),
-							layout.Flexed(columnWidths[6], func(gtx layout.Context) layout.Dimensions {
-								// Button to print student sheet
-								btn := material.Button(th, &printButtons[idx], "Tlačiť hárok")
-								return btn.Layout(gtx)
-							}),
-						)
+		
+				return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
+					layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
+						return material.Body1(th, student.Name).Layout(gtx)
+					}),
+					layout.Flexed(columnWidths[1], func(gtx layout.Context) layout.Dimensions {
+						return material.Body1(th, student.Surname).Layout(gtx)
+					}),
+					layout.Flexed(columnWidths[2], func(gtx layout.Context) layout.Dimensions {
+						return material.Body1(th, student.BirthDate.Format("2006-01-02")).Layout(gtx)
+					}),
+					layout.Flexed(columnWidths[3], func(gtx layout.Context) layout.Dimensions {
+						return material.Body1(th, student.RegistrationNumber).Layout(gtx)
+					}),
+					layout.Flexed(columnWidths[4], func(gtx layout.Context) layout.Dimensions {
+						return material.Body1(th, student.Room).Layout(gtx)
+					}),
+					layout.Flexed(columnWidths[5], func(gtx layout.Context) layout.Dimensions {
+						return material.Body1(th, fmt.Sprintf("%d", student.Score)).Layout(gtx)
+					}),
+					layout.Flexed(columnWidths[6], func(gtx layout.Context) layout.Dimensions {
+						btn := material.Button(th, &printButtons[i], "Tlačiť hárok")
+						return btn.Layout(gtx)
 					}),
 				)
-			}
-			return layout.Flex{Axis: layout.Vertical}.Layout(gtx, rows...)
+			})
 		}),
 	)
 }
