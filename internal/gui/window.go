@@ -38,7 +38,7 @@ func RunWindow(db *gorm.DB) {
                     case 0:
                         return tabs.Exams(gtx, th, db)
                     case 1:
-                        return tabs.Students(gtx, th)
+                        return tabs.Students(gtx, th, db)
                     case 2:
                         return tabs.CreateTest(gtx, th)
                     case 3:
