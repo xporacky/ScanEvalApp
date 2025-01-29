@@ -12,6 +12,9 @@ import (
 )
 var deleteButtons []widget.Clickable
 var showAnsButtons []widget.Clickable
+// scrollovanie
+var examList widget.List = widget.List{List: layout.List{Axis: layout.Vertical}}
+
 // Exams renders the "Exams" tab with dynamically generated columns based on data from the database.
 func Exams(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimensions {
     tests, err := repository.GetAllTests(db)
@@ -56,48 +59,42 @@ func Exams(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimension
             )
         }),
         layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-            var rows []layout.FlexChild
-            for idx, test := range tests {
-                if deleteButtons[idx].Clicked(gtx) {
-					deleteTest(test.ID)
-				}
-                if showAnsButtons[idx].Clicked(gtx) {
-					showAnsTest(test.ID)
-				}
-                rows = append(rows,
-                    layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-                        return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
-                            layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
-                                return material.Body1(th, test.Title).Layout(gtx)
-                            }),
-                            layout.Flexed(columnWidths[1], func(gtx layout.Context) layout.Dimensions {
-                                return material.Body1(th, test.SchoolYear).Layout(gtx)
-                            }),
-                            layout.Flexed(columnWidths[2], func(gtx layout.Context) layout.Dimensions {
-                                return material.Body1(th, fmt.Sprintf("%d", test.QuestionCount)).Layout(gtx)
-                            }),
-                            layout.Flexed(columnWidths[3], func(gtx layout.Context) layout.Dimensions {
-                                return material.Body1(th, fmt.Sprintf("%d", len(test.Students))).Layout(gtx)
-                            }),
-                            layout.Flexed(columnWidths[4], func(gtx layout.Context) layout.Dimensions {
-                                return material.Body1(th, test.Room).Layout(gtx)
-                            }),
-                            layout.Flexed(columnWidths[5], func(gtx layout.Context) layout.Dimensions {
-								// Button to print student sheet
-								btn := material.Button(th, &showAnsButtons[idx], "Zobraziť")
-								return btn.Layout(gtx)
-							}),
-                            layout.Flexed(columnWidths[6], func(gtx layout.Context) layout.Dimensions {
-								// Button to print student sheet
-								btn := material.Button(th, &deleteButtons[idx], "Vymazať")
-								return btn.Layout(gtx)
-							}),
-                        )
+            return material.List(th, &examList).Layout(gtx, len(tests), func(gtx layout.Context, i int) layout.Dimensions {
+                test := tests[i]
+                if deleteButtons[i].Clicked(gtx) {
+                    deleteTest(test.ID)
+                }
+                if showAnsButtons[i].Clicked(gtx) {
+                    showAnsTest(test.ID)
+                }
+        
+                return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
+                    layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
+                        return material.Body1(th, test.Title).Layout(gtx)
+                    }),
+                    layout.Flexed(columnWidths[1], func(gtx layout.Context) layout.Dimensions {
+                        return material.Body1(th, test.SchoolYear).Layout(gtx)
+                    }),
+                    layout.Flexed(columnWidths[2], func(gtx layout.Context) layout.Dimensions {
+                        return material.Body1(th, fmt.Sprintf("%d", test.QuestionCount)).Layout(gtx)
+                    }),
+                    layout.Flexed(columnWidths[3], func(gtx layout.Context) layout.Dimensions {
+                        return material.Body1(th, fmt.Sprintf("%d", len(test.Students))).Layout(gtx)
+                    }),
+                    layout.Flexed(columnWidths[4], func(gtx layout.Context) layout.Dimensions {
+                        return material.Body1(th, test.Room).Layout(gtx)
+                    }),
+                    layout.Flexed(columnWidths[5], func(gtx layout.Context) layout.Dimensions {
+                        btn := material.Button(th, &showAnsButtons[i], "Zobraziť")
+                        return btn.Layout(gtx)
+                    }),
+                    layout.Flexed(columnWidths[6], func(gtx layout.Context) layout.Dimensions {
+                        btn := material.Button(th, &deleteButtons[i], "Vymazať")
+                        return btn.Layout(gtx)
                     }),
                 )
-            }
-            return layout.Flex{Axis: layout.Vertical}.Layout(gtx, rows...)
-        }),
+            })
+        }),        
     )
 }
 
