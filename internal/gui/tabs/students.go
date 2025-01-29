@@ -10,6 +10,7 @@ import (
 )
 	// Tlačidlo na tlač všetkých hárkov
 var printAllButton widget.Clickable
+var printButtons []widget.Clickable
 // StudentsTab renders the "Students" tab with a table of students.
 func Students(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimensions {
 	students, err := repository.GetAllStudents(db)
@@ -20,7 +21,9 @@ func Students(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimens
 
 	columns := []string{"Meno", "Priezvisko", "Dátum narodenia", "Registračné číslo", "Miestnosť", "Skóre", "Tlačiť hárok"}
 	columnWidths := []float32{0.15, 0.15, 0.2, 0.2, 0.1, 0.1, 0.1} // Pomery šírok
-
+	if len(printButtons) != len(students) {
+		printButtons = make([]widget.Clickable, len(students))
+	}
 
 
 	
@@ -60,12 +63,13 @@ func Students(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimens
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			var rows []layout.FlexChild
-			for _, student := range students {
-				/*printButton := new(widget.Clickable)
+			for idx, student := range students {
+				// Check if button for current student is clicked
+				if printButtons[idx].Clicked(gtx) {
+					printSheet(student.RegistrationNumber)
+				}
 
-				if printButton.Clicked(gtx) {
-					printSheet(student.ID)
-				}*/
+				// Adding student rows with button for printing sheet
 				rows = append(rows,
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 						return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
@@ -88,7 +92,9 @@ func Students(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimens
 								return material.Body1(th, fmt.Sprintf("%d", student.Score)).Layout(gtx)
 							}),
 							layout.Flexed(columnWidths[6], func(gtx layout.Context) layout.Dimensions {
-								return material.Body1(th, fmt.Sprintf("Tlacit harok")).Layout(gtx)
+								// Button to print student sheet
+								btn := material.Button(th, &printButtons[idx], "Tlačiť hárok")
+								return btn.Layout(gtx)
 							}),
 						)
 					}),
@@ -104,6 +110,6 @@ func printAllSheets() {
 	fmt.Println("Volám tlač všetky hárky")
 }
 
-func printSheet(studentID uint) {
-	fmt.Printf("Volám tlač hárku pre študenta ID: %d\n", studentID)
+func printSheet(registrationNumber string) {
+	fmt.Printf("Volám tlač hárku pre študenta ID: %s\n", registrationNumber)
 }
