@@ -7,10 +7,12 @@ import (
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"gorm.io/gorm"
+	"reflect"
 )
 	// Tlačidlo na tlač všetkých hárkov
 var printAllButton widget.Clickable
 var printButtons []widget.Clickable
+var searchQuery widget.Editor
 // StudentsTab renders the "Students" tab with a table of students.
 func Students(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimensions {
 	students, err := repository.GetAllStudents(db)
@@ -18,7 +20,24 @@ func Students(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimens
 		fmt.Println("Chyba pri načítaní študentov:", err)
 		return layout.Dimensions{}
 	}
+	// Filtrovanie študentov na základe textu v searchQuery
+	query := searchQuery.Text()
 
+	fmt.Println("Typ premennej x:", reflect.TypeOf(query))
+	// Ak je query nenulové, filtrujeme podľa mena, priezviska a registračného čísla
+	if query != "" {
+		students, err = repository.GetStudentsQuery(db, query)
+		if err != nil {
+			fmt.Println("Chyba pri načítaní študentov:", err)
+			return layout.Dimensions{}
+		}
+	} else {
+		students, err = repository.GetAllStudents(db)
+		if err != nil {
+			fmt.Println("Chyba pri načítaní študentov:", err)
+			return layout.Dimensions{}
+		}
+	}
 	columns := []string{"Meno", "Priezvisko", "Dátum narodenia", "Registračné číslo", "Miestnosť", "Skóre", "Tlačiť hárok"}
 	columnWidths := []float32{0.15, 0.15, 0.2, 0.2, 0.1, 0.1, 0.1} // Pomery šírok
 	if len(printButtons) != len(students) {
@@ -29,6 +48,10 @@ func Students(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimens
 	
 
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			editor := material.Editor(th, &searchQuery, "Vyhľadávanie (Meno, Priezvisko, Registračné číslo)")
+			return editor.Layout(gtx)
+		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			btn := material.Button(th, &printAllButton, "Tlačiť všetky hárky")
 			if printAllButton.Clicked(gtx) {
