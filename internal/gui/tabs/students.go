@@ -7,7 +7,7 @@ import (
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"gorm.io/gorm"
-	"reflect"
+	//"reflect"
 )
 	// Tlačidlo na tlač všetkých hárkov
 var printAllButton widget.Clickable

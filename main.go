@@ -8,10 +8,9 @@ import (
 	//"ScanEvalApp/internal/latex"
 	//"ScanEvalApp/internal/scanprocessing"
 	"ScanEvalApp/internal/gui"
-	"fmt"
-	"time"
-
 	"gioui.org/app"
+	"fmt"
+	//"time"
 
 	"gorm.io/gorm"
 )
@@ -57,7 +56,7 @@ func main() {
 	if err != nil {
 		panic("failed to connect to database")
 	}
-
+	
 	// kontrola ci je prazdna databaza, kvoli seedovaniu
 	testDatabase(questionsCount, studentsCount)
 
@@ -65,15 +64,20 @@ func main() {
 	templatePath := "./assets/latex/main.tex"
 	outputPDFPath := "./assets/tmp/final.pdf"
 
-	// Generovanie PDF pre vsetkych studentov
-	if err := latex.ParallelGeneratePDFs(db, templatePath, outputPDFPath); err != nil {
-		fmt.Println("Chyba pri generovaní PDF:", err)
-		return
-	}
+		// Generovanie PDF pre vsetkych studentov
+		if err := latex.ParallelGeneratePDFs(db, templatePath, outputPDFPath); err != nil {
+			fmt.Println("Chyba pri generovaní PDF:", err)
+			return
+		}
 
 	start := time.Now()
 	//test := repository.GetTest(db, 2)
 	//scanprocessing.ProcessPDF("assets/tmp/scan-pdfs", "assets/tmp/scan-images", test, db)
 	elapsed := time.Since(start)
 	fmt.Printf("Function took %s\n", elapsed)
+	*/
+
+
+	go window.RunWindow(db) // Zavolanie funkcie na vytvorenie a správu okna
+    app.Main()
 }
