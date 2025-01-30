@@ -3,22 +3,15 @@ package main
 import (
 	"ScanEvalApp/internal/database/migrations"
 	"ScanEvalApp/internal/database/seed"
-<<<<<<< HEAD
 	//"ScanEvalApp/internal/files"
 	//"ScanEvalApp/internal/latex"
 	//"ScanEvalApp/internal/scanprocessing"
 	"ScanEvalApp/internal/gui"
 	"gioui.org/app"
-
-	"fmt"
-	//"time"
-=======
-	"ScanEvalApp/internal/latex"
 	"fmt"
 	"time"
 
 	"gorm.io/gorm"
->>>>>>> origin/main
 )
 
 // Kontrola ci je databaza prazdna
