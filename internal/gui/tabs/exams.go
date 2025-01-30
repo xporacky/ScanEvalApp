@@ -23,7 +23,7 @@ func Exams(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimension
         return layout.Dimensions{}
     }
 
-    columns := []string{"Názov", "Rok", "Počet otázok", "Počet študentov", "Miestnosť", "Ukázať odpovede", "Vymazať"}
+    columns := []string{"Názov", "Rok", "Počet otázok", "Počet študentov", "Dátum", "Ukázať odpovede", "Vymazať"}
     columnWidths := []float32{0.2, 0.15, 0.15, 0.15, 0.15, 0.1, 0.1} // Pomery šírok
     if len(deleteButtons) != len(tests) {
 		deleteButtons = make([]widget.Clickable, len(tests))
@@ -82,7 +82,7 @@ func Exams(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimension
                         return material.Body1(th, fmt.Sprintf("%d", len(test.Students))).Layout(gtx)
                     }),
                     layout.Flexed(columnWidths[4], func(gtx layout.Context) layout.Dimensions {
-                        return material.Body1(th, test.Room).Layout(gtx)
+                        return material.Body1(th, fmt.Sprintf("datum")).Layout(gtx)
                     }),
                     layout.Flexed(columnWidths[5], func(gtx layout.Context) layout.Dimensions {
                         btn := material.Button(th, &showAnsButtons[i], "Zobraziť")

@@ -10,6 +10,4 @@ type Test struct {
 	QuestionCount int       `gorm:"not null"`
 	Questions     string    // Použitie mapy s typom char
 	Students      []Student `gorm:"foreignKey:TestID"` // Zoznam študentov
-	Date          string    `gorm:"not null"`     // Dátum testu
-	Room          string    `gorm:"not null"` 
 }
