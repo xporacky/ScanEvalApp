@@ -3,9 +3,15 @@ package main
 import (
 	"ScanEvalApp/internal/database/migrations"
 	"ScanEvalApp/internal/database/seed"
-	"ScanEvalApp/internal/latex"
+
+	//"ScanEvalApp/internal/files"
+	//"ScanEvalApp/internal/latex"
+	//"ScanEvalApp/internal/scanprocessing"
+	"ScanEvalApp/internal/gui"
 	"fmt"
 	"time"
+
+	"gioui.org/app"
 
 	"gorm.io/gorm"
 )
