@@ -3,9 +3,13 @@ package main
 import (
 	"ScanEvalApp/internal/database/migrations"
 	"ScanEvalApp/internal/database/seed"
-	"ScanEvalApp/internal/latex"
+	//"ScanEvalApp/internal/files"
+	//"ScanEvalApp/internal/latex"
+	//"ScanEvalApp/internal/scanprocessing"
+	"ScanEvalApp/internal/gui"
+	"gioui.org/app"
 	"fmt"
-	"time"
+	//"time"
 
 	"gorm.io/gorm"
 )
@@ -43,6 +47,7 @@ func testDatabase(questionsCount int, studentsCount int) {
 }
 
 func main() {
+	
 	var questionsCount int = 40 // pocet otazok ktore pridelujeme do testu, na testovanie
 	var studentsCount int = 50
 
@@ -51,10 +56,10 @@ func main() {
 	if err != nil {
 		panic("failed to connect to database")
 	}
-
+	
 	// kontrola ci je prazdna databaza, kvoli seedovaniu
 	testDatabase(questionsCount, studentsCount)
-
+/*
 	// Cesta k LaTeX sablone a cesta kam sa ma ulozit finalne pdf (pdf so studentami)
 	templatePath := "./assets/latex/main.tex"
 	outputPDFPath := "./assets/tmp/final.pdf"
@@ -70,4 +75,9 @@ func main() {
 	//scanprocessing.ProcessPDF("assets/tmp/scan-pdfs", "assets/tmp/scan-images", test, db)
 	elapsed := time.Since(start)
 	fmt.Printf("Function took %s\n", elapsed)
+	*/
+
+
+	go window.RunWindow(db) // Zavolanie funkcie na vytvorenie a správu okna
+    app.Main()
 }

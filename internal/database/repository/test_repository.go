@@ -2,7 +2,7 @@ package repository
 
 import (
 	"ScanEvalApp/internal/database/models"
-
+	"fmt"
 	"gorm.io/gorm"
 )
 
@@ -34,4 +34,9 @@ func UpdateTest(db *gorm.DB, test *models.Test) error {
 func DeleteTest(db *gorm.DB, id uint) error {
 	result := db.Delete(&models.Test{}, id)
 	return result.Error
+}
+
+func ShowAnswers(test *models.Test) {
+	fmt.Println("Zobrazenie odpovedí na test: ")
+	// Neskôr tu pridáme logiku na zobrazenie odpovedí.
 }
