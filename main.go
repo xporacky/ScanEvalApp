@@ -3,6 +3,7 @@ package main
 import (
 	"ScanEvalApp/internal/database/migrations"
 	"ScanEvalApp/internal/database/seed"
+<<<<<<< HEAD
 	//"ScanEvalApp/internal/files"
 	//"ScanEvalApp/internal/latex"
 	//"ScanEvalApp/internal/scanprocessing"
@@ -11,89 +12,78 @@ import (
 
 	"fmt"
 	//"time"
+=======
+	"ScanEvalApp/internal/latex"
+	"fmt"
+	"time"
+
+	"gorm.io/gorm"
+>>>>>>> origin/main
 )
 
-func testDatabase() {
-	db, err := migrations.MigrateDB()
+// Kontrola ci je databaza prazdna
+func CheckIfDatabaseIsEmpty(db *gorm.DB) (bool, error) {
+	var count int64
+
+	err := db.Table("students").Count(&count).Error
 	if err != nil {
-		panic("failed to connect to database")
+		return false, err
 	}
-
-	seed.Seed(db)
-
-	fmt.Println("Database setup and seeding complete.")
+	return count == 0, nil
 }
-func main() {
+
+// pomocna funkcia, ktora robi seedovanie, pokial mame prazdnu databazu (kvoli testovaniu generovania pdf pre studentov)
+func testDatabase(questionsCount int, studentsCount int) {
 	db, err := migrations.MigrateDB()
 	if err != nil {
 		panic("failed to connect to database")
 	}
 
-	//seed.Seed(db)
-
-	//fmt.Println("Database setup and seeding complete.")
-
-	go window.RunWindow(db) // Zavolanie funkcie na vytvorenie a správu okna
-    app.Main()
-
-	/*
-	// Načítanie LaTeX súboru a jeho otvorenie
-
-	latexFilePath := "./assets/latex/main.tex"
-	latexContent, err := files.OpenFile(latexFilePath)
+	isEmpty, err := CheckIfDatabaseIsEmpty(db)
 	if err != nil {
-		fmt.Println("Error while opening LaTeX file:", err)
+		fmt.Println("Error while checking database:", err)
 		return
 	}
 
-	//  db, err := migrations.MigrateDB()
-	//	if err != nil {
-	//		panic("failed to connect to database")
-	//	}
+	if isEmpty {
+		seed.Seed(db, questionsCount, studentsCount)
+		fmt.Println("Database was empty. Seeding complete.")
+	} else {
+		fmt.Println("Database is not empty. Skipping seeding.")
+	}
+}
 
-	//	seed.Seed(db)
+func main() {
+	var questionsCount int = 40 // pocet otazok ktore pridelujeme do testu, na testovanie
+	var studentsCount int = 50
 
-	//	fmt.Println("Database setup and seeding complete.")
-
-	// LaTeX generation pdf test
-	// Hodnoty na nahradenie kvôli testovaniu funkcionality
-	data := latex.TemplateData{
-		ID:        "120345",
-		Meno:      "Jožko Alexander Mrkvička",
-		Datum:     "15. 11. 2024",
-		Miestnost: "CD300",
-		Cas:       "10:30",
-		Bloky:     50,
-		QrCode:    "www.google.com",
+	// inicializacia a migracia db
+	db, err := migrations.MigrateDB()
+	if err != nil {
+		panic("failed to connect to database")
 	}
 
-	// Nahradenie placeholderov
-	updatedLatex, err := latex.ReplaceTemplatePlaceholders(latexContent, data)
-	if err != nil {
-		fmt.Println("Error replacing placeholders:", err)
+	// kontrola ci je prazdna databaza, kvoli seedovaniu
+	testDatabase(questionsCount, studentsCount)
+
+	// Cesta k LaTeX sablone a cesta kam sa ma ulozit finalne pdf (pdf so studentami)
+	templatePath := "./assets/latex/main.tex"
+	outputPDFPath := "./assets/tmp/final.pdf"
+
+	// Generovanie PDF pre vsetkych studentov
+	if err := latex.ParallelGeneratePDFs(db, templatePath, outputPDFPath); err != nil {
+		fmt.Println("Chyba pri generovaní PDF:", err)
 		return
 	}
 
-	// Kompilácia upraveného LaTeX na PDF
-	pdfBytes, err := latex.CompileLatexToPDF(updatedLatex)
-	if err != nil {
-		fmt.Println("Error:", err)
-		return
-	}
-
-	// Uloženie výsledného PDF
-	outputFilePath := "./assets/tmp/output.pdf"
-	err = files.SaveFile(outputFilePath, pdfBytes)
-	if err != nil {
-		fmt.Println("Chyba pri ukladaní PDF súboru:", err)
-		return
-	}
-
-	fmt.Println("PDF úspešne vytvorený a uložený ako:", outputFilePath)
 	start := time.Now()
 	//test := repository.GetTest(db, 2)
 	//scanprocessing.ProcessPDF("assets/tmp/scan-pdfs", "assets/tmp/scan-images", test, db)
 	elapsed := time.Since(start)
 	fmt.Printf("Function took %s\n", elapsed)
-	*/
+	
+
+
+	go window.RunWindow(db) // Zavolanie funkcie na vytvorenie a správu okna
+    app.Main()
 }

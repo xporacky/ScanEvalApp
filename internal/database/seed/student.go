@@ -8,8 +8,8 @@ import (
 )
 
 func StudentGenerator(questionsCount int) *models.Student {
-	firstnames := []string{"Ján", "František", "Jozef", "Martin", "Monika", "Nikola", "Ema", "Vanesa"}
-	surnames := []string{"Novák", "Kováč", "Horvát", "Štúr", "Nagy", "Varga"}
+	firstnames := []string{"Ján", "František", "Jozef", "Martin", "Monika", "Nikola", "Ema", "Vanesa", "Timotej", "Matúš", "Roman Alexander", "Radoslav", "Ondrej"}
+	surnames := []string{"Novák", "Kováč", "Horvát", "Štúr", "Nagy", "Varga", "Kolesár", "Mrkvička", "Kokavec", "Matejovec", "Šeliga"}
 	rooms := []string{"AB300", "BC300", "CD300", "DE300", "AB150"}
 
 	student := &models.Student{
@@ -25,9 +25,9 @@ func StudentGenerator(questionsCount int) *models.Student {
 	return student
 }
 
-func StudentListGenerator(questionsCount int) *[]models.Student {
+func StudentListGenerator(questionsCount int, studentsCount int) *[]models.Student {
 	students := []models.Student{}
-	for i := 0; i < 5; i++ {
+	for i := 0; i < studentsCount; i++ {
 		students = append(students, *StudentGenerator(questionsCount))
 	}
 	return &students
