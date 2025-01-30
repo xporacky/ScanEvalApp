@@ -25,7 +25,6 @@ func Students(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimens
 	// Filtrovanie študentov na základe textu v searchQuery
 	query := searchQuery.Text()
 
-	fmt.Println("Typ premennej x:", reflect.TypeOf(query))
 	// Ak je query nenulové, filtrujeme podľa mena, priezviska a registračného čísla
 	if query != "" {
 		students, err = repository.GetStudentsQuery(db, query)
