@@ -8,10 +8,13 @@ import (
 	//"ScanEvalApp/internal/scanprocessing"
 	"ScanEvalApp/internal/gui"
 	"gioui.org/app"
-	"fmt"
+	//"fmt"
 	//"time"
 
 	"gorm.io/gorm"
+	"os"
+	"log"
+	"log/slog"
 )
 
 // Kontrola ci je databaza prazdna
@@ -20,43 +23,79 @@ func CheckIfDatabaseIsEmpty(db *gorm.DB) (bool, error) {
 
 	err := db.Table("students").Count(&count).Error
 	if err != nil {
+		errorLogger.Error("Chyba pri kontrole databázy", slog.String("error", err.Error()))
 		return false, err
+	}
+	if count == 0 {
+		logger.Warn("Databáza je prázdna.")
+	} else {
+		logger.Info("Databáza obsahuje záznamy.", slog.Int64("count", count))
 	}
 	return count == 0, nil
 }
 
 // pomocna funkcia, ktora robi seedovanie, pokial mame prazdnu databazu (kvoli testovaniu generovania pdf pre studentov)
 func testDatabase(questionsCount int, studentsCount int) {
+	logger.Debug("Inicializujem databázu na testovanie.")
+
 	db, err := migrations.MigrateDB()
 	if err != nil {
+		errorLogger.Error("Nepodarilo sa pripojiť k databáze", slog.Group("CRITICAL", slog.String("error", err.Error()))) // Použi Error namiesto Critical
 		panic("failed to connect to database")
 	}
 
 	isEmpty, err := CheckIfDatabaseIsEmpty(db)
 	if err != nil {
-		fmt.Println("Error while checking database:", err)
+		errorLogger.Error("Chyba pri kontrole prázdnosti databázy", slog.String("error", err.Error()))
 		return
 	}
 
 	if isEmpty {
+		logger.Info("Databáza je prázdna, spúšťam seedovanie.")
 		seed.Seed(db, questionsCount, studentsCount)
-		fmt.Println("Database was empty. Seeding complete.")
+		logger.Info("Seedovanie dokončené.")
 	} else {
-		fmt.Println("Database is not empty. Skipping seeding.")
+		logger.Info("Databáza nie je prázdna, seedovanie preskočené.")
 	}
 }
 
+var logger *slog.Logger
+var errorLogger *slog.Logger
+
+func InitLogger() {
+	logFile, err := os.OpenFile("logs/app.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("CRITICAL: Nepodarilo sa otvoriť app.log: %v", err)
+	}
+	errorFile, err := os.OpenFile("logs/error.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("CRITICAL: Nepodarilo sa otvoriť error.log: %v", err)
+	}
+
+	// inicializacia
+	logger = slog.New(slog.NewTextHandler(logFile, nil))
+	errorLogger = slog.New(slog.NewTextHandler(errorFile, nil))
+}
+
 func main() {
+	InitLogger()
+	logger.	Info("---------------------------------------------------")
+	errorLogger.Info("---------------------------------------------------")
+
+	logger.Info("Aplikácia spustená")
 	
 	var questionsCount int = 40 // pocet otazok ktore pridelujeme do testu, na testovanie
 	var studentsCount int = 50
 
 	// inicializacia a migracia db
+	logger.Info("Spúšťam migráciu databázy.")
 	db, err := migrations.MigrateDB()
 	if err != nil {
+		errorLogger.Error("Nepodarilo sa pripojiť k databáze", slog.Group("CRITICAL", slog.String("error", err.Error()))) // Použi Error namiesto Critical
 		panic("failed to connect to database")
 	}
-	
+	logger.Info("Migrácia databázy dokončená.")
+
 	// kontrola ci je prazdna databaza, kvoli seedovaniu
 	testDatabase(questionsCount, studentsCount)
 /*
@@ -77,7 +116,7 @@ func main() {
 	fmt.Printf("Function took %s\n", elapsed)
 	*/
 
-
+	logger.Info("Spúšťam GUI.")
 	go window.RunWindow(db) // Zavolanie funkcie na vytvorenie a správu okna
     app.Main()
 }
