@@ -16,6 +16,7 @@ import (
 	"os"
 	"log"
 	"log/slog"
+	"path/filepath"
 )
 
 // Kontrola ci je databaza prazdna
@@ -64,11 +65,22 @@ var logger *slog.Logger
 var errorLogger *slog.Logger
 
 func InitLogger() {
-	logFile, err := os.OpenFile("logs/app.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	logsDir := "logs"
+
+	// Vytvorenie priečinka, ak neexistuje
+	err := os.MkdirAll(logsDir, os.ModePerm)
+	if err != nil {
+		log.Fatalf("CRITICAL: Nepodarilo sa vytvoriť priečinok logs: %v", err)
+	}
+
+	// Otvorenie app.log
+	logFile, err := os.OpenFile(filepath.Join(logsDir, "app.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatalf("CRITICAL: Nepodarilo sa otvoriť app.log: %v", err)
 	}
-	errorFile, err := os.OpenFile("logs/error.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+
+	// Otvorenie error.log
+	errorFile, err := os.OpenFile(filepath.Join(logsDir, "error.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatalf("CRITICAL: Nepodarilo sa otvoriť error.log: %v", err)
 	}
