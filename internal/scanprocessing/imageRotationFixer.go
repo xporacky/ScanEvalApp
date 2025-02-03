@@ -5,10 +5,13 @@ import (
 	"math"
 
 	"gocv.io/x/gocv"
+	"ScanEvalApp/internal/logging"
 )
 
 // Finds border rectangle of asnwer sheet
 func FindBorderRotatedRectangle(mat gocv.Mat) gocv.RotatedRect {
+	logger := logging.GetLogger()
+
 	contours := FindContours(mat)
 	// Find rectangle
 	for i := 0; i < contours.Size(); i++ {
@@ -20,6 +23,7 @@ func FindBorderRotatedRectangle(mat gocv.Mat) gocv.RotatedRect {
 			return rect
 		}
 	}
+	logger.Warn("Ohraničujúci obdĺžnik nebol nájdený")
 	return gocv.RotatedRect{}
 }
 
