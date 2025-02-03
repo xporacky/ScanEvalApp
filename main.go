@@ -72,7 +72,7 @@ func main() {
 	errorLogger := logging.GetErrorLogger()
 
 	logger.	Info("---------------------------------------------------")
-	errorLogger.Info("---------------------------------------------------")
+	errorLogger.Error("---------------------------------------------------")
 
 	logger.Info("Aplikácia spustená")
 	
