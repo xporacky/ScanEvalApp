@@ -10,10 +10,12 @@ import (
     "ScanEvalApp/internal/gui/tabmanager"  // Import tabmanager balíka
     "ScanEvalApp/internal/gui/tabs"
     "gorm.io/gorm"
-    
+    "ScanEvalApp/internal/logging"
 )
 
 func RunWindow(db *gorm.DB) {
+    logger := logging.GetLogger()
+
     w := new(app.Window)
     w.Option(app.Title("ScanEvalApp"))
     var ops op.Ops
@@ -51,6 +53,7 @@ func RunWindow(db *gorm.DB) {
             typ.Frame(gtx.Ops)
 
         case app.DestroyEvent:
+            logger.Info("Zatvorenie aplikácie.")
             os.Exit(0)
         }
     }

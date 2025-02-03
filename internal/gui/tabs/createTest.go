@@ -13,6 +13,8 @@ import (
 	"gioui.org/unit"
 	"fmt"
 	"strconv"
+	"ScanEvalApp/internal/logging"
+	"log/slog"
 )
 
 var (
@@ -34,7 +36,10 @@ type questionForm struct {
 
 // CreateTest renders the content for the "Vytvorenie Písomky" tab.
 func CreateTest(gtx layout.Context, th *material.Theme) layout.Dimensions {
+	logger := logging.GetLogger()
+
 	if createButton.Clicked(gtx) {
+		logger.Info("Kliknutie na tlačidlo Vytvoriť test")
 		if questionsInput.Text() != "" {
 			n := parseNumber(questionsInput.Text())
 			if n > 0 {
@@ -86,6 +91,7 @@ func CreateTest(gtx layout.Context, th *material.Theme) layout.Dimensions {
 			if showQuestions {
 				btn := material.Button(th, &submitButton, "Odoslať")
 				if submitButton.Clicked(gtx) {
+					logger.Info("Kliknutie na tlačidlo Odoslať")
 					submitForm()
 				}
 				return btn.Layout(gtx)
@@ -108,11 +114,14 @@ func CreateTest(gtx layout.Context, th *material.Theme) layout.Dimensions {
 }
 
 func parseNumber(input string) int {
+	logger := logging.GetLogger()
+	errorLogger := logging.GetErrorLogger()
+
 	num, err := strconv.Atoi(input)
 	if err != nil {
-		fmt.Println("Chyba pri parsovaní:", err)
+		errorLogger.Error("Chyba pri parsovaní počtu otázok", slog.String("error", err.Error()))
 	} else {
-		fmt.Println("Preparsované číslo pocet otazok:", num)
+		logger.Debug("Preparsované číslo pocet otazok:", slog.Int("count", num))
 	}
 	return num
 }
@@ -125,6 +134,7 @@ func updateQuestionForms(n int) {
 		questionForms = questionForms[:len(questionForms)-1]
 	}
 }
+
 func renderQuestionForms(gtx layout.Context, th *material.Theme) []layout.FlexChild {
 	children := make([]layout.FlexChild, len(questionForms))
 	for i := range questionForms { // Prechádzame len indexy, aby sme pracovali priamo so slice-om
@@ -162,21 +172,25 @@ func renderOptions(gtx layout.Context, th *material.Theme, questionIndex int, qf
 }
 
 func submitForm() {
+	logger := logging.GetLogger()
+	errorLogger := logging.GetErrorLogger()
+
 	// Načítame údaje zo všetkých inputov
 	nazov := nameInput.Text()
 	miestnost := roomInput.Text()
 	cas := timeInput.Text()
 	pocetOtazok, err := strconv.Atoi(questionsInput.Text())
 	if err != nil {
-		fmt.Println("Chyba pri parsovaní počtu otázok:", err)
+		errorLogger.Error("Chyba pri parsovaní počtu otázok", slog.Group("CRITICAL", slog.String("error", err.Error())))
 		return
 	}
 
 	// Vytvoríme si výsledný výpis
-	fmt.Println("Názov:", nazov)
-	fmt.Println("Miestnosť:", miestnost)
-	fmt.Println("Čas:", cas)
-	fmt.Println("Počet otázok:", pocetOtazok)
+	logger.Info("Formulár odoslaný", 
+		slog.String("nazov", nazov), 
+		slog.String("miestnost", miestnost), 
+		slog.String("cas", cas), 
+		slog.Int("pocetOtazok", pocetOtazok))
 		// Premenná pre uchovávanie zaškrtnutých možností
 //	var selectedOptions string
 	// Prejdeme každú otázku a jej odpovede
