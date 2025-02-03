@@ -3,36 +3,50 @@ package files
 import (
 	"fmt"
 	"os"
+	"ScanEvalApp/internal/logging"
+	"log/slog"
 )
 
 // OpenFile load file from specified path
 func OpenFile(filePath string) ([]byte, error) {
+	errorLogger := logging.GetErrorLogger()
+
 	data, err := os.ReadFile(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("chyba pri otváraní súboru: %v", err)
+		errorLogger.Error("Chyba pri otváraní súboru", slog.Group("CRITICAL", slog.String("error", err.Error())))
+		return nil
 	}
 	return data, nil
 }
 
 // SaveFile saves []byte data to specified path
 func SaveFile(filePath string, data []byte) error {
+	logger := logging.GetLogger()
+	errorLogger := logging.GetErrorLogger()
+
 	err := os.WriteFile(filePath, data, 0644)
 	if err != nil {
-		return fmt.Errorf("chyba pri ukladaní súboru: %v", err)
+		errorLogger.Error("Chyba pri ukladaní súboru", slog.Group("CRITICAL", slog.String("error", err.Error())))
+		return nil
 	}
+	logger.Info("Súbor uložený", slog.String("file_path", filePath))
 	return nil
 }
 
 // DeleteFile deletes file from specified path
 func DeleteFile(filePath string) error {
+	logger := logging.GetLogger()
+	errorLogger := logging.GetErrorLogger()
+
 	if _, err := os.Stat(filePath); err == nil {
 		// File exists, attempt to remove it
 		err = os.Remove(filePath)
 		if err != nil {
-			fmt.Println("Error while deleting file:", err)
-			return err
+			errorLogger.Error("Chyba pri načítaní študentov", slog.Group("CRITICAL", slog.String("error", err.Error())))
 		}
-		fmt.Println("Successfully deleted file:", filePath)
+		logger.Info("Súbor úspešne vymazaný")
+	} else if os.IsNotExist(err) {
+		errorLogger.Error("Súbor neexistuje", slog.Group("CRITICAL", slog.String("error", err.Error())))
 	}
 	return nil
 }
