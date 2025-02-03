@@ -8,7 +8,8 @@ import (
 	"gorm.io/gorm"
 	"gioui.org/widget"
 	//"gioui.org/unit"
-
+	"ScanEvalApp/internal/logging"
+	"log/slog"
 )
 var deleteButtons []widget.Clickable
 var showAnsButtons []widget.Clickable
@@ -17,9 +18,12 @@ var examList widget.List = widget.List{List: layout.List{Axis: layout.Vertical}}
 
 // Exams renders the "Exams" tab with dynamically generated columns based on data from the database.
 func Exams(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimensions {
+    //logger := logging.GetLogger()
+	errorLogger := logging.GetErrorLogger()
+
     tests, err := repository.GetAllTests(db)
     if err != nil {
-        fmt.Println("Chyba pri načítaní testov:", err)
+        errorLogger.Error("Chyba pri načítaní testov", slog.String("error", err.Error()))
         return layout.Dimensions{}
     }
 
@@ -100,9 +104,13 @@ func Exams(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimension
 
 
 func deleteTest(Id uint) {
-	fmt.Printf("delete testu s ID: %d\n", Id)
+    logger := logging.GetLogger()
+
+    logger.Info("Vymazanie testu s ID", slog.Uint64("ID", uint64(Id)))
 }
 
 func showAnsTest(Id uint) {
-	fmt.Printf("show answer testu s ID: %d\n", Id)
+    logger := logging.GetLogger()
+
+    logger.Info("Ukázanie opovedí testu s ID", slog.Uint64("ID", uint64(Id)))
 }

@@ -8,6 +8,8 @@ import (
 	"gioui.org/widget/material"
 	"gorm.io/gorm"
 	//"reflect"
+	"ScanEvalApp/internal/logging"
+	"log/slog"
 )
 	// Tlačidlo na tlač všetkých hárkov
 var printAllButton widget.Clickable
@@ -17,9 +19,12 @@ var searchQuery widget.Editor
 var studentList widget.List = widget.List{List: layout.List{Axis: layout.Vertical}}
 // StudentsTab renders the "Students" tab with a table of students.
 func Students(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimensions {
+	logger := logging.GetLogger()
+	errorLogger := logging.GetErrorLogger()
+
 	students, err := repository.GetAllStudents(db)
 	if err != nil {
-		fmt.Println("Chyba pri načítaní študentov:", err)
+		errorLogger.Error("Chyba pri načítaní študentov", slog.String("error", err.Error()))
 		return layout.Dimensions{}
 	}
 	// Filtrovanie študentov na základe textu v searchQuery
@@ -29,13 +34,13 @@ func Students(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimens
 	if query != "" {
 		students, err = repository.GetStudentsQuery(db, query)
 		if err != nil {
-			fmt.Println("Chyba pri načítaní študentov:", err)
+			errorLogger.Error("Chyba pri načítaní študentov", slog.String("error", err.Error()))
 			return layout.Dimensions{}
 		}
 	} else {
 		students, err = repository.GetAllStudents(db)
 		if err != nil {
-			fmt.Println("Chyba pri načítaní študentov:", err)
+			errorLogger.Error("Chyba pri načítaní študentov", slog.String("error", err.Error()))
 			return layout.Dimensions{}
 		}
 	}
@@ -56,6 +61,7 @@ func Students(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimens
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			btn := material.Button(th, &printAllButton, "Tlačiť všetky hárky")
 			if printAllButton.Clicked(gtx) {
+				logger.Info("Kliknutie na tlačidlo Tlačiť všetky hárky")
 				printAllSheets()
 			}
 			return btn.Layout(gtx)
@@ -123,9 +129,13 @@ func Students(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimens
 
 
 func printAllSheets() {
-	fmt.Println("Volám tlač všetky hárky")
+	logger := logging.GetLogger()
+
+	logger.Info("Volám tlač všetky hárky")
 }
 
 func printSheet(registrationNumber string) {
-	fmt.Printf("Volám tlač hárku pre študenta ID: %s\n", registrationNumber)
+	logger := logging.GetLogger()
+
+	logger.Info("Volám tlač hárku pre študenta ID", slog.String("ID", registrationNumber))
 }
