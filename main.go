@@ -8,19 +8,20 @@ import (
 	//"ScanEvalApp/internal/latex"
 	//"ScanEvalApp/internal/scanprocessing"
 	"ScanEvalApp/internal/gui"
+	"ScanEvalApp/internal/logging"
 	"gioui.org/app"
 	//"fmt"
 	//"time"
 
 	"gorm.io/gorm"
-	"os"
-	"log"
 	"log/slog"
-	"path/filepath"
 )
 
 // Kontrola ci je databaza prazdna
 func CheckIfDatabaseIsEmpty(db *gorm.DB) (bool, error) {
+	logger := logging.GetLogger()
+	errorLogger := logging.GetErrorLogger()
+	
 	var count int64
 
 	err := db.Table("students").Count(&count).Error
@@ -38,6 +39,9 @@ func CheckIfDatabaseIsEmpty(db *gorm.DB) (bool, error) {
 
 // pomocna funkcia, ktora robi seedovanie, pokial mame prazdnu databazu (kvoli testovaniu generovania pdf pre studentov)
 func testDatabase(questionsCount int, studentsCount int) {
+	logger := logging.GetLogger()
+	errorLogger := logging.GetErrorLogger()
+
 	logger.Debug("Inicializujem databázu na testovanie.")
 
 	db, err := migrations.MigrateDB()
@@ -61,37 +65,12 @@ func testDatabase(questionsCount int, studentsCount int) {
 	}
 }
 
-var logger *slog.Logger
-var errorLogger *slog.Logger
-
-func InitLogger() {
-	logsDir := "logs"
-
-	// Vytvorenie priečinka, ak neexistuje
-	err := os.MkdirAll(logsDir, os.ModePerm)
-	if err != nil {
-		log.Fatalf("CRITICAL: Nepodarilo sa vytvoriť priečinok logs: %v", err)
-	}
-
-	// Otvorenie app.log
-	logFile, err := os.OpenFile(filepath.Join(logsDir, "app.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	if err != nil {
-		log.Fatalf("CRITICAL: Nepodarilo sa otvoriť app.log: %v", err)
-	}
-
-	// Otvorenie error.log
-	errorFile, err := os.OpenFile(filepath.Join(logsDir, "error.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	if err != nil {
-		log.Fatalf("CRITICAL: Nepodarilo sa otvoriť error.log: %v", err)
-	}
-
-	// inicializacia
-	logger = slog.New(slog.NewTextHandler(logFile, nil))
-	errorLogger = slog.New(slog.NewTextHandler(errorFile, nil))
-}
 
 func main() {
-	InitLogger()
+	logging.InitLogger()
+	logger := logging.GetLogger()
+	errorLogger := logging.GetErrorLogger()
+
 	logger.	Info("---------------------------------------------------")
 	errorLogger.Info("---------------------------------------------------")
 
