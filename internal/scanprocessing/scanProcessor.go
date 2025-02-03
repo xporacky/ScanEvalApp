@@ -9,10 +9,14 @@ import (
 
 	"github.com/gen2brain/go-fitz"
 	"gorm.io/gorm"
+	"ScanEvalApp/internal/logging"
+	"log/slog"
 )
 
 // Process PDF
 func ProcessPDF(scanPath string, outputPath string, test *models.Test, db *gorm.DB) {
+	errorLogger := logging.GetErrorLogger()
+	
 	var files []string
 
 	err := filepath.Walk(scanPath, func(path string, info os.FileInfo, err error) error {
@@ -22,11 +26,13 @@ func ProcessPDF(scanPath string, outputPath string, test *models.Test, db *gorm.
 		return nil
 	})
 	if err != nil {
+		errorLogger.Error("Chyba pri prechádzaní adresára", slog.String("error", err.Error()))
 		panic(err)
 	}
 	for _, file := range files {
 		doc, err := fitz.New(file)
 		if err != nil {
+			logging.Error("Chyba pri načítaní PDF súboru", slog.String("file", file), slog.String("error", err.Error()))
 			panic(err)
 		}
 		//folder := strings.TrimSuffix(path.Base(file), filepath.Ext(path.Base(file)))
@@ -39,8 +45,11 @@ func ProcessPDF(scanPath string, outputPath string, test *models.Test, db *gorm.
 }
 
 func ProcessPage(doc *fitz.Document, n int, test *models.Test, db *gorm.DB) {
+	errorLogger := logging.GetErrorLogger()
+	
 	img, err := doc.Image(n)
 	if err != nil {
+		errorLogger.Error("Chyba pri extrahovaní obrázka z PDF stránky", slog.Int("page", n), slog.String("error", err.Error()))
 		panic(err)
 	}
 	mat := ImageToMat(img)
@@ -48,26 +57,26 @@ func ProcessPage(doc *fitz.Document, n int, test *models.Test, db *gorm.DB) {
 	mat = FixImageRotation(mat)
 	studentID, err := GetStudentID(&mat)
 	if err != nil {
-		fmt.Println(err.Error())
+		errorLogger.Error("Chyba pri získavaní ID študenta", slog.String("error", err.Error()))
 		return
 	}
 	student, err := repository.GetStudent(db, uint(studentID), test.ID)
 	if err != nil {
-		fmt.Println(err.Error())
+		errorLogger.Error("Chyba pri získavaní ID študenta z databázy", slog.String("studentID", studentID), slog.String("error", err.Error()))
 		return
 	}
-	fmt.Println("ID STUDENTA: ", studentID)
+	logger.Info("Našiel sa študent v databáze", slog.String("studentID", student.ID), slog.String("name", student.Name))
 	//path := filepath.Join("./"+outputPath+"/", fmt.Sprintf("%s-image-%05d.png", folder, n)) //na testovanie zatial takto
 	EvaluateAnswers(&mat, test.QuestionCount, student)
 	err = repository.UpdateStudent(db, student)
 	if err != nil {
-		fmt.Println(err.Error())
+		errorLogger.Error("Chyba pri aktualizácii študenta v databáze", slog.String("studentID", student.ID), slog.String("error", err.Error()))
 		return
 	}
-	println(student.Answers)
+	logger.Info("Aktualizované odpovede študenta", slog.String("studentID", studentID), slog.String("answers", student.Answers))
 	//SaveMat("", mat)
 	defer mat.Close()
-	println(student.Answers)
+	//println(student.Answers)
 	ShowMat(mat)
 	//return
 }

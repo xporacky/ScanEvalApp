@@ -8,10 +8,15 @@ import (
 	"image"
 
 	"gocv.io/x/gocv"
+	"ScanEvalApp/internal/logging"
+	"log/slog"
 )
 
 // Evaluate answers
 func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int, student *models.Student) {
+	logger := logging.GetLogger()
+	errorLogger := logging.GetErrorLogger()
+
 	studentAnswers := []rune(student.Answers)
 	var unknownQuestionsAnswers []rune
 	croppedMat := CropMatAnswersOnly(mat)
@@ -24,12 +29,12 @@ func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int, student *models.Stude
 			questionNumber, err = GetQuestionNumber(&croppedMat, i)
 			// if we didnt find question number yet add answer to unknown questions
 			if err != nil {
-				fmt.Println(err.Error())
+                errorLogger.Error("Chyba pri hľadaní čísla otázky", slog.Int("questionIndex", i), slog.String("error", err.Error()))
 				unknownQuestionsAnswers = append(unknownQuestionsAnswers, answer)
 				continue
 			} else if unknownQuestionsAnswers != nil { // if we found question number and we have unknown questions answers assign them to question answers to student
 				fillUnknowQuestionsAnswers(questionNumber, &unknownQuestionsAnswers, &studentAnswers)
-				fmt.Println("Unknown questions answers:", unknownQuestionsAnswers)
+				logger.Debug("Pridané odpovede k neznámym otázkam", slog.String("unknownAnswers", unknownQuestionsAnswers))
 			}
 		}
 		studentAnswers[questionNumber-1] = answer
@@ -37,7 +42,7 @@ func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int, student *models.Stude
 		questionNumber++
 
 		if questionNumber > numberOfQuestions {
-			fmt.Println("All questions found")
+			logger.Info("Všetky otázky boli nájdené")
 			break
 		}
 
@@ -46,7 +51,7 @@ func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int, student *models.Stude
 	// if we didnt find question number in whole page
 	if questionNumber == -1 {
 		//TODO nejaky fail safe
-		fmt.Println("No question number found")
+		errorLogger.Error("Neboli nájdené žiadne čísla otázok", "error", "No question number found")
 		return
 	}
 	student.Answers = string(studentAnswers)
@@ -77,10 +82,13 @@ func FindRectangle(mat *gocv.Mat, minAreaSize float64, maxAreaSize float64) imag
 			return rect
 		}
 	}
+    logger.Warn("Nezistený obvod v matici", "error", "No valid rectangle found")
 	return image.Rectangle{image.Pt(0, 0), image.Pt(0, 0)}
 }
 
 func GetQuestionNumber(mat *gocv.Mat, i int) (int, error) {
+	errorLogger := logging.GetErrorLogger()
+
 	rect := image.Rectangle{Min: image.Point{PADDING, PADDING + (i * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE)}, Max: image.Point{(mat.Cols() / (NUMBER_OF_CHOICES + 1)) - PADDING, ((i + 1) * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE) - PADDING}}
 	questionMat := mat.Region(rect)
 	defer questionMat.Close()
@@ -88,6 +96,11 @@ func GetQuestionNumber(mat *gocv.Mat, i int) (int, error) {
 	SaveMat(TEMP_IMAGE_PATH, questionMat)
 	questionNum, err := ocr.ExtractQuestionNumber(TEMP_IMAGE_PATH)
 	files.DeleteFile(TEMP_IMAGE_PATH)
+
+	if err != nil {
+        logging.ErrorLogger.Error("Chyba pri extrakcii čísla otázky", slog.Int("questionIndex", i), slog.String("error", err.Error()))
+    }
+
 	return questionNum, err
 }
 

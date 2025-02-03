@@ -8,6 +8,8 @@ import (
 	"image/color"
 
 	"gocv.io/x/gocv"
+	"ScanEvalApp/internal/logging"
+	"log/slog"
 )
 
 func FindContours(mat gocv.Mat) gocv.PointsVector {
@@ -24,12 +26,15 @@ func FindContours(mat gocv.Mat) gocv.PointsVector {
 
 	// Find contours
 	contours := gocv.FindContours(canny, gocv.RetrievalExternal, gocv.ChainApproxNone)
+	//logger.Info("Nájdené kontúry", slog.Int("count", contours.Size()))
 	//fmt.Println("Found", contours.Size(), "contours")
 	return contours
 }
 
 // Converts image to gocv.Mat
 func ImageToMat(imgRGBA *image.RGBA) gocv.Mat {
+	errorLogger := logging.GetErrorLogger()
+
 	bounds := imgRGBA.Bounds()
 	x := bounds.Dx()
 	y := bounds.Dy()
@@ -45,6 +50,7 @@ func ImageToMat(imgRGBA *image.RGBA) gocv.Mat {
 
 	mat, err := gocv.NewMatFromBytes(y, x, gocv.MatTypeCV8UC3, bytes)
 	if err != nil {
+		errorLogger.Error("Chyba pri konverzii obrázka na Mat", slog.String("error", err.Error()))
 		panic(err)
 	}
 	return mat
@@ -68,15 +74,23 @@ func MatToGrayscale(mat gocv.Mat) gocv.Mat {
 
 // Save image in gocv.Mat to png file
 func SaveMat(path string, mat gocv.Mat) {
+	logger := logging.GetLogger()
+	errorLogger := logging.GetErrorLogger()
+
 	if path == "" {
 		path = TEMP_IMAGE_PATH
 	}
 	err := files.DeleteFile(path)
 	if err != nil {
+		errorLogger.Error("Chyba pri odstraňovaní existujúceho súboru", slog.String("path", path), slog.String("error", err.Error()))
 		panic(err)
 	}
-	gocv.IMWrite(path, mat)
-	fmt.Println("Succesfully saved file: ", path)
+	err = gocv.IMWrite(path, mat)
+	if err != nil {
+		errorLogger.Error("Chyba pri ukladaní obrázka", slog.String("path", path), slog.String("error", err.Error()))
+	} else {
+		logger.Info("Úspešne uložený obrázok", slog.String("path", path))
+	}
 }
 
 func ReadQR(mat *gocv.Mat) string {
@@ -111,15 +125,21 @@ func DrawCountours(mat *gocv.Mat, contours gocv.PointsVector) {
 }
 
 func GetStudentID(mat *gocv.Mat) (int, error) {
+	logger := logging.GetLogger()
+	errorLogger := logging.GetErrorLogger()
+
 	qrText := ReadQR(mat)
 	if qrText != "" {
 		var id int
 		_, err := fmt.Sscan(qrText, &id)
 		if err != nil {
-			return 0, fmt.Errorf("failed to convert ID to integer: %v", err)
+			errorLogger.Error("Chyba pri konverzii QR textu na ID", slog.String("qrText", qrText), slog.String("error", err.Error()))
+			return 0
 		}
 		return id, nil
 	}
+	logger.Warn("QR kód nebol nájdený, pokúšame sa získať ID zo záhlavia")
+
 	rect := image.Rectangle{Min: image.Point{PADDING, PADDING}, Max: image.Point{mat.Cols() - PADDING, (mat.Rows() / 4) - PADDING}}
 	headerMat := mat.Region(rect)
 	defer headerMat.Close()
@@ -127,7 +147,8 @@ func GetStudentID(mat *gocv.Mat) (int, error) {
 	id, err := ocr.ExtractID(TEMP_HEADER_IMAGE_PATH)
 	files.DeleteFile(TEMP_HEADER_IMAGE_PATH)
 	if err != nil {
-		return 0, err
+		errorLogger.Error("Chyba pri extrakcii ID zo záhlavia obrázku", slog.String("error", err.Error()))
+		return 0
 	}
 	return id, nil
 }
