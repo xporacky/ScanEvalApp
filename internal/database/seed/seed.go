@@ -1,18 +1,22 @@
 package seed
 
 import (
-	"fmt"
 	"math/rand"
 
 	"gorm.io/gorm"
+	"ScanEvalApp/internal/logging"
+	"log/slog"
 )
 
 func Seed(db *gorm.DB, questionCount int, studentsCount int) {
+	logger := logging.GetLogger()
+	errorLogger := logging.GetErrorLogger()
+
 	test := TestGenerator(questionCount, studentsCount)
 	if err := db.Create(test).Error; err != nil {
-		fmt.Printf("Could not seed test: %s\n", test.Title)
+		errorLogger.Error("Could not seed test", slog.Group("CRITICAL", slog.String("test", test.Title)))
 	} else {
-		fmt.Printf("Seeded test: %s\n", test.Title)
+		logger.Info("Seeded test", slog.String("test", test.Title))
 	}
 }
 

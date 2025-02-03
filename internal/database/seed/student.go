@@ -5,6 +5,8 @@ import (
 	"math/rand"
 	"strconv"
 	"time"
+	"ScanEvalApp/internal/logging"
+	"log/slog"
 )
 
 func StudentGenerator(questionsCount int) *models.Student {
@@ -26,6 +28,9 @@ func StudentGenerator(questionsCount int) *models.Student {
 }
 
 func StudentListGenerator(questionsCount int, studentsCount int) *[]models.Student {
+	logger := logging.GetLogger()
+	
+	logger.Info("Generovanie študentov...", slog.Int("count", studentsCount))
 	students := []models.Student{}
 	for i := 0; i < studentsCount; i++ {
 		students = append(students, *StudentGenerator(questionsCount))
