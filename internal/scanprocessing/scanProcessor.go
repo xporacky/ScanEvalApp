@@ -77,6 +77,6 @@ func ProcessPage(doc *fitz.Document, n int, test *models.Test, db *gorm.DB) {
 	//SaveMat("", mat)
 	defer mat.Close()
 	//println(student.Answers)
-	ShowMat(mat)
+	//ShowMat(mat)
 	//return
 }

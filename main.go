@@ -93,23 +93,33 @@ func main() {
 	// kontrola ci je prazdna databaza, kvoli seedovaniu
 	testDatabase(questionsCount, studentsCount)
 	/*
-		// Cesta k LaTeX sablone a cesta kam sa ma ulozit finalne pdf (pdf so studentami)
-		templatePath := "./assets/latex/main.tex"
-		outputPDFPath := "./assets/tmp/final.pdf"
+			// Cesta k LaTeX sablone a cesta kam sa ma ulozit finalne pdf (pdf so studentami)
+			templatePath := "./assets/latex/main.tex"
+			outputPDFPath := "./assets/tmp/final.pdf"
 
-		// Generovanie PDF pre vsetkych studentov
-		if err := latex.ParallelGeneratePDFs(db, templatePath, outputPDFPath); err != nil {
-			fmt.Println("Chyba pri generovaní PDF:", err)
+			// Generovanie PDF pre vsetkych studentov
+			if err := latex.ParallelGeneratePDFs(db, templatePath, outputPDFPath); err != nil {
+				fmt.Println("Chyba pri generovaní PDF:", err)
+				return
+			}
+
+		students, err := repository.GetAllStudents(db)
+		if err != nil {
 			return
 		}
-
+		for _, student := range students {
+			student.Answers = seed.GenerateAnswers(40)
+			repository.UpdateStudent(db, &student)
+		}
 		start := time.Now()
-		//test := repository.GetTest(db, 2)
-		//scanprocessing.ProcessPDF("assets/tmp/scan-pdfs", "assets/tmp/scan-images", test, db)
+		test, err := repository.GetTest(db, 1)
+		if err != nil {
+			return
+		}
+		scanprocessing.ProcessPDF("assets/tmp/scan-pdfs", "assets/tmp/scan-images", test, db)
 		elapsed := time.Since(start)
 		fmt.Printf("Function took %s\n", elapsed)
 	*/
-
 	logger.Info("Spúšťam GUI.")
 	go window.RunWindow(db) // Zavolanie funkcie na vytvorenie a správu okna
 	app.Main()

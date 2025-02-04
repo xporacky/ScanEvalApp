@@ -41,11 +41,10 @@ func DeleteFile(filePath string) error {
 		// File exists, attempt to remove it
 		err = os.Remove(filePath)
 		if err != nil {
-			errorLogger.Error("Chyba pri načítaní študentov", slog.Group("CRITICAL", slog.String("error", err.Error())))
+			errorLogger.Error("Chyba pri mazaní súboru", slog.Group("CRITICAL", slog.String("error", err.Error())))
+			return err
 		}
 		logger.Info("Súbor úspešne vymazaný")
-	} else if os.IsNotExist(err) {
-		errorLogger.Error("Súbor neexistuje", slog.Group("CRITICAL", slog.String("error", err.Error())))
 	}
 	return nil
 }

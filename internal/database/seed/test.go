@@ -8,14 +8,14 @@ import (
 
 func TestGenerator(questionsCount int, studentsCount int) *models.Test {
 	logger := logging.GetLogger()
-	
+
 	logger.Debug("Generovanie testu", slog.Int("questions count", questionsCount), slog.Int("students count", studentsCount))
 
 	test := &models.Test{
 		Title:         "Matematický test",
 		SchoolYear:    "2024/2025",
 		QuestionCount: questionsCount,
-		Questions:     generateAnswers(questionsCount),
+		Questions:     GenerateAnswers(questionsCount),
 		Students:      *StudentListGenerator(questionsCount, studentsCount),
 	}
 	logger.Debug("Test úspešne vygenerovaný.")
