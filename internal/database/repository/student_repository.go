@@ -5,12 +5,13 @@ import (
 
 	"gorm.io/gorm"
 	//"fmt"
-	"golang.org/x/text/transform"
-	"golang.org/x/text/unicode/norm"
-	"strings"
-	"unicode"
 	"ScanEvalApp/internal/logging"
 	"log/slog"
+	"strings"
+	"unicode"
+
+	"golang.org/x/text/transform"
+	"golang.org/x/text/unicode/norm"
 )
 
 func CreateStudent(db *gorm.DB, student *models.Student) error {
@@ -20,7 +21,7 @@ func CreateStudent(db *gorm.DB, student *models.Student) error {
 	logger.Debug("Vytváranie študenta", slog.String("name", student.Name), slog.String("surname", student.Surname), slog.String("registration number", student.RegistrationNumber))
 	result := db.Create(student)
 	if result.Error != nil {
-		errorLogger.Error("Chyba pri vytváraní študenta", slog.Group("CRITICAL", slog.Group("CRITICAL", result.Error)))
+		errorLogger.Error("Chyba pri vytváraní študenta", slog.Group("CRITICAL", slog.String("error", result.Error.Error())))
 	}
 	return result.Error
 }
@@ -32,9 +33,9 @@ func GetStudent(db *gorm.DB, registrationNumber uint, testID uint) (*models.Stud
 	logger.Debug("Hľadanie študenta", slog.Uint64("registration number", uint64(registrationNumber)), slog.Uint64("test ID", uint64(testID)))
 
 	var student models.Student
-	result := db.Where("registration_number = ? AND test_id = ?", registrationNumber, testID).First(&student)
+	result := db.Where("ID = ? AND test_id = ?", registrationNumber, testID).First(&student)
 	if result.Error != nil {
-		errorLogger.Error("Študent nebol nájdený", slog.String("student registration number", student.RegistrationNumber), slog.Group("CRITICAL", slog.Group("CRITICAL", result.Error)))
+		errorLogger.Error("Študent nebol nájdený", slog.String("student registration number", student.RegistrationNumber), slog.Group("CRITICAL", slog.String("error", result.Error.Error())))
 		return nil, result.Error
 	}
 	logger.Debug("Študent nájdený", slog.String("name", student.Name), slog.String("surname", student.Surname))
@@ -47,7 +48,7 @@ func GetAllStudents(db *gorm.DB) ([]models.Student, error) {
 	var students []models.Student
 	result := db.Find(&students)
 	if result.Error != nil {
-		errorLogger.Error("Chyba pri načítavaní študentov", slog.Group("CRITICAL", slog.Group("CRITICAL", result.Error)))
+		errorLogger.Error("Chyba pri načítavaní študentov", slog.Group("CRITICAL", slog.String("error", result.Error.Error())))
 	}
 	return students, result.Error
 }
@@ -59,7 +60,7 @@ func UpdateStudent(db *gorm.DB, student *models.Student) error {
 	logger.Debug("Aktualizácia študenta", slog.String("registration number", student.RegistrationNumber), slog.String("name", student.Name), slog.String("surname", student.Surname))
 	result := db.Save(student)
 	if result.Error != nil {
-		errorLogger.Error("Chyba pri aktualizácii študenta", slog.Group("CRITICAL", slog.Group("CRITICAL", result.Error)))
+		errorLogger.Error("Chyba pri aktualizácii študenta", slog.Group("CRITICAL", slog.String("error", result.Error.Error())))
 	}
 	return result.Error
 }
@@ -70,7 +71,7 @@ func DeleteStudent(db *gorm.DB, id uint) error {
 
 	result := db.Delete(&models.Student{}, id)
 	if result.Error != nil {
-		errorLogger.Error("Chyba pri mazaní študenta", slog.Group("CRITICAL", slog.Group("CRITICAL", result.Error)))
+		errorLogger.Error("Chyba pri mazaní študenta", slog.Group("CRITICAL", slog.String("error", result.Error.Error())))
 	}
 
 	logger.Debug("Študent vymazaný", slog.Uint64("student ID", uint64(id)))
