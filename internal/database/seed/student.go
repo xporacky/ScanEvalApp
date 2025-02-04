@@ -2,11 +2,11 @@ package seed
 
 import (
 	"ScanEvalApp/internal/database/models"
+	"ScanEvalApp/internal/logging"
+	"log/slog"
 	"math/rand"
 	"strconv"
 	"time"
-	"ScanEvalApp/internal/logging"
-	"log/slog"
 )
 
 func StudentGenerator(questionsCount int) *models.Student {
@@ -21,7 +21,7 @@ func StudentGenerator(questionsCount int) *models.Student {
 		RegistrationNumber: generateRegistrationNumber(),
 		Room:               rooms[rand.Intn(len(rooms))],
 		Score:              0,
-		Answers:            generateAnswers(questionsCount),
+		Answers:            GenerateAnswers(questionsCount),
 	}
 
 	return student
@@ -29,7 +29,7 @@ func StudentGenerator(questionsCount int) *models.Student {
 
 func StudentListGenerator(questionsCount int, studentsCount int) *[]models.Student {
 	logger := logging.GetLogger()
-	
+
 	logger.Info("Generovanie študentov...", slog.Int("count", studentsCount))
 	students := []models.Student{}
 	for i := 0; i < studentsCount; i++ {

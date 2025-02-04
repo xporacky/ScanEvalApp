@@ -1,11 +1,10 @@
 package seed
 
 import (
-	"math/rand"
-
-	"gorm.io/gorm"
 	"ScanEvalApp/internal/logging"
 	"log/slog"
+
+	"gorm.io/gorm"
 )
 
 func Seed(db *gorm.DB, questionCount int, studentsCount int) {
@@ -20,11 +19,10 @@ func Seed(db *gorm.DB, questionCount int, studentsCount int) {
 	}
 }
 
-func generateAnswers(n int) string {
-	possibleAnswers := []string{"A", "B", "C", "D", "E"}
+func GenerateAnswers(n int) string {
 	answers := ""
 	for i := 0; i < n; i++ {
-		answers = answers + possibleAnswers[rand.Intn(len(possibleAnswers))]
+		answers = answers + "0"
 	}
 	return answers
 }
