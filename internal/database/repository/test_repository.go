@@ -66,7 +66,7 @@ func DeleteTest(db *gorm.DB, id uint) error {
 
 	result := db.Delete(&models.Test{}, id)
 	if result.Error != nil {
-		errorLogger.Error("Chyba pri mazaní testu", slog.Group("CRITICAL", slog.Strin("error", result.Error.Error())))
+		errorLogger.Error("Chyba pri mazaní testu", slog.Group("CRITICAL", slog.String("error", result.Error.Error())))
 	}
 
 	logger.Debug("Test vymazaný", slog.Uint64("test ID", uint64(id)))
