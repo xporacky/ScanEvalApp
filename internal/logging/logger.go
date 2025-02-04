@@ -1,9 +1,9 @@
 package logging
 
 import (
-	"os"
 	"log"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"sync"
 )
@@ -54,10 +54,16 @@ func InitLogger() {
 
 // GetLogger vráti logger pre app.log
 func GetLogger() *slog.Logger {
+	if logger == nil {
+		InitLogger()
+	}
 	return logger
 }
 
 // GetErrorLogger vráti logger pre error.log
 func GetErrorLogger() *slog.Logger {
+	if errorLogger == nil {
+		InitLogger()
+	}
 	return errorLogger
 }
