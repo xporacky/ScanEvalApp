@@ -3,20 +3,20 @@ package scanprocessing
 import (
 	"ScanEvalApp/internal/database/models"
 	"ScanEvalApp/internal/database/repository"
-	"fmt"
 	"os"
 	"path/filepath"
 
-	"github.com/gen2brain/go-fitz"
-	"gorm.io/gorm"
 	"ScanEvalApp/internal/logging"
 	"log/slog"
+
+	"github.com/gen2brain/go-fitz"
+	"gorm.io/gorm"
 )
 
 // Process PDF
 func ProcessPDF(scanPath string, outputPath string, test *models.Test, db *gorm.DB) {
 	errorLogger := logging.GetErrorLogger()
-	
+
 	var files []string
 
 	err := filepath.Walk(scanPath, func(path string, info os.FileInfo, err error) error {
@@ -32,7 +32,7 @@ func ProcessPDF(scanPath string, outputPath string, test *models.Test, db *gorm.
 	for _, file := range files {
 		doc, err := fitz.New(file)
 		if err != nil {
-			logging.Error("Chyba pri načítaní PDF súboru", slog.String("file", file), slog.String("error", err.Error()))
+			errorLogger.Error("Chyba pri načítaní PDF súboru", slog.String("file", file), slog.String("error", err.Error()))
 			panic(err)
 		}
 		//folder := strings.TrimSuffix(path.Base(file), filepath.Ext(path.Base(file)))
@@ -46,7 +46,7 @@ func ProcessPDF(scanPath string, outputPath string, test *models.Test, db *gorm.
 
 func ProcessPage(doc *fitz.Document, n int, test *models.Test, db *gorm.DB) {
 	errorLogger := logging.GetErrorLogger()
-	
+
 	img, err := doc.Image(n)
 	if err != nil {
 		errorLogger.Error("Chyba pri extrahovaní obrázka z PDF stránky", slog.Int("page", n), slog.String("error", err.Error()))
@@ -62,18 +62,18 @@ func ProcessPage(doc *fitz.Document, n int, test *models.Test, db *gorm.DB) {
 	}
 	student, err := repository.GetStudent(db, uint(studentID), test.ID)
 	if err != nil {
-		errorLogger.Error("Chyba pri získavaní ID študenta z databázy", slog.String("studentID", studentID), slog.String("error", err.Error()))
+		errorLogger.Error("Chyba pri získavaní ID študenta z databázy", "studentID", studentID, "error", err.Error())
 		return
 	}
-	logger.Info("Našiel sa študent v databáze", slog.String("studentID", student.ID), slog.String("name", student.Name))
+	errorLogger.Info("Našiel sa študent v databáze", "studentID", student.ID, "name", student.Name)
 	//path := filepath.Join("./"+outputPath+"/", fmt.Sprintf("%s-image-%05d.png", folder, n)) //na testovanie zatial takto
 	EvaluateAnswers(&mat, test.QuestionCount, student)
 	err = repository.UpdateStudent(db, student)
 	if err != nil {
-		errorLogger.Error("Chyba pri aktualizácii študenta v databáze", slog.String("studentID", student.ID), slog.String("error", err.Error()))
+		errorLogger.Error("Chyba pri aktualizácii študenta v databáze", "studentID", student.ID, "error", err.Error())
 		return
 	}
-	logger.Info("Aktualizované odpovede študenta", slog.String("studentID", studentID), slog.String("answers", student.Answers))
+	errorLogger.Info("Aktualizované odpovede študenta", "studentID", studentID, "answers", student.Answers)
 	//SaveMat("", mat)
 	defer mat.Close()
 	//println(student.Answers)

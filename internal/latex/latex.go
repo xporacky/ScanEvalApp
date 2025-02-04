@@ -26,13 +26,13 @@ func CompileLatexToPDF(latexContent []byte) ([]byte, error) {
 	texFile, err := os.CreateTemp(TemporaryPDFPath, "*.tex")
 	if err != nil {
 		errorLogger.Error("Failed to create temporary LaTeX file", slog.Group("CRITICAL", slog.String("error", err.Error())))
-		return nil
+		return nil, err
 	}
 	defer files.DeleteFile(texFile.Name())
 
 	if _, err = texFile.Write(latexContent); err != nil {
 		errorLogger.Error("Error writing to .tex file", slog.Group("CRITICAL", slog.String("error", err.Error())))
-		return nil
+		return nil, err
 	}
 	texFile.Close()
 
@@ -41,7 +41,7 @@ func CompileLatexToPDF(latexContent []byte) ([]byte, error) {
 	outputDir, err := os.MkdirTemp(TemporaryPDFPath, "latex_output")
 	if err != nil {
 		errorLogger.Error("Failed to create temporary output directory", slog.Group("CRITICAL", slog.String("error", err.Error())))
-		return nil
+		return nil, err
 	}
 	defer os.RemoveAll(outputDir)
 
@@ -50,14 +50,15 @@ func CompileLatexToPDF(latexContent []byte) ([]byte, error) {
 	cmd.Stderr = nil
 
 	if err = cmd.Run(); err != nil {
-		return nil, fmt.Errorf("error compiling LaTeX to PDF: %v", err)
+		errorLogger.Error("Error compiling LateX to PDF", slog.Group("CRITICAL", slog.String("error", err.Error())))
+		return nil, err
 	}
 
 	pdfPath := filepath.Join(outputDir, filepath.Base(texFile.Name())[:len(filepath.Base(texFile.Name()))-4]+".pdf")
 	pdfBytes, err := os.ReadFile(pdfPath)
 	if err != nil {
 		errorLogger.Error("Error compiling LaTeX to PDF", slog.Group("CRITICAL", slog.String("error", err.Error())))
-		return nil
+		return nil, err
 	}
 
 	logger.Info("PDF compiled")
@@ -71,14 +72,14 @@ func ReplaceTemplatePlaceholders(templateContent []byte, data TemplateData) ([]b
 	tmpl, err := template.New("latex").Parse(string(templateContent))
 	if err != nil {
 		errorLogger.Error("Error parsing LaTeX template", slog.String("error", err.Error()))
-		return nil
+		return nil, err
 	}
 
 	var output bytes.Buffer
 	err = tmpl.Execute(&output, data)
 	if err != nil {
 		errorLogger.Error("Error replacing placeholders in template", slog.String("error", err.Error()))
-		return nil
+		return nil, err
 	}
 
 	return output.Bytes(), nil
@@ -88,11 +89,11 @@ func ReplaceTemplatePlaceholders(templateContent []byte, data TemplateData) ([]b
 func MergePDFs(pdf1Path, pdf2Path, outputPath string) error {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
-	
+
 	cmd := exec.Command("pdfunite", pdf1Path, pdf2Path, outputPath)
 	cmd.Stdout = nil
 	cmd.Stderr = nil
-	logger.Debug("Merging PDFs", slog.String("pdf1", pdf1Path), slog,String("pdf2", pdf2Path))
+	logger.Debug("Merging PDFs", slog.String("pdf1", pdf1Path), slog.String("pdf2", pdf2Path))
 
 	if err := cmd.Run(); err != nil {
 		errorLogger.Error("Error merging PDFs", slog.String("error", err.Error()))
@@ -140,14 +141,14 @@ func ParallelGeneratePDFs(db *gorm.DB, templatePath, outputPDFPath string) error
 			// Nacitanie LaTeX sablony
 			latexTemplate, err := os.ReadFile(templatePath)
 			if err != nil {
-				errorLogger.Error("Error reading LaTeX template for student", slog.Int("student_id", student.ID), slog.String("error", err.Error()))
+				errorLogger.Error("Error reading LaTeX template for student", "student_id", student.ID, slog.String("error", err.Error()))
 				return
 			}
 
 			// nacitanie testu pre studenta z databazy
 			var test models.Test
 			if err := db.First(&test, student.TestID).Error; err != nil {
-				errorLogger.Error("Error fetching test for student", slog.Int("student_id", student.ID), slog.String("error", err.Error()))
+				errorLogger.Error("Error fetching test for student", "student_id", student.ID, slog.String("error", err.Error()))
 				return
 			}
 
@@ -165,21 +166,21 @@ func ParallelGeneratePDFs(db *gorm.DB, templatePath, outputPDFPath string) error
 			// nahradenie placeholderov v LaTeX sablone udajmi studenta
 			updatedLatex, err := ReplaceTemplatePlaceholders(latexTemplate, data)
 			if err != nil {
-				errorLogger.Error("Error replacing placeholders for student" slog.Int("student_id", student.ID), slog.String("error", err.Error()))
+				errorLogger.Error("Error replacing placeholders for student", "student_id", student.ID, slog.String("error", err.Error()))
 				return
 			}
 
 			// kompilacia latex sablony do pdf studenta
 			studentPDF, err := CompileLatexToPDF(updatedLatex)
 			if err != nil {
-				errorLogger.Error("Error generating PDF for student", slog.Int("student_id", student.ID), slog.String("error", err.Error()))
+				errorLogger.Error("Error generating PDF for student", "student_id", student.ID, slog.String("error", err.Error()))
 				return
 			}
 
 			// ulozenie generovaneho/kompilovaneho pdf studenta do docasneho suboru
 			studentPDFPath := filepath.Join(TemporaryPDFPath, fmt.Sprintf("student_%d.pdf", student.ID))
 			if err := os.WriteFile(studentPDFPath, studentPDF, FilePermission); err != nil {
-				errorLogger.Error("Error saving PDF for student", slog.Int("student_id", student.ID), slog.String("error", err.Error()))
+				errorLogger.Error("Error saving PDF for student", "student_id", student.ID, slog.String("error", err.Error()))
 				return
 			}
 
@@ -190,25 +191,25 @@ func ParallelGeneratePDFs(db *gorm.DB, templatePath, outputPDFPath string) error
 			if !mainPDFSet {
 				mainPDFPath = studentPDFPath
 				mainPDFSet = true
-				errorLogger.Error("Set initial main PDF for student", slog.Int("student_id", student.ID))
+				errorLogger.Error("Set initial main PDF for student", "student_id", student.ID)
 			} else {
 				// zlucenie generovaneho pdf so zakladnym pdf
 				mergedPDFPath := filepath.Join(TemporaryPDFPath, "merged.pdf")
 				if err := MergePDFs(mainPDFPath, studentPDFPath, mergedPDFPath); err != nil {
-					errorLogger.Error("Error merging PDF for student", slog.Int("student_id", student.ID), slog.String("error", err.Error()))
+					errorLogger.Error("Error merging PDF for student", "student_id", student.ID, slog.String("error", err.Error()))
 					return
 				}
 
 				// nahradenie hlavneho pdf novym zlucenym pdf
 				if err := os.Rename(mergedPDFPath, mainPDFPath); err != nil {
-					errorLogger.Error("Error updating main PDF for student", slog.Int("student_id", student.ID), slog.String("error", err.Error()))
+					errorLogger.Error("Error updating main PDF for student", "student_id", student.ID, slog.String("error", err.Error()))
 					return
 				}
 
 				// Odstranenie docasneho pdf studenta s defer, ktore sa vykona vzdy na konci funkcie
 				defer func() {
 					if err := files.DeleteFile(studentPDFPath); err != nil {
-						errorLogger.Error("Error removing temporary PDF for student", slog.Int("student_id", student.ID), slog.String("error", err.Error()))
+						errorLogger.Error("Error removing temporary PDF for student", "student_id", student.ID, slog.String("error", err.Error()))
 					}
 				}()
 
@@ -217,12 +218,12 @@ func ParallelGeneratePDFs(db *gorm.DB, templatePath, outputPDFPath string) error
 			// Zvýšenie počtu spracovaných PDF a výpis stavu
 			processedCount++
 			studentDuration := time.Since(studentStartTime)
-			logger.Debug("Generovanie PDF", 
-				slog.Int("spracovaných", processedCount),
-				slog.Int("celkovo", len(students)),
-				slog.String("test", test.Title),
-				slog.String("id študenta", student.ID), 
-				slog.String("dokončené za", studentDuration))
+			logger.Debug("Generovanie PDF",
+				"spracovaných", processedCount,
+				"celkovo", len(students),
+				"test", test.Title,
+				"id študenta", student.ID,
+				"dokončené za", studentDuration)
 		}(student)
 	}
 
@@ -237,7 +238,7 @@ func ParallelGeneratePDFs(db *gorm.DB, templatePath, outputPDFPath string) error
 
 	// zmeranie celkoveho casu behu programu
 	duration := time.Since(startTime)
-	logger.Debug("Celkový čas generovania PDF", slog.Int("duration", duration))
+	logger.Debug("Celkový čas generovania PDF", "duration", duration)
 
 	logger.Info("Výsledné PDF úspešne uložené do", slog.String("output_PDF_path", outputPDFPath))
 	return nil

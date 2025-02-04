@@ -3,24 +3,28 @@ package main
 import (
 	"ScanEvalApp/internal/database/migrations"
 	"ScanEvalApp/internal/database/seed"
+
 	//"ScanEvalApp/internal/files"
 	//"ScanEvalApp/internal/latex"
 	//"ScanEvalApp/internal/scanprocessing"
-	"ScanEvalApp/internal/gui"
+	window "ScanEvalApp/internal/gui"
 	"ScanEvalApp/internal/logging"
+
 	"gioui.org/app"
+
 	//"fmt"
 	//"time"
 
-	"gorm.io/gorm"
 	"log/slog"
+
+	"gorm.io/gorm"
 )
 
 // Kontrola ci je databaza prazdna
 func CheckIfDatabaseIsEmpty(db *gorm.DB) (bool, error) {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
-	
+
 	var count int64
 
 	err := db.Table("students").Count(&count).Error
@@ -64,17 +68,16 @@ func testDatabase(questionsCount int, studentsCount int) {
 	}
 }
 
-
 func main() {
 	logging.InitLogger()
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
-	logger.	Info("---------------------------------------------------")
+	logger.Info("---------------------------------------------------")
 	errorLogger.Error("---------------------------------------------------")
 
 	logger.Info("Aplikácia spustená")
-	
+
 	var questionsCount int = 40 // pocet otazok ktore pridelujeme do testu, na testovanie
 	var studentsCount int = 50
 
@@ -89,25 +92,25 @@ func main() {
 
 	// kontrola ci je prazdna databaza, kvoli seedovaniu
 	testDatabase(questionsCount, studentsCount)
-/*
-	// Cesta k LaTeX sablone a cesta kam sa ma ulozit finalne pdf (pdf so studentami)
-	templatePath := "./assets/latex/main.tex"
-	outputPDFPath := "./assets/tmp/final.pdf"
+	/*
+		// Cesta k LaTeX sablone a cesta kam sa ma ulozit finalne pdf (pdf so studentami)
+		templatePath := "./assets/latex/main.tex"
+		outputPDFPath := "./assets/tmp/final.pdf"
 
-	// Generovanie PDF pre vsetkych studentov
-	if err := latex.ParallelGeneratePDFs(db, templatePath, outputPDFPath); err != nil {
-		fmt.Println("Chyba pri generovaní PDF:", err)
-		return
-	}
+		// Generovanie PDF pre vsetkych studentov
+		if err := latex.ParallelGeneratePDFs(db, templatePath, outputPDFPath); err != nil {
+			fmt.Println("Chyba pri generovaní PDF:", err)
+			return
+		}
 
-	start := time.Now()
-	//test := repository.GetTest(db, 2)
-	//scanprocessing.ProcessPDF("assets/tmp/scan-pdfs", "assets/tmp/scan-images", test, db)
-	elapsed := time.Since(start)
-	fmt.Printf("Function took %s\n", elapsed)
+		start := time.Now()
+		//test := repository.GetTest(db, 2)
+		//scanprocessing.ProcessPDF("assets/tmp/scan-pdfs", "assets/tmp/scan-images", test, db)
+		elapsed := time.Since(start)
+		fmt.Printf("Function took %s\n", elapsed)
 	*/
 
 	logger.Info("Spúšťam GUI.")
 	go window.RunWindow(db) // Zavolanie funkcie na vytvorenie a správu okna
-    app.Main()
+	app.Main()
 }
