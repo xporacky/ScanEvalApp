@@ -12,7 +12,7 @@ func OpenFile(filePath string) ([]byte, error) {
 
 	data, err := os.ReadFile(filePath)
 	if err != nil {
-		errorLogger.Error("Chyba pri otváraní súboru", slog.Group("CRITICAL", slog.String("error", err.Error())))
+		errorLogger.Error("Chyba pri otváraní súboru", slog.Group("CRITICAL", slog.String("error", err.Error())), slog.String("file_path", filePath))
 		return nil, err
 	}
 	return data, nil
@@ -25,7 +25,7 @@ func SaveFile(filePath string, data []byte) error {
 
 	err := os.WriteFile(filePath, data, 0644)
 	if err != nil {
-		errorLogger.Error("Chyba pri ukladaní súboru", slog.Group("CRITICAL", slog.String("error", err.Error())))
+		errorLogger.Error("Chyba pri ukladaní súboru", slog.Group("CRITICAL", slog.String("error", err.Error())), slog.String("file_path", filePath))
 		return nil
 	}
 	logger.Info("Súbor uložený", slog.String("file_path", filePath))
@@ -41,10 +41,10 @@ func DeleteFile(filePath string) error {
 		// File exists, attempt to remove it
 		err = os.Remove(filePath)
 		if err != nil {
-			errorLogger.Error("Chyba pri mazaní súboru", slog.Group("CRITICAL", slog.String("error", err.Error())))
+			errorLogger.Error("Chyba pri mazaní súboru", slog.Group("CRITICAL", slog.String("error", err.Error())), slog.String("file_path", filePath))
 			return err
 		}
-		logger.Info("Súbor úspešne vymazaný")
+		logger.Info("Súbor úspešne vymazaný", slog.String("file_path", filePath))
 	}
 	return nil
 }
