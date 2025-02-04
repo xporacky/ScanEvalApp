@@ -1,13 +1,14 @@
-time=2025-02-04T23:27:16.132+01:00 level=ERROR msg=---------------------------------------------------
-time=2025-02-04T23:27:27.823+01:00 level=ERROR msg="No ID found in the input image" path=./assets/tmp/temp-header-image.png
-time=2025-02-04T23:27:27.823+01:00 level=ERROR msg="Chyba pri extrakcii ID zo záhlavia obrázku" error="No ID found in the input image"
-time=2025-02-04T23:27:27.823+01:00 level=ERROR msg="Chyba pri získavaní ID študenta" error="No ID found in the input image"
-time=2025-02-04T23:27:33.180+01:00 level=ERROR msg="Failed to convert QuestionNumber to integer" error="expected integer"
-time=2025-02-04T23:27:33.180+01:00 level=ERROR msg="Chyba pri extrakcii čísla otázky" questionIndex=0 error="expected integer"
-time=2025-02-04T23:27:33.180+01:00 level=ERROR msg="Chyba pri hľadaní čísla otázky" questionIndex=0 error="expected integer"
-time=2025-02-04T23:28:14.259+01:00 level=ERROR msg="Failed to convert QuestionNumber to integer" error="expected integer"
-time=2025-02-04T23:28:14.259+01:00 level=ERROR msg="Chyba pri extrakcii čísla otázky" questionIndex=0 error="expected integer"
-time=2025-02-04T23:28:14.259+01:00 level=ERROR msg="Chyba pri hľadaní čísla otázky" questionIndex=0 error="expected integer"
-time=2025-02-04T23:28:19.619+01:00 level=ERROR msg="Failed to convert QuestionNumber to integer" error="expected integer"
-time=2025-02-04T23:28:19.619+01:00 level=ERROR msg="Chyba pri extrakcii čísla otázky" questionIndex=0 error="expected integer"
-time=2025-02-04T23:28:19.619+01:00 level=ERROR msg="Chyba pri hľadaní čísla otázky" questionIndex=0 error="expected integer"
+time=2025-02-04T23:46:40.267+01:00 level=ERROR msg=---------------------------------------------------
+time=2025-02-04T23:47:11.720+01:00 level=ERROR msg=---------------------------------------------------
+time=2025-02-04T23:47:23.983+01:00 level=ERROR msg="No ID found in the input image" path=./assets/tmp/temp-header-image.png
+time=2025-02-04T23:47:23.983+01:00 level=ERROR msg="Chyba pri extrakcii ID zo záhlavia obrázku" error="No ID found in the input image"
+time=2025-02-04T23:47:23.983+01:00 level=ERROR msg="Chyba pri získavaní ID študenta" error="No ID found in the input image"
+time=2025-02-04T23:47:29.650+01:00 level=ERROR msg="Failed to convert QuestionNumber to integer" error="expected integer"
+time=2025-02-04T23:47:29.650+01:00 level=ERROR msg="Chyba pri extrakcii čísla otázky" questionIndex=0 error="expected integer"
+time=2025-02-04T23:47:29.650+01:00 level=ERROR msg="Chyba pri hľadaní čísla otázky" questionIndex=0 error="expected integer"
+time=2025-02-04T23:48:12.495+01:00 level=ERROR msg="Failed to convert QuestionNumber to integer" error="expected integer"
+time=2025-02-04T23:48:12.496+01:00 level=ERROR msg="Chyba pri extrakcii čísla otázky" questionIndex=0 error="expected integer"
+time=2025-02-04T23:48:12.496+01:00 level=ERROR msg="Chyba pri hľadaní čísla otázky" questionIndex=0 error="expected integer"
+time=2025-02-04T23:48:18.061+01:00 level=ERROR msg="Failed to convert QuestionNumber to integer" error="expected integer"
+time=2025-02-04T23:48:18.061+01:00 level=ERROR msg="Chyba pri extrakcii čísla otázky" questionIndex=0 error="expected integer"
+time=2025-02-04T23:48:18.061+01:00 level=ERROR msg="Chyba pri hľadaní čísla otázky" questionIndex=0 error="expected integer"
