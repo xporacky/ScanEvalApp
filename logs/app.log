@@ -29,3 +29,28 @@ time=2025-02-03T16:42:19.247+01:00 level=INFO msg="Spúšťam GUI."
 time=2025-02-03T16:42:44.324+01:00 level=INFO msg="Ukázanie opovedí testu s ID" ID=1
 time=2025-02-03T16:42:50.926+01:00 level=INFO msg="Vymazanie testu s ID" ID=1
 time=2025-02-03T16:43:06.905+01:00 level=INFO msg="Zatvorenie aplikácie."
+time=2025-02-04T21:33:38.862+01:00 level=INFO msg=---------------------------------------------------
+time=2025-02-04T21:33:38.863+01:00 level=INFO msg="Aplikácia spustená"
+time=2025-02-04T21:33:38.863+01:00 level=INFO msg="Spúšťam migráciu databázy."
+time=2025-02-04T21:33:38.863+01:00 level=DEBUG msg="Pripájam sa k databáze..."
+time=2025-02-04T21:33:38.863+01:00 level=DEBUG msg="Spúšťam migrácie..."
+time=2025-02-04T21:33:38.864+01:00 level=INFO msg="Migrácia databázy dokončená."
+time=2025-02-04T21:33:38.864+01:00 level=DEBUG msg="Inicializujem databázu na testovanie."
+time=2025-02-04T21:33:38.864+01:00 level=DEBUG msg="Pripájam sa k databáze..."
+time=2025-02-04T21:33:38.864+01:00 level=DEBUG msg="Spúšťam migrácie..."
+time=2025-02-04T21:33:38.865+01:00 level=INFO msg="Databáza obsahuje záznamy." count=50
+time=2025-02-04T21:33:38.865+01:00 level=INFO msg="Databáza nie je prázdna, seedovanie preskočené."
+time=2025-02-04T21:33:38.865+01:00 level=INFO msg="Spúšťam GUI."
+time=2025-02-04T21:34:14.817+01:00 level=INFO msg="Zatvorenie aplikácie."
+time=2025-02-04T21:38:41.635+01:00 level=INFO msg=---------------------------------------------------
+time=2025-02-04T21:38:41.635+01:00 level=INFO msg="Aplikácia spustená"
+time=2025-02-04T21:38:41.635+01:00 level=INFO msg="Spúšťam migráciu databázy."
+time=2025-02-04T21:38:41.635+01:00 level=DEBUG msg="Pripájam sa k databáze..."
+time=2025-02-04T21:38:41.635+01:00 level=DEBUG msg="Spúšťam migrácie..."
+time=2025-02-04T21:38:41.636+01:00 level=INFO msg="Migrácia databázy dokončená."
+time=2025-02-04T21:38:41.636+01:00 level=DEBUG msg="Inicializujem databázu na testovanie."
+time=2025-02-04T21:38:41.636+01:00 level=DEBUG msg="Pripájam sa k databáze..."
+time=2025-02-04T21:38:41.636+01:00 level=DEBUG msg="Spúšťam migrácie..."
+time=2025-02-04T21:38:41.637+01:00 level=INFO msg="Databáza obsahuje záznamy." count=50
+time=2025-02-04T21:38:41.637+01:00 level=INFO msg="Databáza nie je prázdna, seedovanie preskočené."
+time=2025-02-04T21:38:41.637+01:00 level=DEBUG msg="Hľadanie testu" "ID testu"=2

@@ -7,9 +7,10 @@ import (
 	"image"
 	"image/color"
 
-	"gocv.io/x/gocv"
 	"ScanEvalApp/internal/logging"
 	"log/slog"
+
+	"gocv.io/x/gocv"
 )
 
 func FindContours(mat gocv.Mat) gocv.PointsVector {
@@ -85,11 +86,10 @@ func SaveMat(path string, mat gocv.Mat) {
 		errorLogger.Error("Chyba pri odstraňovaní existujúceho súboru", slog.String("path", path), slog.String("error", err.Error()))
 		panic(err)
 	}
-	err = gocv.IMWrite(path, mat)
-	if err != nil {
-		errorLogger.Error("Chyba pri ukladaní obrázka", slog.String("path", path), slog.String("error", err.Error()))
-	} else {
+	if gocv.IMWrite(path, mat) {
 		logger.Info("Úspešne uložený obrázok", slog.String("path", path))
+	} else {
+		errorLogger.Error("Chyba pri ukladaní obrázka", slog.String("path", path))
 	}
 }
 
@@ -134,7 +134,7 @@ func GetStudentID(mat *gocv.Mat) (int, error) {
 		_, err := fmt.Sscan(qrText, &id)
 		if err != nil {
 			errorLogger.Error("Chyba pri konverzii QR textu na ID", slog.String("qrText", qrText), slog.String("error", err.Error()))
-			return 0
+			return 0, err
 		}
 		return id, nil
 	}
@@ -148,7 +148,7 @@ func GetStudentID(mat *gocv.Mat) (int, error) {
 	files.DeleteFile(TEMP_HEADER_IMAGE_PATH)
 	if err != nil {
 		errorLogger.Error("Chyba pri extrakcii ID zo záhlavia obrázku", slog.String("error", err.Error()))
-		return 0
+		return 0, err
 	}
 	return id, nil
 }

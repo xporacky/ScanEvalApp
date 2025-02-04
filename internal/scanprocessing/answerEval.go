@@ -7,9 +7,10 @@ import (
 	"fmt"
 	"image"
 
-	"gocv.io/x/gocv"
 	"ScanEvalApp/internal/logging"
 	"log/slog"
+
+	"gocv.io/x/gocv"
 )
 
 // Evaluate answers
@@ -29,12 +30,12 @@ func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int, student *models.Stude
 			questionNumber, err = GetQuestionNumber(&croppedMat, i)
 			// if we didnt find question number yet add answer to unknown questions
 			if err != nil {
-                errorLogger.Error("Chyba pri hľadaní čísla otázky", slog.Int("questionIndex", i), slog.String("error", err.Error()))
+				errorLogger.Error("Chyba pri hľadaní čísla otázky", slog.Int("questionIndex", i), slog.String("error", err.Error()))
 				unknownQuestionsAnswers = append(unknownQuestionsAnswers, answer)
 				continue
 			} else if unknownQuestionsAnswers != nil { // if we found question number and we have unknown questions answers assign them to question answers to student
 				fillUnknowQuestionsAnswers(questionNumber, &unknownQuestionsAnswers, &studentAnswers)
-				logger.Debug("Pridané odpovede k neznámym otázkam", slog.String("unknownAnswers", unknownQuestionsAnswers))
+				logger.Debug("Pridané odpovede k neznámym otázkam", "unknownAnswers", unknownQuestionsAnswers)
 			}
 		}
 		studentAnswers[questionNumber-1] = answer
@@ -67,6 +68,7 @@ func CropMatAnswersOnly(mat *gocv.Mat) gocv.Mat {
 
 // Finds rectangle on mat
 func FindRectangle(mat *gocv.Mat, minAreaSize float64, maxAreaSize float64) image.Rectangle {
+	errorLogger := logging.GetErrorLogger()
 	contours := FindContours(*mat)
 	// Find rectangle
 	for i := 0; i < contours.Size(); i++ {
@@ -82,7 +84,7 @@ func FindRectangle(mat *gocv.Mat, minAreaSize float64, maxAreaSize float64) imag
 			return rect
 		}
 	}
-    logger.Warn("Nezistený obvod v matici", "error", "No valid rectangle found")
+	errorLogger.Warn("Nezistený obvod v matici", "error", "No valid rectangle found")
 	return image.Rectangle{image.Pt(0, 0), image.Pt(0, 0)}
 }
 
@@ -98,8 +100,8 @@ func GetQuestionNumber(mat *gocv.Mat, i int) (int, error) {
 	files.DeleteFile(TEMP_IMAGE_PATH)
 
 	if err != nil {
-        logging.ErrorLogger.Error("Chyba pri extrakcii čísla otázky", slog.Int("questionIndex", i), slog.String("error", err.Error()))
-    }
+		errorLogger.Error("Chyba pri extrakcii čísla otázky", slog.Int("questionIndex", i), slog.String("error", err.Error()))
+	}
 
 	return questionNum, err
 }

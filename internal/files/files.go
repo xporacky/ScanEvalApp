@@ -1,10 +1,9 @@
 package files
 
 import (
-	"fmt"
-	"os"
 	"ScanEvalApp/internal/logging"
 	"log/slog"
+	"os"
 )
 
 // OpenFile load file from specified path
@@ -14,7 +13,7 @@ func OpenFile(filePath string) ([]byte, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		errorLogger.Error("Chyba pri otváraní súboru", slog.Group("CRITICAL", slog.String("error", err.Error())))
-		return nil
+		return nil, err
 	}
 	return data, nil
 }
