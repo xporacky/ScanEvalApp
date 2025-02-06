@@ -18,6 +18,7 @@ require (
 	github.com/dsoprea/go-logging v0.0.0-20190624164917-c4f10aab7696 // indirect
 	github.com/go-errors/errors v1.0.1 // indirect
 	github.com/go-pdf/fpdf v0.9.0 // indirect
+	github.com/go-text/typesetting v0.1.1 // indirect
 	github.com/golang/geo v0.0.0-20190916061304-5b978397cfec // indirect
 	github.com/hhrutter/lzw v1.0.0 // indirect
 	github.com/hhrutter/tiff v1.0.1 // indirect
@@ -36,5 +37,6 @@ require (
 	golang.org/x/net v0.0.0-20191209160850-c0dbc17a3553 // indirect
 	golang.org/x/sys v0.22.0 // indirect
 	golang.org/x/text v0.20.0 // indirect
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
