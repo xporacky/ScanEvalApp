@@ -26,7 +26,7 @@ func SaveFile(filePath string, data []byte) error {
 	err := os.WriteFile(filePath, data, 0644)
 	if err != nil {
 		errorLogger.Error("Chyba pri ukladaní súboru", slog.Group("CRITICAL", slog.String("error", err.Error())), slog.String("file_path", filePath))
-		return nil
+		return err
 	}
 	logger.Info("Súbor uložený", slog.String("file_path", filePath))
 	return nil
