@@ -97,7 +97,7 @@ func MergePDFs(pdf1Path, pdf2Path, outputPath string) error {
 
 	if err := cmd.Run(); err != nil {
 		errorLogger.Error("Error merging PDFs", slog.String("error", err.Error()))
-		return nil
+		return err
 	}
 	logger.Info("PDFs merged", slog.String("output_path", outputPath))
 	return nil
@@ -112,7 +112,7 @@ func ParallelGeneratePDFs(db *gorm.DB, templatePath, outputPDFPath string) error
 	var students []models.Student
 	if err := db.Find(&students).Error; err != nil {
 		errorLogger.Error("Error fetching students", slog.String("error", err.Error()))
-		return nil
+		return err
 	}
 
 	// meranie celkoveho casu generovania a mergovania pdf
@@ -233,7 +233,7 @@ func ParallelGeneratePDFs(db *gorm.DB, templatePath, outputPDFPath string) error
 	// presun hlavného PDF na finálnu cestu
 	if err := os.Rename(mainPDFPath, outputPDFPath); err != nil {
 		errorLogger.Error("error moving final PDF", slog.String("error", err.Error()))
-		return nil
+		return err
 	}
 
 	// zmeranie celkoveho casu behu programu

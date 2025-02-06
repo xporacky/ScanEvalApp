@@ -65,16 +65,15 @@ func UpdateStudent(db *gorm.DB, student *models.Student) error {
 	return result.Error
 }
 
-func DeleteStudent(db *gorm.DB, id uint) error {
+func DeleteStudent(db *gorm.DB, student *models.Student) error {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
-
-	result := db.Delete(&models.Student{}, id)
+	logger.Debug("Mazanie študenta", slog.String("registration number", student.RegistrationNumber), slog.String("name", student.Name), slog.String("surname", student.Surname))
+	result := db.Delete(student)
 	if result.Error != nil {
 		errorLogger.Error("Chyba pri mazaní študenta", slog.Group("CRITICAL", slog.String("error", result.Error.Error())))
 	}
 
-	logger.Debug("Študent vymazaný", slog.Uint64("student ID", uint64(id)))
 	return result.Error
 }
 
