@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 var (
@@ -24,25 +26,31 @@ func InitLogger() {
 			log.Fatalf("CRITICAL: Nepodarilo sa vytvoriť priečinok logs: %v", err)
 		}
 
-		// Otvorenie app.log (pre DEBUG, INFO, WARNING)
-		logFile, err := os.OpenFile(filepath.Join(logsDir, "app.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-		if err != nil {
-			log.Fatalf("CRITICAL: Nepodarilo sa otvoriť app.log: %v", err)
+		// Rotujúce log súbory pre app.log
+		appLogWriter := &lumberjack.Logger{
+			Filename:   filepath.Join(logsDir, "app.log"),
+			MaxSize:    5,  // Max 5 MB
+			MaxBackups: 3,  // Udržiava max 3 staré logy
+			MaxAge:     7,  // Ukladá logy max 7 dní
+			Compress:   true, // Kompresia starých logov
 		}
 
-		// Otvorenie error.log (pre ERROR, CRITICAL)
-		errorFile, err := os.OpenFile(filepath.Join(logsDir, "error.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-		if err != nil {
-			log.Fatalf("CRITICAL: Nepodarilo sa otvoriť error.log: %v", err)
+		// Rotujúce log súbory pre error.log
+		errorLogWriter := &lumberjack.Logger{
+			Filename:   filepath.Join(logsDir, "error.log"),
+			MaxSize:    5,  // Max 5 MB
+			MaxBackups: 3,  // Udržiava max 3 staré logy
+			MaxAge:     7,  // Ukladá logy max 7 dní
+			Compress:   true, // Kompresia starých logov
 		}
 
 		// Handler pre DEBUG, INFO, WARNING
-		appHandler := slog.NewTextHandler(logFile, &slog.HandlerOptions{
+		appHandler := slog.NewTextHandler(appLogWriter, &slog.HandlerOptions{
 			Level: slog.LevelDebug, // Umožní logovanie od úrovne DEBUG a vyššie
 		})
 
 		// Handler pre ERROR, CRITICAL
-		errorHandler := slog.NewTextHandler(errorFile, &slog.HandlerOptions{
+		errorHandler := slog.NewTextHandler(errorLogWriter, &slog.HandlerOptions{
 			Level: slog.LevelError, // Umožní logovanie od úrovne ERROR a vyššie
 		})
 
