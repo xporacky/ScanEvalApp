@@ -44,7 +44,7 @@ func RunWindow(db *gorm.DB) {
                     case 2:
                         return tabs.CreateTest(gtx, th)
                     case 3:
-                        return tabs.Upload(gtx, th)
+                        return tabs.Upload(gtx, th,w)
                     default:
                         return layout.Dimensions{}
                     }
