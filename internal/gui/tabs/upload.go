@@ -36,7 +36,7 @@ func NewUploadTab(w *app.Window) *UploadTab {
 func (t *UploadTab) Layout(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimensions {
 	// Spracovanie kliknutí na tlačidlo
 	if t.button.Clicked(gtx) {
-		go t.openFileDialog()
+		go t.openFileDialog(db)
 	}
 
 	// Vykreslenie layoutu
@@ -52,8 +52,8 @@ func (t *UploadTab) Layout(gtx layout.Context, th *material.Theme, db *gorm.DB) 
 				text := "Žiadny súbor nebol vybraný"
 				if t.selectedFile != "" {
 					text = fmt.Sprintf("Vybraný súbor: %s", t.selectedFile)
-					ParseCSV(strings.NewReader(t.selectedFile), db)
-					fmt.Println("volam parse")
+					
+					
 				}
 				return material.Label(th, unit.Sp(16), text).Layout(gtx)
 			}),
@@ -62,7 +62,7 @@ func (t *UploadTab) Layout(gtx layout.Context, th *material.Theme, db *gorm.DB) 
 }
 
 // Funkcia na otvorenie dialógového okna na výber súboru
-func (t *UploadTab) openFileDialog() {
+func (t *UploadTab) openFileDialog(db *gorm.DB) {
 	file, err := t.explorer.ChooseFile()
 	if err != nil {
 		log.Println("Chyba pri výbere súboru:", err)
@@ -76,6 +76,8 @@ func (t *UploadTab) openFileDialog() {
 			return
 		}
 		t.selectedFile = string(b)
+		fmt.Println("volam parse")
+		ParseCSV(strings.NewReader(t.selectedFile), db)
 
 
 	}
