@@ -10,6 +10,7 @@ import (
 	//"gioui.org/unit"
 	"ScanEvalApp/internal/logging"
 	"log/slog"
+    "ScanEvalApp/internal/database/models"
 )
 var deleteButtons []widget.Clickable
 var showAnsButtons []widget.Clickable
@@ -66,7 +67,8 @@ func Exams(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimension
             return material.List(th, &examList).Layout(gtx, len(tests), func(gtx layout.Context, i int) layout.Dimensions {
                 test := tests[i]
                 if deleteButtons[i].Clicked(gtx) {
-                    deleteTest(test.ID)
+                    deleteTest(test.ID, db)
+                    tests = removeTestFromList(tests, i) // Remove test from the list for UI update
                 }
                 if showAnsButtons[i].Clicked(gtx) {
                     showAnsTest(test.ID)
@@ -103,10 +105,22 @@ func Exams(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimension
 }
 
 
-func deleteTest(Id uint) {
+func deleteTest(Id uint, db *gorm.DB) {
     logger := logging.GetLogger()
+    errorLogger := logging.GetErrorLogger()
+
+    // Deleting the test from the database
+    if err := repository.DeleteTest(db, Id); err != nil {
+        errorLogger.Error("Chyba pri vymazávaní testu", slog.Uint64("ID", uint64(Id)), slog.String("error", err.Error()))
+        return
+    }
 
     logger.Info("Vymazanie testu s ID", slog.Uint64("ID", uint64(Id)))
+}
+
+func removeTestFromList(tests []models.Test, index int) []models.Test {
+    // Removing the test from the list at the specified index
+    return append(tests[:index], tests[index+1:]...)
 }
 
 func showAnsTest(Id uint) {
