@@ -15,6 +15,9 @@ import (
 	"strconv"
 	"ScanEvalApp/internal/logging"
 	"log/slog"
+	"ScanEvalApp/internal/database/repository"
+	"ScanEvalApp/internal/database/models"
+	"gorm.io/gorm"
 )
 
 var (
@@ -35,7 +38,7 @@ type questionForm struct {
 }
 
 // CreateTest renders the content for the "Vytvorenie Písomky" tab.
-func CreateTest(gtx layout.Context, th *material.Theme) layout.Dimensions {
+func CreateTest(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimensions {
 	logger := logging.GetLogger()
 
 	if createButton.Clicked(gtx) {
@@ -92,7 +95,7 @@ func CreateTest(gtx layout.Context, th *material.Theme) layout.Dimensions {
 				btn := material.Button(th, &submitButton, "Odoslať")
 				if submitButton.Clicked(gtx) {
 					logger.Info("Kliknutie na tlačidlo Odoslať")
-					submitForm()
+					submitForm(db)
 				}
 				return btn.Layout(gtx)
 			}
@@ -171,7 +174,7 @@ func renderOptions(gtx layout.Context, th *material.Theme, questionIndex int, qf
 	return children
 }
 
-func submitForm() {
+func submitForm(db *gorm.DB) {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
@@ -184,7 +187,19 @@ func submitForm() {
 		errorLogger.Error("Chyba pri parsovaní počtu otázok", slog.Group("CRITICAL", slog.String("error", err.Error())))
 		return
 	}
-
+	// Vytvorenie testu
+	test := models.Test{
+		Title:      nazov,
+		SchoolYear: cas,
+//		Room:       miestnost,
+		QuestionCount: pocetOtazok,
+	}
+	// ulozenie do db
+	err = repository.CreateTest(db, &test)
+	if err != nil {
+		errorLogger.Error("Chyba pri ukladaní testu", slog.Group("CRITICAL", slog.String("error", err.Error())))
+		return
+	}
 	// Vytvoríme si výsledný výpis
 	logger.Info("Formulár odoslaný", 
 		slog.String("nazov", nazov), 
