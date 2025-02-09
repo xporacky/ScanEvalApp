@@ -22,6 +22,8 @@ func RunWindow(db *gorm.DB) {
     tm := tabmanager.NewTabManager(4) // Vytvor TabManager
     tabNames := []string{"Písomky", "Študenti", "Vytvorenie Písomky", "Upload CSV"}
 
+    uploadTab := tabs.NewUploadTab(w)
+
     for {
         evt := w.Event()
         switch typ := evt.(type) {
@@ -44,12 +46,16 @@ func RunWindow(db *gorm.DB) {
                     case 2:
                         return tabs.CreateTest(gtx, th)
                     case 3:
-                        return tabs.Upload(gtx, th,w)
+						return uploadTab.Layout(gtx, th) // Použitie inicializovaného UploadTab
+                        //return tabs.Upload(gtx, th,w)
                     default:
                         return layout.Dimensions{}
                     }
                 }),
             )
+            if tm.ActiveTab == 3 {
+				uploadTab.HandleEvent(evt)
+			}
             typ.Frame(gtx.Ops)
 
         case app.DestroyEvent:

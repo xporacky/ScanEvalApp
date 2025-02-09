@@ -3,7 +3,7 @@ package tabs
 import (
 	"fmt"
 	"gioui.org/app"
-	"gioui.org/io/system"
+	//"gioui.org/io/system"
 	"gioui.org/layout"
 	"gioui.org/unit"
 	"gioui.org/widget"
@@ -28,24 +28,7 @@ func NewUploadTab(w *app.Window) *UploadTab {
 func (t *UploadTab) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 	// Spracovanie kliknutí na tlačidlo
 	if t.button.Clicked(gtx) {
-		go func() {
-			// Získanie vybraného súboru (len jeden)
-			file, err := t.explorer.ChooseFile() // Používame ChooseFile na výber jedného súboru
-			if err != nil {
-				log.Println("Chyba pri výbere súboru:", err)
-				return
-			}
-
-			// Ak je súbor vybraný, načítame ho
-			if file != nil {
-				// Ak súbor implementuje io.Reader, môžeme ho prečítať
-				if b, err := io.ReadAll(file); err == nil {
-					t.selectedFile = string(b) // Uloženie obsahu súboru do premennej
-				} else {
-					log.Println("Chyba pri čítaní súboru:", err)
-				}
-			}
-		}()
+		go t.openFileDialog()
 	}
 
 	// Vykreslenie layoutu
@@ -68,26 +51,28 @@ func (t *UploadTab) Layout(gtx layout.Context, th *material.Theme) layout.Dimens
 	})
 }
 
-
-//BIG PROBLEM!!!
-func (t *UploadTab) HandleEvent(event system.Event) {
-	switch e := event.(type) {
-	case system.FrameEvent:
-		// Počúvanie udalostí pre Explorer
-		t.explorer.ListenEvents(e)
+// Funkcia na otvorenie dialógového okna na výber súboru
+func (t *UploadTab) openFileDialog() {
+	file, err := t.explorer.ChooseFile()
+	if err != nil {
+		log.Println("Chyba pri výbere súboru:", err)
+		return
+	}
+	if file != nil {
+		defer file.Close() // Nezabudni zatvoriť súbor
+		b, err := io.ReadAll(file)
+		if err != nil {
+			log.Println("Chyba pri čítaní súboru:", err)
+			return
+		}
+		t.selectedFile = string(b)
 	}
 }
 
-// Funkcia Upload pre vykreslenie záložky "Upload"
-func Upload(gtx layout.Context, th *material.Theme, w *app.Window) layout.Dimensions {
-	// Vytvorenie nového UploadTab
-	uploadTab := NewUploadTab(w)
-
-	// Spracovanie udalostí
-	for _, event := range w.Events() { // Získame všetky udalosti z okna
-		uploadTab.HandleEvent(event)
+// Spracovanie eventov (pre Explorer)
+func (t *UploadTab) HandleEvent(evt interface{}) { // Zmena na interface{}
+	switch e := evt.(type) {
+	case app.FrameEvent:
+		t.explorer.ListenEvents(e)
 	}
-
-	// Vykreslenie obsahu záložky
-	return uploadTab.Layout(gtx, th)
 }
