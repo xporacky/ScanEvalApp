@@ -11,12 +11,20 @@ import (
 	"gioui.org/x/explorer"
 	"io"
 	"log"
+
+	"ScanEvalApp/internal/database/models"
+	"ScanEvalApp/internal/database/repository"
+	"strings"
+	"time"
+	"gorm.io/gorm"
+	"encoding/csv"
 )
 
 type UploadTab struct {
-	button       widget.Clickable
-	explorer     *explorer.Explorer
-	selectedFile string
+	button       	widget.Clickable
+	explorer     	*explorer.Explorer
+	selectedFile 	string
+
 }
 
 func NewUploadTab(w *app.Window) *UploadTab {
@@ -25,7 +33,7 @@ func NewUploadTab(w *app.Window) *UploadTab {
 	}
 }
 
-func (t *UploadTab) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions {
+func (t *UploadTab) Layout(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimensions {
 	// Spracovanie kliknutí na tlačidlo
 	if t.button.Clicked(gtx) {
 		go t.openFileDialog()
@@ -44,6 +52,8 @@ func (t *UploadTab) Layout(gtx layout.Context, th *material.Theme) layout.Dimens
 				text := "Žiadny súbor nebol vybraný"
 				if t.selectedFile != "" {
 					text = fmt.Sprintf("Vybraný súbor: %s", t.selectedFile)
+					ParseCSV(strings.NewReader(t.selectedFile), db)
+					fmt.Println("volam parse")
 				}
 				return material.Label(th, unit.Sp(16), text).Layout(gtx)
 			}),
@@ -66,6 +76,8 @@ func (t *UploadTab) openFileDialog() {
 			return
 		}
 		t.selectedFile = string(b)
+
+
 	}
 }
 
@@ -76,3 +88,48 @@ func (t *UploadTab) HandleEvent(evt interface{}) { // Zmena na interface{}
 		t.explorer.ListenEvents(e)
 	}
 }
+
+
+func ParseCSV(file io.Reader, db *gorm.DB) {
+	
+	reader := csv.NewReader(file)
+	rows, err := reader.ReadAll()
+	if err != nil {
+		fmt.Println("error1: %s", err)
+		return 
+	}
+
+
+	fmt.Println("studenti v csv: %s", rows)
+
+	for i, row := range rows {
+		fmt.Println("som dnu for")
+		if i == 0 {
+			fmt.Println("hlavicka")
+			continue // Preskočiť hlavičku CSV
+		}
+		birthDate, err := time.Parse("2006-01-02", row[2]) 
+		if err != nil {
+			fmt.Println("error2: %s", err)
+			return
+		}
+
+		student := models.Student{
+			Name:               row[0],
+			Surname:            row[1],
+			BirthDate:          birthDate,
+			RegistrationNumber: row[3],
+			Room:               row[4],
+			TestID:             2,					//TODO:preroobilt!!!!!!!!!!!!!!!!!!!!! 
+		}
+		if err := repository.CreateStudent(db, &student); err != nil {
+			fmt.Println("error3: ", err)
+			return 
+		}else{
+			fmt.Println("student pridany: %s", student)
+		}
+	}
+}
+
+
+
