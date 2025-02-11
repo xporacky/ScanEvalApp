@@ -7,10 +7,13 @@ povolit iba jednu moznost pri danej otazke
 osetrit vstupy
 */
 import (
+	"gioui.org/app"
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"gioui.org/unit"
+	"gioui.org/x/explorer"
+	"io"
 	"fmt"
 	"strconv"
 	"ScanEvalApp/internal/logging"
@@ -18,6 +21,10 @@ import (
 	"ScanEvalApp/internal/database/repository"
 	"ScanEvalApp/internal/database/models"
 	"gorm.io/gorm"
+	"log"
+	"strings"
+	"time"
+	"encoding/csv"
 )
 
 var (
@@ -30,7 +37,17 @@ var (
 	questionForms  []questionForm
 	showQuestions  bool
 )
+type UploadCsv struct {
+	button       	widget.Clickable
+	explorer     	*explorer.Explorer
+	selectedFile 	string
 
+}
+func NewUploadCsv(w *app.Window) *UploadCsv {
+	return &UploadCsv{
+		explorer: explorer.NewExplorer(w),
+	}
+}
 var questionList widget.List = widget.List{List: layout.List{Axis: layout.Vertical}}
 
 type questionForm struct {
@@ -38,7 +55,7 @@ type questionForm struct {
 }
 
 // CreateTest renders the content for the "Vytvorenie Písomky" tab.
-func CreateTest(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimensions {
+func (t *UploadCsv) CreateTest(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimensions {
 	logger := logging.GetLogger()
 
 	if createButton.Clicked(gtx) {
@@ -50,6 +67,9 @@ func CreateTest(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dime
 				showQuestions = true
 			}
 		}
+	}
+	if t.button.Clicked(gtx) {
+		go t.openFileDialog(db)
 	}
 
 	return layout.Flex{
@@ -91,11 +111,23 @@ func CreateTest(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dime
 			return material.Button(th, &createButton, "Vytvoriť test").Layout(gtx)
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return material.Button(th, &t.button, "Vybrať súbor").Layout(gtx)
+		}),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			text := "Žiadny súbor nebol vybraný"
+			if t.selectedFile != "" {
+				text = fmt.Sprintf("Vybraný súbor: %s", t.selectedFile)
+				
+				
+			}
+			return material.Label(th, unit.Sp(16), text).Layout(gtx)
+		}),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			if showQuestions {
 				btn := material.Button(th, &submitButton, "Odoslať")
 				if submitButton.Clicked(gtx) {
 					logger.Info("Kliknutie na tlačidlo Odoslať")
-					submitForm(db)
+					submitForm(db, t)
 				}
 				return btn.Layout(gtx)
 			}
@@ -115,6 +147,33 @@ func CreateTest(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dime
 		}),
 	)
 }
+
+// Funkcia na otvorenie dialógového okna na výber súboru
+func (t *UploadCsv) openFileDialog(db *gorm.DB) {
+	file, err := t.explorer.ChooseFile()
+	if err != nil {
+		log.Println("Chyba pri výbere súboru:", err)
+		return
+	}
+	if file != nil {
+		defer file.Close() // Nezabudni zatvoriť súbor
+		b, err := io.ReadAll(file)
+		if err != nil {
+			log.Println("Chyba pri čítaní súboru:", err)
+			return
+		}
+		t.selectedFile = string(b)
+	}
+}
+
+// Spracovanie eventov (pre Explorer)
+func (t *UploadCsv) HandleEvent(evt interface{}) { // Zmena na interface{}
+	switch e := evt.(type) {
+	case app.FrameEvent:
+		t.explorer.ListenEvents(e)
+	}
+}
+
 
 func parseNumber(input string) int {
 	logger := logging.GetLogger()
@@ -174,7 +233,7 @@ func renderOptions(gtx layout.Context, th *material.Theme, questionIndex int, qf
 	return children
 }
 
-func submitForm(db *gorm.DB) {
+func submitForm(db *gorm.DB, t *UploadCsv) {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
@@ -207,32 +266,45 @@ func submitForm(db *gorm.DB) {
 		slog.String("cas", cas), 
 		slog.Int("pocetOtazok", pocetOtazok))
 		// Premenná pre uchovávanie zaškrtnutých možností
-//	var selectedOptions string
-	// Prejdeme každú otázku a jej odpovede
-/*	for i, qf := range questionForms {
-		fmt.Printf("otazka c. %d", i)
-		// Pre každú možnosť otázky (A, B, C, D, E) skontrolujeme, či je zaškrtnutá
-		for j, option := range qf.options {
-			optionStr := string(rune('A' + j))
-			if option.Value {
-				// Ak je možnosť zaškrtnutá, pridáme ju do stringu
-				if selectedOptions != "" {
-					selectedOptions += ", "
-				}
-				selectedOptions += optionStr
-				fmt.Printf("  - Zaškrtnuté: %s\n", optionStr)
-			}
+
+	fmt.Println(t.selectedFile)
+
+
+	reader := csv.NewReader(strings.NewReader(t.selectedFile))
+	rows, err := reader.ReadAll()
+	if err != nil {
+		fmt.Println("error1: %s", err)
+		return 
+	}
+
+
+	fmt.Println("studenti v csv: %s", rows)
+
+	for i, row := range rows {
+		fmt.Println("som dnu for")
+		if i == 0 {
+			fmt.Println("hlavicka")
+			continue // Preskočiť hlavičku CSV
+		}
+		birthDate, err := time.Parse("2006-01-02", row[2]) 
+		if err != nil {
+			fmt.Println("error2: %s", err)
+			return
 		}
 
-		// Ak sú zaškrtnuté možnosti, vypíšeme ich
-
+		student := models.Student{
+			Name:               row[0],
+			Surname:            row[1],
+			BirthDate:          birthDate,
+			RegistrationNumber: row[3],
+			Room:               row[4],
+			TestID:             test.ID,					//TODO:preroobilt!!!!!!!!!!!!!!!!!!!!! 
+		}
+		if err := repository.CreateStudent(db, &student); err != nil {
+			fmt.Println("error3: ", err)
+			return 
+		}else{
+			fmt.Println("student pridany: %s", student)
+		}
 	}
-	if selectedOptions != "" {
-		fmt.Printf("  - Zaškrtnuté možnosti: %s\n", selectedOptions)
-	} else {
-		fmt.Println("  - Žiadna možnosť nie je zaškrtnutá")
-	}
-	
-
-*/
 }

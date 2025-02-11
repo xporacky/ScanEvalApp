@@ -23,6 +23,7 @@ func RunWindow(db *gorm.DB) {
     tabNames := []string{"Písomky", "Študenti", "Vytvorenie Písomky", "Upload CSV"}
 
     uploadTab := tabs.NewUploadTab(w)
+    uploadCsv := tabs.NewUploadCsv(w)
 
     for {
         evt := w.Event()
@@ -44,7 +45,7 @@ func RunWindow(db *gorm.DB) {
                     case 1:
                         return tabs.Students(gtx, th, db)
                     case 2:
-                        return tabs.CreateTest(gtx, th, db)
+                        return uploadCsv.CreateTest(gtx, th, db)
                     case 3:
 						return uploadTab.Layout(gtx, th, db) // Použitie inicializovaného UploadTab
                         //return tabs.Upload(gtx, th,w)
