@@ -1,5 +1,6 @@
 #!/bin/bash
 add_to_bashrc=false
+
 # Check for Fedora in /etc/os-release
 if grep -iq 'fedora' /etc/os-release; then
   sudo dnf update -y
@@ -16,7 +17,6 @@ else
 #
 fi
 
-go instalation
 wget https://go.dev/dl/go1.23.2.linux-amd64.tar.gz
 sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.23.2.linux-amd64.tar.gz
 sudo rm go1.23.2.linux-amd64.tar.gz

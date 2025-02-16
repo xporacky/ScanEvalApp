@@ -31,8 +31,12 @@ func ExtractID(path string) (int, error) {
 	re := regexp.MustCompile(`ID:\s*(\d+)`)
 	match := re.FindStringSubmatch(dt)
 	if len(match) < 2 {
-		errorLogger.Error("No ID found in the input image", slog.String("path", path))
-		return 0, errors.New("No ID found in the input image")
+		dt = OcrImage(path, PSM_DEFAULT)
+		match = re.FindStringSubmatch(dt)
+		if len(match) < 2 {
+			errorLogger.Error("No ID found in the input image", slog.String("path", path))
+			return 0, errors.New("no id found in the input image")
+		}
 	}
 	var id int
 	_, err := fmt.Sscan(match[1], &id)
