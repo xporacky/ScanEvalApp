@@ -9,21 +9,22 @@ import (
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"gioui.org/x/explorer"
-	"io"
+	//"io"
 	"log"
-
-	"ScanEvalApp/internal/database/models"
-	"ScanEvalApp/internal/database/repository"
-	"strings"
-	"time"
+	//"path/filepath"
+	//"ScanEvalApp/internal/database/models"
+	//"ScanEvalApp/internal/database/repository"
+	//"strings"
+	//"time"
 	"gorm.io/gorm"
-	"encoding/csv"
+	//"encoding/csv"
+	"os"
 )
 
 type UploadTab struct {
 	button       	widget.Clickable
 	explorer     	*explorer.Explorer
-	selectedFile 	string
+	filePath 	string
 
 }
 
@@ -50,8 +51,8 @@ func (t *UploadTab) Layout(gtx layout.Context, th *material.Theme, db *gorm.DB) 
 			}),
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 				text := "Žiadny súbor nebol vybraný"
-				if t.selectedFile != "" {
-					text = fmt.Sprintf("Vybraný súbor: %s", t.selectedFile)
+				if t.filePath != "" {
+					text = fmt.Sprintf("Vybraný súbor: %s", t.filePath)
 					
 					
 				}
@@ -70,14 +71,19 @@ func (t *UploadTab) openFileDialog(db *gorm.DB) {
 	}
 	if file != nil {
 		defer file.Close() // Nezabudni zatvoriť súbor
-		b, err := io.ReadAll(file)
 		if err != nil {
 			log.Println("Chyba pri čítaní súboru:", err)
 			return
 		}
-		t.selectedFile = string(b)
-		fmt.Println("volam parse")
-		ParseCSV(strings.NewReader(t.selectedFile), db)
+		// Pretypovanie na *os.File
+		if f, ok := file.(*os.File); ok {
+			t.filePath = f.Name()	
+			fmt.Println("Cesta k súboru:", t.filePath)
+		} else {
+			log.Println("file nie je typu *os.File")
+		}
+
+	
 
 
 	}
@@ -91,47 +97,6 @@ func (t *UploadTab) HandleEvent(evt interface{}) { // Zmena na interface{}
 	}
 }
 
-
-func ParseCSV(file io.Reader, db *gorm.DB) {
-	
-	reader := csv.NewReader(file)
-	rows, err := reader.ReadAll()
-	if err != nil {
-		fmt.Println("error1: %s", err)
-		return 
-	}
-
-
-	fmt.Println("studenti v csv: %s", rows)
-
-	for i, row := range rows {
-		fmt.Println("som dnu for")
-		if i == 0 {
-			fmt.Println("hlavicka")
-			continue // Preskočiť hlavičku CSV
-		}
-		birthDate, err := time.Parse("2006-01-02", row[2]) 
-		if err != nil {
-			fmt.Println("error2: %s", err)
-			return
-		}
-
-		student := models.Student{
-			Name:               row[0],
-			Surname:            row[1],
-			BirthDate:          birthDate,
-			RegistrationNumber: row[3],
-			Room:               row[4],
-			TestID:             2,					//TODO:preroobilt!!!!!!!!!!!!!!!!!!!!! 
-		}
-		if err := repository.CreateStudent(db, &student); err != nil {
-			fmt.Println("error3: ", err)
-			return 
-		}else{
-			fmt.Println("student pridany: %s", student)
-		}
-	}
-}
 
 
 
