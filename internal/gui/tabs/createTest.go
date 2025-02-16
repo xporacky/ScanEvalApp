@@ -253,12 +253,22 @@ func submitForm(db *gorm.DB, t *UploadCsv) {
 		errorLogger.Error("Chyba pri parsovaní počtu otázok", slog.Group("CRITICAL", slog.String("error", err.Error())))
 		return
 	}
+
+	var answers []string
+	for _, qf := range questionForms {
+		answers = append(answers, qf.selectedOption.Value)
+	}
+	answersStr := strings.Join(answers, "")
+
+
+
 	// Vytvorenie testu
 	test := models.Test{
 		Title:      nazov,
 		SchoolYear: cas,
 //		Room:       miestnost,
 		QuestionCount: pocetOtazok,
+		Questions : answersStr,
 	}
 	// ulozenie do db
 	err = repository.CreateTest(db, &test)
@@ -271,7 +281,8 @@ func submitForm(db *gorm.DB, t *UploadCsv) {
 		slog.String("nazov", nazov), 
 		slog.String("miestnost", miestnost), 
 		slog.String("cas", cas), 
-		slog.Int("pocetOtazok", pocetOtazok))
+		slog.Int("pocetOtazok", pocetOtazok),
+		slog.String("odpovede", answersStr))
 		// Premenná pre uchovávanie zaškrtnutých možností
 
 	fmt.Println(t.selectedFile)
