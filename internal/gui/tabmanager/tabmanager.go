@@ -27,7 +27,7 @@ func (tm *TabManager) LayoutTabs(gtx layout.Context, th *material.Theme, tabName
             for i, btn := range tm.Buttons {
                 idx := i
                 children[i] = layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-                    if btn.Clicked(gtx) {
+                    if idx != 3 && btn.Clicked(gtx) {
                         tm.ActiveTab = idx
                     }
                     label := tabNames[idx]

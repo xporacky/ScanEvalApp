@@ -20,7 +20,7 @@ func RunWindow(db *gorm.DB) {
     w.Option(app.Title("ScanEvalApp"))
     var ops op.Ops
     tm := tabmanager.NewTabManager(4) // Vytvor TabManager
-    tabNames := []string{"Písomky", "Študenti", "Vytvorenie Písomky", "Upload CSV"}
+    tabNames := []string{"Písomky", "Študenti", "Vytvorenie Písomky", "Vyhodnotenie testu"}
 
     uploadTab := tabs.NewUploadTab(w)
     uploadCsv := tabs.NewUploadCsv(w)
