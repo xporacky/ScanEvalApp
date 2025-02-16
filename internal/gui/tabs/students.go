@@ -12,14 +12,14 @@ import (
 	"log/slog"
 )
 	// Tlačidlo na tlač všetkých hárkov
-var printAllButton widget.Clickable
+
 var printButtons []widget.Clickable
 var searchQuery widget.Editor
 // scrollovanie
 var studentList widget.List = widget.List{List: layout.List{Axis: layout.Vertical}}
 // StudentsTab renders the "Students" tab with a table of students.
 func Students(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimensions {
-	logger := logging.GetLogger()
+	//logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
 	students, err := repository.GetAllStudents(db)
@@ -58,14 +58,7 @@ func Students(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimens
 			editor := material.Editor(th, &searchQuery, "Vyhľadávanie (Meno, Priezvisko, Registračné číslo)")
 			return editor.Layout(gtx)
 		}),
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			btn := material.Button(th, &printAllButton, "Tlačiť všetky hárky")
-			if printAllButton.Clicked(gtx) {
-				logger.Info("Kliknutie na tlačidlo Tlačiť všetky hárky")
-				printAllSheets()
-			}
-			return btn.Layout(gtx)
-		}),
+		
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
 				layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
@@ -128,11 +121,7 @@ func Students(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimens
 }
 
 
-func printAllSheets() {
-	logger := logging.GetLogger()
 
-	logger.Info("Volám tlač všetky hárky")
-}
 
 func printSheet(registrationNumber string) {
 	logger := logging.GetLogger()

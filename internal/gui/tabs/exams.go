@@ -16,12 +16,14 @@ import (
 var deleteButtons []widget.Clickable
 var showAnsButtons []widget.Clickable
 var evaluateTestBtns []widget.Clickable
+var printTestBtns []widget.Clickable
+var printAllButton widget.Clickable
 // scrollovanie
 var examList widget.List = widget.List{List: layout.List{Axis: layout.Vertical}}
 
 // Exams renders the "Exams" tab with dynamically generated columns based on data from the database.
 func Exams(gtx layout.Context, th *material.Theme, selectedTestID *uint, db *gorm.DB, tm *tabmanager.TabManager) layout.Dimensions {
-    //logger := logging.GetLogger()
+    logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
     tests, err := repository.GetAllTests(db)
@@ -30,8 +32,8 @@ func Exams(gtx layout.Context, th *material.Theme, selectedTestID *uint, db *gor
         return layout.Dimensions{}
     }
 
-    columns := []string{"Názov", "Rok", "Počet otázok", "Počet študentov", "Dátum", "Ukázať odpovede", "Vymazať", "Vyhodnotiť"}
-    columnWidths := []float32{0.2, 0.15, 0.15, 0.1, 0.1, 0.1, 0.1, 0.1} // Pomery šírok
+    columns := []string{"Názov", "Rok", "Počet otázok", "Počet študentov", "Dátum", "Ukázať odpovede", "Vymazať", "Vyhodnotiť", "Tlačiť"}
+    columnWidths := []float32{0.2, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1} // Pomery šírok
     if len(deleteButtons) != len(tests) {
 		deleteButtons = make([]widget.Clickable, len(tests))
 	}
@@ -41,8 +43,19 @@ func Exams(gtx layout.Context, th *material.Theme, selectedTestID *uint, db *gor
     if len(evaluateTestBtns) != len(tests) {
 		evaluateTestBtns = make([]widget.Clickable, len(tests))
 	}
+    if len(printTestBtns) != len(tests) {
+		printTestBtns = make([]widget.Clickable, len(tests))
+	}
 
     return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+        layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			btn := material.Button(th, &printAllButton, "Tlačiť všetky hárky")
+			if printAllButton.Clicked(gtx) {
+				logger.Info("Kliknutie na tlačidlo Tlačiť všetky hárky")
+				printAllSheets()
+			}
+			return btn.Layout(gtx)
+		}),
         layout.Rigid(func(gtx layout.Context) layout.Dimensions {
             return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
                 layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
@@ -69,6 +82,9 @@ func Exams(gtx layout.Context, th *material.Theme, selectedTestID *uint, db *gor
                 layout.Flexed(columnWidths[7], func(gtx layout.Context) layout.Dimensions {
                     return material.Body1(th, columns[7]).Layout(gtx)
                 }),
+                layout.Flexed(columnWidths[8], func(gtx layout.Context) layout.Dimensions {
+                    return material.Body1(th, columns[8]).Layout(gtx)
+                }),
                 
             )
         }),
@@ -86,6 +102,10 @@ func Exams(gtx layout.Context, th *material.Theme, selectedTestID *uint, db *gor
                 if evaluateTestBtns[i].Clicked(gtx) {
                     *selectedTestID = test.ID  // Nastavenie ID testu
                     tm.ActiveTab = 3          // Prechod na UploadTab
+                
+                }
+                if printTestBtns[i].Clicked(gtx) {
+                    printTest(test.ID)
                 
                 }
         
@@ -117,6 +137,10 @@ func Exams(gtx layout.Context, th *material.Theme, selectedTestID *uint, db *gor
                         btn := material.Button(th, &evaluateTestBtns[i], "Vyhodnotiť")
                         return btn.Layout(gtx)
                     }),
+                    layout.Flexed(columnWidths[8], func(gtx layout.Context) layout.Dimensions {
+                        btn := material.Button(th, &printTestBtns[i], "Tlačiť")
+                        return btn.Layout(gtx)
+                    }),
                 )
             })
         }),        
@@ -146,4 +170,16 @@ func showAnsTest(Id uint) {
     logger := logging.GetLogger()
 
     logger.Info("Ukázanie opovedí testu s ID", slog.Uint64("ID", uint64(Id)))
+}
+
+func printAllSheets() {
+	logger := logging.GetLogger()
+
+	logger.Info("Volám tlač všetky hárky")
+}
+
+func printTest(Id uint) {
+    logger := logging.GetLogger()
+
+    logger.Info("tlačenie testu s ID", slog.Uint64("ID", uint64(Id)))
 }
