@@ -81,8 +81,6 @@ func Exams(gtx layout.Context, th *material.Theme, selectedTestID *uint, db *gor
                 }
                 if showAnsButtons[i].Clicked(gtx) {
                     showAnsTest(test.ID)
-                    *selectedTestID = test.ID  // Nastavenie ID testu
-                    tm.ActiveTab = 3          // Prechod na UploadTab
                 
                 }
                 if evaluateTestBtns[i].Clicked(gtx) {
