@@ -11,14 +11,16 @@ import (
 	"ScanEvalApp/internal/logging"
 	"log/slog"
     "ScanEvalApp/internal/database/models"
+    "ScanEvalApp/internal/gui/tabmanager" 
 )
 var deleteButtons []widget.Clickable
 var showAnsButtons []widget.Clickable
+var evaluateTestBtns []widget.Clickable
 // scrollovanie
 var examList widget.List = widget.List{List: layout.List{Axis: layout.Vertical}}
 
 // Exams renders the "Exams" tab with dynamically generated columns based on data from the database.
-func Exams(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimensions {
+func Exams(gtx layout.Context, th *material.Theme, selectedTestID *uint, db *gorm.DB, tm *tabmanager.TabManager) layout.Dimensions {
     //logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
@@ -28,13 +30,16 @@ func Exams(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimension
         return layout.Dimensions{}
     }
 
-    columns := []string{"Názov", "Rok", "Počet otázok", "Počet študentov", "Dátum", "Ukázať odpovede", "Vymazať"}
-    columnWidths := []float32{0.2, 0.15, 0.15, 0.15, 0.15, 0.1, 0.1} // Pomery šírok
+    columns := []string{"Názov", "Rok", "Počet otázok", "Počet študentov", "Dátum", "Ukázať odpovede", "Vymazať", "Vyhodnotiť"}
+    columnWidths := []float32{0.2, 0.15, 0.15, 0.1, 0.1, 0.1, 0.1, 0.1} // Pomery šírok
     if len(deleteButtons) != len(tests) {
 		deleteButtons = make([]widget.Clickable, len(tests))
 	}
     if len(showAnsButtons) != len(tests) {
 		showAnsButtons = make([]widget.Clickable, len(tests))
+	}
+    if len(evaluateTestBtns) != len(tests) {
+		evaluateTestBtns = make([]widget.Clickable, len(tests))
 	}
 
     return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
@@ -61,6 +66,10 @@ func Exams(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimension
                 layout.Flexed(columnWidths[6], func(gtx layout.Context) layout.Dimensions {
                     return material.Body1(th, columns[6]).Layout(gtx)
                 }),
+                layout.Flexed(columnWidths[7], func(gtx layout.Context) layout.Dimensions {
+                    return material.Body1(th, columns[7]).Layout(gtx)
+                }),
+                
             )
         }),
         layout.Rigid(func(gtx layout.Context) layout.Dimensions {
@@ -72,6 +81,14 @@ func Exams(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimension
                 }
                 if showAnsButtons[i].Clicked(gtx) {
                     showAnsTest(test.ID)
+                    *selectedTestID = test.ID  // Nastavenie ID testu
+                    tm.ActiveTab = 3          // Prechod na UploadTab
+                
+                }
+                if evaluateTestBtns[i].Clicked(gtx) {
+                    *selectedTestID = test.ID  // Nastavenie ID testu
+                    tm.ActiveTab = 3          // Prechod na UploadTab
+                
                 }
         
                 return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
@@ -96,6 +113,10 @@ func Exams(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimension
                     }),
                     layout.Flexed(columnWidths[6], func(gtx layout.Context) layout.Dimensions {
                         btn := material.Button(th, &deleteButtons[i], "Vymazať")
+                        return btn.Layout(gtx)
+                    }),
+                    layout.Flexed(columnWidths[7], func(gtx layout.Context) layout.Dimensions {
+                        btn := material.Button(th, &evaluateTestBtns[i], "Vyhodnotiť")
                         return btn.Layout(gtx)
                     }),
                 )

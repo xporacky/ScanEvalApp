@@ -24,6 +24,8 @@ func RunWindow(db *gorm.DB) {
 
     uploadTab := tabs.NewUploadTab(w)
     uploadCsv := tabs.NewUploadCsv(w)
+    var selectedTestID uint
+
 
     for {
         evt := w.Event()
@@ -41,12 +43,15 @@ func RunWindow(db *gorm.DB) {
                 layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
                     switch tm.ActiveTab {
                     case 0:
-                        return tabs.Exams(gtx, th, db)
+                        return tabs.Exams(gtx, th, &selectedTestID, db, tm)
                     case 1:
                         return tabs.Students(gtx, th, db)
                     case 2:
                         return uploadCsv.CreateTest(gtx, th, db)
                     case 3:
+                        if selectedTestID != 0 {
+                            uploadTab.SetTestID(selectedTestID) // Nastavenie ID testu v UploadTab
+                        }
 						return uploadTab.Layout(gtx, th, db) // Použitie inicializovaného UploadTab
                         //return tabs.Upload(gtx, th,w)
                     default:

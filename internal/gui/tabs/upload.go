@@ -13,7 +13,7 @@ import (
 	"log"
 	//"path/filepath"
 	//"ScanEvalApp/internal/database/models"
-	//"ScanEvalApp/internal/database/repository"
+	"ScanEvalApp/internal/database/repository"
 	//"strings"
 	//"time"
 	"gorm.io/gorm"
@@ -25,7 +25,12 @@ type UploadTab struct {
 	button       	widget.Clickable
 	explorer     	*explorer.Explorer
 	filePath 	string
+	testID uint
 
+
+}
+func (t *UploadTab) SetTestID(id uint) {
+    t.testID = id
 }
 
 func NewUploadTab(w *app.Window) *UploadTab {
@@ -58,6 +63,13 @@ func (t *UploadTab) Layout(gtx layout.Context, th *material.Theme, db *gorm.DB) 
 				}
 				return material.Label(th, unit.Sp(16), text).Layout(gtx)
 			}),
+			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+				text := "Žiadny test nebol vybraný"
+				if t.testID != 0 {
+					text = fmt.Sprintf("Vybraný test ID: %d", t.testID)
+				}
+				return material.Label(th, unit.Sp(16), text).Layout(gtx)
+			}),
 		)
 	})
 }
@@ -83,9 +95,7 @@ func (t *UploadTab) openFileDialog(db *gorm.DB) {
 			log.Println("file nie je typu *os.File")
 		}
 
-	
-
-
+		scanProcess(t, db)
 	}
 }
 
@@ -96,6 +106,19 @@ func (t *UploadTab) HandleEvent(evt interface{}) { // Zmena na interface{}
 		t.explorer.ListenEvents(e)
 	}
 }
+
+
+func scanProcess(t *UploadTab , db *gorm.DB){
+	if t.testID == 0 && t.filePath == "" {
+		fmt.Println("nevybrane povinne subory")
+	}
+	
+	test,_ := repository.GetTest(db, t.testID)
+
+
+	fmt.Println("tu zavolat funkciu scanprocesting s param test a t.filePath", test)
+}
+
 
 
 
