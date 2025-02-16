@@ -10,6 +10,8 @@ import (
 	//"reflect"
 	"ScanEvalApp/internal/logging"
 	"log/slog"
+	"gioui.org/unit"
+
 )
 	// Tlačidlo na tlač všetkých hárkov
 
@@ -55,8 +57,19 @@ func Students(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimens
 
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			margin := unit.Dp(16) // Nastav si veľkosť marginu podľa potreby
+			gtx.Constraints.Min.X = 0
+			gtx.Constraints.Min.Y = 0
+			gtx.Constraints.Max.X -= 2 * gtx.Dp(margin)
+		
+			inset := layout.Inset{
+				Top:    margin,
+				Bottom: margin,
+				Left: margin,
+			}
+		
 			editor := material.Editor(th, &searchQuery, "Vyhľadávanie (Meno, Priezvisko, Registračné číslo)")
-			return editor.Layout(gtx)
+			return inset.Layout(gtx, editor.Layout)
 		}),
 		
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {

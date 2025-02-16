@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"gorm.io/gorm"
 	"gioui.org/widget"
-	//"gioui.org/unit"
+	"gioui.org/unit"
 	"ScanEvalApp/internal/logging"
 	"log/slog"
     "ScanEvalApp/internal/database/models"
@@ -49,13 +49,23 @@ func Exams(gtx layout.Context, th *material.Theme, selectedTestID *uint, db *gor
 
     return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
         layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			btn := material.Button(th, &printAllButton, "Tlačiť všetky hárky")
-			if printAllButton.Clicked(gtx) {
-				logger.Info("Kliknutie na tlačidlo Tlačiť všetky hárky")
-				printAllSheets()
-			}
-			return btn.Layout(gtx)
-		}),
+            margin := unit.Dp(16) // Nastav si veľkosť marginu podľa potreby
+        
+            inset := layout.Inset{
+                Top:    margin,
+                Bottom: margin,
+                Left: margin,
+                Right: margin,
+            }
+        
+            btn := material.Button(th, &printAllButton, "Tlačiť všetky hárky")
+            if printAllButton.Clicked(gtx) {
+                logger.Info("Kliknutie na tlačidlo Tlačiť všetky hárky")
+                printAllSheets()
+            }
+        
+            return inset.Layout(gtx, btn.Layout)
+        }),
         layout.Rigid(func(gtx layout.Context) layout.Dimensions {
             return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
                 layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
