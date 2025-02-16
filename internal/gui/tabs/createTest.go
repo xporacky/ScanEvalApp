@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 	"encoding/csv"
+	"os"
 )
 
 var (
@@ -41,6 +42,7 @@ type UploadCsv struct {
 	button       	widget.Clickable
 	explorer     	*explorer.Explorer
 	selectedFile 	string
+	filePath		string
 
 }
 func NewUploadCsv(w *app.Window) *UploadCsv {
@@ -116,7 +118,7 @@ func (t *UploadCsv) CreateTest(gtx layout.Context, th *material.Theme, db *gorm.
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			text := "Žiadny súbor nebol vybraný"
 			if t.selectedFile != "" {
-				text = fmt.Sprintf("Vybraný súbor: %s", t.selectedFile)
+				text = fmt.Sprintf("Vybraný súbor: %s", t.filePath)
 				
 				
 			}
@@ -157,6 +159,11 @@ func (t *UploadCsv) openFileDialog(db *gorm.DB) {
 	}
 	if file != nil {
 		defer file.Close() // Nezabudni zatvoriť súbor
+		if f, ok := file.(*os.File); ok {
+			t.filePath = f.Name()
+		} else {
+			log.Println("file nie je typu *os.File")
+		}	
 		b, err := io.ReadAll(file)
 		if err != nil {
 			log.Println("Chyba pri čítaní súboru:", err)
