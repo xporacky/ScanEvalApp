@@ -2,71 +2,79 @@
 package window
 
 import (
-    "gioui.org/app"
-    "gioui.org/layout"
-    "gioui.org/op"
-    "gioui.org/widget/material"
-    "os"
-    "ScanEvalApp/internal/gui/tabmanager"  // Import tabmanager balíka
-    "ScanEvalApp/internal/gui/tabs"
-    "gorm.io/gorm"
-    "ScanEvalApp/internal/logging"
+	"ScanEvalApp/internal/gui/fonts"
+	"ScanEvalApp/internal/gui/tabmanager" // Import tabmanager balíka
+	"ScanEvalApp/internal/gui/tabs"
+	"ScanEvalApp/internal/gui/themeUI"
+	"ScanEvalApp/internal/logging"
+	"os"
+
+	"gioui.org/app"
+	"gioui.org/layout"
+	"gioui.org/op"
+	"gioui.org/text"
+	"gioui.org/widget/material"
+	"gorm.io/gorm"
 )
 
-func RunWindow(db *gorm.DB) {
-    logger := logging.GetLogger()
+func RunWindow(db *gorm.DB) error {
+	logger := logging.GetLogger()
 
-    w := new(app.Window)
-    w.Option(app.Title("ScanEvalApp"))
-    var ops op.Ops
-    tm := tabmanager.NewTabManager(4) // Vytvor TabManager
-    tabNames := []string{"Písomky", "Študenti", "Vytvorenie Písomky", "Vyhodnotenie testu"}
+	w := new(app.Window)
+	w.Option(app.Title("ScanEvalApp"))
+	var ops op.Ops
+	tm := tabmanager.NewTabManager(4) // Vytvor TabManager
+	tabNames := []string{"Písomky", "Študenti", "Vytvorenie Písomky", "Vyhodnotenie testu"}
 
-    uploadTab := tabs.NewUploadTab(w)
-    uploadCsv := tabs.NewUploadCsv(w)
-    var selectedTestID uint
+	uploadTab := tabs.NewUploadTab(w)
+	uploadCsv := tabs.NewUploadCsv(w)
+	var selectedTestID uint
 
+	for {
+		evt := w.Event()
+		switch typ := evt.(type) {
+		case app.FrameEvent:
+			gtx := app.NewContext(&ops, typ)
+			ops.Reset()
+			fontCollection, err := fonts.Prepare()
+			if err != nil {
+				return err
+			}
+			theme := material.NewTheme()
+			theme.Shaper = text.NewShaper(text.WithCollection(fontCollection))
+			th := themeUI.New(theme, false)
 
-    for {
-        evt := w.Event()
-        switch typ := evt.(type) {
-        case app.FrameEvent:
-            gtx := app.NewContext(&ops, typ)
-            ops.Reset()
-
-            th := material.NewTheme()
-
-            layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-                layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-                    return tm.LayoutTabs(gtx, th, tabNames) // Vykreslenie záložiek
-                }),
-                layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-                    switch tm.ActiveTab {
-                    case 0:
-                        return tabs.Exams(gtx, th, &selectedTestID, db, tm)
-                    case 1:
-                        return tabs.Students(gtx, th, db)
-                    case 2:
-                        return uploadCsv.CreateTest(gtx, th, db)
-                    case 3:
-                        if selectedTestID != 0 {
-                            uploadTab.SetTestID(selectedTestID) // Nastavenie ID testu v UploadTab
-                        }
-						return uploadTab.Layout(gtx, th, db) // Použitie inicializovaného UploadTab
-                        //return tabs.Upload(gtx, th,w)
-                    default:
-                        return layout.Dimensions{}
-                    }
-                }),
-            )
-            if tm.ActiveTab == 3 {
+			layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+					return tm.LayoutTabs(gtx, th.Material(), tabNames) // Vykreslenie záložiek
+				}),
+				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+					switch tm.ActiveTab {
+					case 0:
+						return tabs.Exams(gtx, th, &selectedTestID, db, tm)
+					case 1:
+						return tabs.Students(gtx, th.Material(), db)
+					case 2:
+						return uploadCsv.CreateTest(gtx, th.Material(), db)
+					case 3:
+						if selectedTestID != 0 {
+							uploadTab.SetTestID(selectedTestID) // Nastavenie ID testu v UploadTab
+						}
+						return uploadTab.Layout(gtx, th.Material(), db) // Použitie inicializovaného UploadTab
+						//return tabs.Upload(gtx, th,w)
+					default:
+						return layout.Dimensions{}
+					}
+				}),
+			)
+			if tm.ActiveTab == 3 {
 				uploadTab.HandleEvent(evt)
 			}
-            typ.Frame(gtx.Ops)
+			typ.Frame(gtx.Ops)
 
-        case app.DestroyEvent:
-            logger.Info("Zatvorenie aplikácie.")
-            os.Exit(0)
-        }
-    }
+		case app.DestroyEvent:
+			logger.Info("Zatvorenie aplikácie.")
+			os.Exit(0)
+		}
+	}
 }
