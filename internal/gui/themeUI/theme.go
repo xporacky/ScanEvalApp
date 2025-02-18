@@ -18,11 +18,11 @@ var (
 	Red         = color.NRGBA{R: 220, G: 53, B: 69, A: 255}
 	Gray        = color.NRGBA{R: 108, G: 117, B: 125, A: 255}
 	Green       = color.NRGBA{R: 40, G: 167, B: 69, A: 255}
+	LightGray   = color.NRGBA{R: 211, G: 211, B: 211, A: 255}
 )
 
 type Theme struct {
 	*material.Theme
-	isDark bool
 
 	LoaderColor           color.NRGBA
 	BorderColor           color.NRGBA
@@ -50,7 +50,7 @@ type Theme struct {
 	BadgeBgColor          color.NRGBA
 }
 
-func New(material *material.Theme, isDark bool) *Theme {
+func New(material *material.Theme) *Theme {
 	t := &Theme{
 		Theme:            material,
 		SideBarBgColor:   rgb(0x202224),
@@ -59,79 +59,37 @@ func New(material *material.Theme, isDark bool) *Theme {
 
 	t.Theme.TextSize = unit.Sp(14)
 	// default theme is dark
-	t.Switch(isDark)
+	t.LoaderColor = rgb(0x000000)
+	t.Theme.Palette.Fg = rgb(0x000000)
+	t.Theme.Palette.Bg = rgb(0xffffff)
+	t.Theme.Palette.ContrastBg = rgb(0x4589f5)
+	t.Theme.Palette.ContrastFg = rgb(0x000000)
+	t.BorderColorFocused = rgb(0x4589f5)
+	t.BorderColor = rgb(0x6c6f76)
+	t.TabInactiveColor = rgb(0x4589f5)
+	t.SendButtonBgColor = rgb(0x4589f5)
+	t.SwitchBgColor = rgb(0x4589f5)
+	t.TextColor = rgb(0x000000)
+	t.ButtonTextColor = rgb(0xffffff)
+	t.SeparatorColor = rgb(0x9c9c9c)
+	t.TableBorderColor = rgb(0xb0b3b8)
+	t.CheckBoxColor = rgb(0x4589f5)
+	t.RequestMethodColor = rgb(0x007518)
+	t.DropDownMenuBgColor = rgb(0x2b2d31)
+	t.MenuBgColor = rgb(0x2b2d31)
+	t.TextSelectionColor = rgb(0xccd3de)
+	t.NotificationBgColor = rgb(0x4589f5)
+	t.NotificationTextColor = rgb(0xffffff)
+	t.ResponseStatusColor = rgb(0x007518)
+	t.ErrorColor = rgb(0xff7373)
+	t.WarningColor = rgb(0xffe073)
+	t.BadgeBgColor = rgb(0x2b2d31)
+	t.DeleteButtonBgColor = rgb(0xff7373)
 	return t
 }
 
 func (t *Theme) Material() *material.Theme {
 	return t.Theme
-}
-
-func (t *Theme) Switch(isDark bool) *material.Theme {
-	t.isDark = isDark
-
-	if isDark {
-		t.Theme.Palette.Fg = rgb(0xd7dade)
-		t.LoaderColor = rgb(0xd7dade)
-		t.Theme.Palette.Bg = rgb(0x202224)
-		t.Theme.Palette.ContrastBg = rgb(0x202224)
-		t.Theme.Palette.ContrastFg = rgb(0xffffff)
-		t.BorderColorFocused = rgb(0xffffff)
-		t.TextColor = rgb(0x8b8e95)
-		t.BorderColor = rgb(0x6c6f76)
-		t.TabInactiveColor = rgb(0x4589f5)
-		t.SendButtonBgColor = rgb(0x4589f5)
-		t.SwitchBgColor = rgb(0x4589f5)
-		t.TextColor = rgb(0xffffff)
-		t.ButtonTextColor = rgb(0xffffff)
-		t.SeparatorColor = rgb(0x2b2d31)
-		t.TableBorderColor = rgb(0x2b2d31)
-		t.CheckBoxColor = rgb(0xb0b3b8)
-		t.RequestMethodColor = rgb(0x8bc34a)
-		t.DropDownMenuBgColor = rgb(0x2b2d31)
-		t.MenuBgColor = rgb(0x2b2d31)
-		t.TextSelectionColor = rgb(0x6380ad)
-		t.NotificationBgColor = rgb(0x4589f5)
-		t.NotificationTextColor = rgb(0xffffff)
-		t.ResponseStatusColor = rgb(0x8bc34a)
-		t.ErrorColor = rgb(0xff7373)
-		t.WarningColor = rgb(0xffe073)
-		t.BadgeBgColor = rgb(0x2b2d31)
-		t.DeleteButtonBgColor = rgb(0xff7373)
-	} else {
-		t.LoaderColor = rgb(0x000000)
-		t.Theme.Palette.Fg = rgb(0x000000)
-		t.Theme.Palette.Bg = rgb(0xffffff)
-		t.Theme.Palette.ContrastBg = rgb(0x4589f5)
-		t.Theme.Palette.ContrastFg = rgb(0x000000)
-		t.BorderColorFocused = rgb(0x4589f5)
-		t.BorderColor = rgb(0x6c6f76)
-		t.TabInactiveColor = rgb(0x4589f5)
-		t.SendButtonBgColor = rgb(0x4589f5)
-		t.SwitchBgColor = rgb(0x4589f5)
-		t.TextColor = rgb(0x000000)
-		t.ButtonTextColor = rgb(0xffffff)
-		t.SeparatorColor = rgb(0x9c9c9c)
-		t.TableBorderColor = rgb(0xb0b3b8)
-		t.CheckBoxColor = rgb(0x4589f5)
-		t.RequestMethodColor = rgb(0x007518)
-		t.DropDownMenuBgColor = rgb(0x2b2d31)
-		t.MenuBgColor = rgb(0x2b2d31)
-		t.TextSelectionColor = rgb(0xccd3de)
-		t.NotificationBgColor = rgb(0x4589f5)
-		t.NotificationTextColor = rgb(0xffffff)
-		t.ResponseStatusColor = rgb(0x007518)
-		t.ErrorColor = rgb(0xff7373)
-		t.WarningColor = rgb(0xffe073)
-		t.BadgeBgColor = rgb(0x2b2d31)
-		t.DeleteButtonBgColor = rgb(0xff7373)
-	}
-
-	return t.Theme
-}
-
-func (t *Theme) IsDark() bool {
-	return t.isDark
 }
 
 func rgb(c uint32) color.NRGBA {

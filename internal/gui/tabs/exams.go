@@ -65,7 +65,7 @@ func Exams(gtx layout.Context, th *themeIU.Theme, selectedTestID *uint, db *gorm
 			}
 
 			//btn := material.Button(th.Theme, &printAllButton, "Tlačiť všetky hárky")
-			btn := widgets.Button(th.Theme, &printAllButton, widgets.SaveIcon, widgets.IconPositionStart, "Tlačiť všetky hárkyZobraziť")
+			btn := widgets.Button(th.Theme, &printAllButton, widgets.SaveIcon, widgets.IconPositionStart, "Tlačiť všetky hárky")
 			btn.Background = themeUI.Gray
 			btn.Color = themeUI.White
 			if printAllButton.Clicked(gtx) {

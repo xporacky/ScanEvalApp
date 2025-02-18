@@ -42,11 +42,11 @@ func RunWindow(db *gorm.DB) error {
 			}
 			theme := material.NewTheme()
 			theme.Shaper = text.NewShaper(text.WithCollection(fontCollection))
-			th := themeUI.New(theme, false)
+			th := themeUI.New(theme)
 
 			layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					return tm.LayoutTabs(gtx, th.Material(), tabNames) // Vykreslenie záložiek
+					return tm.LayoutTabs(gtx, th, tabNames) // Vykreslenie záložiek
 				}),
 				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 					switch tm.ActiveTab {
