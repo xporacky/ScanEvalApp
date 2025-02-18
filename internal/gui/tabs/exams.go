@@ -127,7 +127,6 @@ func Exams(gtx layout.Context, th *themeIU.Theme, selectedTestID *uint, db *gorm
 					printTest(test.ID)
 
 				}
-
 				return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
 					layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
 						return material.Body1(th.Theme, test.Title).Layout(gtx)

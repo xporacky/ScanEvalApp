@@ -2,18 +2,23 @@ package tabs
 
 import (
 	"fmt"
+
 	"gioui.org/app"
+
 	//"gioui.org/io/system"
 	"gioui.org/layout"
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"gioui.org/x/explorer"
+
 	//"io"
 	"log"
 	//"path/filepath"
 	//"ScanEvalApp/internal/database/models"
 	"ScanEvalApp/internal/database/repository"
+	"ScanEvalApp/internal/scanprocessing"
+
 	//"strings"
 	//"time"
 	"gorm.io/gorm"
@@ -22,15 +27,14 @@ import (
 )
 
 type UploadTab struct {
-	button       	widget.Clickable
-	explorer     	*explorer.Explorer
-	filePath 	string
-	testID uint
-
-
+	button   widget.Clickable
+	explorer *explorer.Explorer
+	filePath string
+	testID   uint
 }
+
 func (t *UploadTab) SetTestID(id uint) {
-    t.testID = id
+	t.testID = id
 }
 
 func NewUploadTab(w *app.Window) *UploadTab {
@@ -58,8 +62,7 @@ func (t *UploadTab) Layout(gtx layout.Context, th *material.Theme, db *gorm.DB) 
 				text := "Žiadny súbor nebol vybraný"
 				if t.filePath != "" {
 					text = fmt.Sprintf("Vybraný súbor: %s", t.filePath)
-					
-					
+
 				}
 				return material.Label(th, unit.Sp(16), text).Layout(gtx)
 			}),
@@ -89,7 +92,7 @@ func (t *UploadTab) openFileDialog(db *gorm.DB) {
 		}
 		// Pretypovanie na *os.File
 		if f, ok := file.(*os.File); ok {
-			t.filePath = f.Name()	
+			t.filePath = f.Name()
 			fmt.Println("Cesta k súboru:", t.filePath)
 		} else {
 			log.Println("file nie je typu *os.File")
@@ -107,19 +110,15 @@ func (t *UploadTab) HandleEvent(evt interface{}) { // Zmena na interface{}
 	}
 }
 
-
-func scanProcess(t *UploadTab , db *gorm.DB){
+func scanProcess(t *UploadTab, db *gorm.DB) {
 	if t.testID == 0 && t.filePath == "" {
 		fmt.Println("nevybrane povinne subory")
+		return
 	}
-	
-	test,_ := repository.GetTest(db, t.testID)
 
-
-	fmt.Println("tu zavolat funkciu scanprocesting s param test a t.filePath", test)
+	test, err := repository.GetTest(db, t.testID)
+	if err != nil {
+		return
+	}
+	scanprocessing.ProcessPDF(t.filePath, test, db)
 }
-
-
-
-
-
