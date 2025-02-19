@@ -3,6 +3,8 @@ package seed
 import (
 	"ScanEvalApp/internal/logging"
 	"log/slog"
+	"math/rand"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -25,4 +27,10 @@ func GenerateAnswers(n int) string {
 		answers = answers + "0"
 	}
 	return answers
+}
+func RandomDate() time.Time {
+	minUnix := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).Unix()
+	maxUnix := time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC).Unix()
+	randomUnix := rand.Int63n(maxUnix-minUnix) + minUnix
+	return time.Unix(randomUnix, 0)
 }

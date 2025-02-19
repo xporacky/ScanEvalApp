@@ -14,6 +14,7 @@ func TestGenerator(questionsCount int, studentsCount int) *models.Test {
 	test := &models.Test{
 		Title:         "Matematický test",
 		SchoolYear:    "2024/2025",
+		Date:          RandomDate(),
 		QuestionCount: questionsCount,
 		Questions:     GenerateAnswers(questionsCount),
 		Students:      *StudentListGenerator(questionsCount, studentsCount),
