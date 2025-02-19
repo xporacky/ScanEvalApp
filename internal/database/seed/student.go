@@ -5,8 +5,6 @@ import (
 	"ScanEvalApp/internal/logging"
 	"log/slog"
 	"math/rand"
-	"strconv"
-	"time"
 )
 
 func StudentGenerator(questionsCount int) *models.Student {
@@ -17,7 +15,7 @@ func StudentGenerator(questionsCount int) *models.Student {
 	student := &models.Student{
 		Name:               firstnames[rand.Intn(len(firstnames))],
 		Surname:            surnames[rand.Intn(len(surnames))],
-		BirthDate:          randomDate(),
+		BirthDate:          RandomDate(),
 		RegistrationNumber: generateRegistrationNumber(),
 		Room:               rooms[rand.Intn(len(rooms))],
 		Score:              0,
@@ -38,17 +36,10 @@ func StudentListGenerator(questionsCount int, studentsCount int) *[]models.Stude
 	return &students
 }
 
-func generateRegistrationNumber() string {
-	s := strconv.FormatInt(int64(rand.Intn(99999999)), 10)
-	for len(s) < 8 {
-		s = "0" + s
+func generateRegistrationNumber() int {
+	n := rand.Intn(999999)
+	for n < 100000 {
+		n = rand.Intn(999999)
 	}
-	return s
-}
-
-func randomDate() time.Time {
-	minUnix := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).Unix()
-	maxUnix := time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC).Unix()
-	randomUnix := rand.Int63n(maxUnix-minUnix) + minUnix
-	return time.Unix(randomUnix, 0)
+	return n
 }

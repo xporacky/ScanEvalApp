@@ -3,20 +3,25 @@ package tabs
 import (
 	"ScanEvalApp/internal/database/repository"
 	"fmt"
+
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"gorm.io/gorm"
+
 	//"reflect"
 	"ScanEvalApp/internal/logging"
 	"log/slog"
 )
-	// Tlačidlo na tlač všetkých hárkov
+
+// Tlačidlo na tlač všetkých hárkov
 var printAllButton widget.Clickable
 var printButtons []widget.Clickable
 var searchQuery widget.Editor
+
 // scrollovanie
 var studentList widget.List = widget.List{List: layout.List{Axis: layout.Vertical}}
+
 // StudentsTab renders the "Students" tab with a table of students.
 func Students(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimensions {
 	logger := logging.GetLogger()
@@ -49,9 +54,6 @@ func Students(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimens
 	if len(printButtons) != len(students) {
 		printButtons = make([]widget.Clickable, len(students))
 	}
-
-
-	
 
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
@@ -95,9 +97,9 @@ func Students(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimens
 			return material.List(th, &studentList).Layout(gtx, len(students), func(gtx layout.Context, i int) layout.Dimensions {
 				student := students[i]
 				if printButtons[i].Clicked(gtx) {
-					printSheet(student.RegistrationNumber)
+					printSheet(fmt.Sprintf("%d", student.RegistrationNumber))
 				}
-		
+
 				return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
 					layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
 						return material.Body1(th, student.Name).Layout(gtx)
@@ -109,7 +111,7 @@ func Students(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimens
 						return material.Body1(th, student.BirthDate.Format("2006-01-02")).Layout(gtx)
 					}),
 					layout.Flexed(columnWidths[3], func(gtx layout.Context) layout.Dimensions {
-						return material.Body1(th, student.RegistrationNumber).Layout(gtx)
+						return material.Body1(th, fmt.Sprintf("%d", student.RegistrationNumber)).Layout(gtx)
 					}),
 					layout.Flexed(columnWidths[4], func(gtx layout.Context) layout.Dimensions {
 						return material.Body1(th, student.Room).Layout(gtx)
@@ -126,7 +128,6 @@ func Students(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimens
 		}),
 	)
 }
-
 
 func printAllSheets() {
 	logger := logging.GetLogger()

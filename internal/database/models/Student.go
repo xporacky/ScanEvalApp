@@ -2,6 +2,7 @@ package models
 
 import (
 	"time"
+
 	"gorm.io/gorm"
 )
 
@@ -11,7 +12,7 @@ type Student struct {
 	Name               string    `gorm:"not null"`
 	Surname            string    `gorm:"not null"`
 	BirthDate          time.Time `gorm:"not null"`
-	RegistrationNumber string    `gorm:"not null;unique"`
+	RegistrationNumber int       `gorm:"not null;unique"`
 	Room               string    `gorm:"not null"`
 	Score              int
 	Answers            string

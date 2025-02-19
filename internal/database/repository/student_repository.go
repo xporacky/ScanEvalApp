@@ -2,6 +2,7 @@ package repository
 
 import (
 	"ScanEvalApp/internal/database/models"
+	"fmt"
 
 	"gorm.io/gorm"
 	//"fmt"
@@ -18,7 +19,7 @@ func CreateStudent(db *gorm.DB, student *models.Student) error {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
-	logger.Debug("Vytváranie študenta", slog.String("name", student.Name), slog.String("surname", student.Surname), slog.String("registration number", student.RegistrationNumber))
+	logger.Debug("Vytváranie študenta", slog.String("name", student.Name), slog.String("surname", student.Surname), "registration number", student.RegistrationNumber)
 	result := db.Create(student)
 	if result.Error != nil {
 		errorLogger.Error("Chyba pri vytváraní študenta", slog.Group("CRITICAL", slog.String("error", result.Error.Error())))
@@ -35,7 +36,7 @@ func GetStudent(db *gorm.DB, registrationNumber uint, testID uint) (*models.Stud
 	var student models.Student
 	result := db.Where("ID = ? AND test_id = ?", registrationNumber, testID).First(&student)
 	if result.Error != nil {
-		errorLogger.Error("Študent nebol nájdený", slog.String("student registration number", student.RegistrationNumber), slog.Group("CRITICAL", slog.String("error", result.Error.Error())))
+		errorLogger.Error("Študent nebol nájdený", "student registration number", student.RegistrationNumber, slog.Group("CRITICAL", slog.String("error", result.Error.Error())))
 		return nil, result.Error
 	}
 	logger.Debug("Študent nájdený", slog.String("name", student.Name), slog.String("surname", student.Surname))
@@ -57,7 +58,7 @@ func UpdateStudent(db *gorm.DB, student *models.Student) error {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
-	logger.Debug("Aktualizácia študenta", slog.String("registration number", student.RegistrationNumber), slog.String("name", student.Name), slog.String("surname", student.Surname))
+	logger.Debug("Aktualizácia študenta", "registration number", student.RegistrationNumber, slog.String("name", student.Name), slog.String("surname", student.Surname))
 	result := db.Save(student)
 	if result.Error != nil {
 		errorLogger.Error("Chyba pri aktualizácii študenta", slog.Group("CRITICAL", slog.String("error", result.Error.Error())))
@@ -68,7 +69,7 @@ func UpdateStudent(db *gorm.DB, student *models.Student) error {
 func DeleteStudent(db *gorm.DB, student *models.Student) error {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
-	logger.Debug("Mazanie študenta", slog.String("registration number", student.RegistrationNumber), slog.String("name", student.Name), slog.String("surname", student.Surname))
+	logger.Debug("Mazanie študenta", "registration number", student.RegistrationNumber, slog.String("name", student.Name), slog.String("surname", student.Surname))
 	result := db.Delete(student)
 	if result.Error != nil {
 		errorLogger.Error("Chyba pri mazaní študenta", slog.Group("CRITICAL", slog.String("error", result.Error.Error())))
@@ -108,7 +109,7 @@ func GetStudentsQuery(db *gorm.DB, query string) ([]models.Student, error) {
 		// Porovnanie bez diakritiky
 		if strings.Contains(removeDiacritics(student.Name), query) ||
 			strings.Contains(removeDiacritics(student.Surname), query) ||
-			strings.Contains(student.RegistrationNumber, query) {
+			strings.Contains(fmt.Sprintf("%d", student.RegistrationNumber), query) {
 			students = append(students, student)
 		}
 	}
