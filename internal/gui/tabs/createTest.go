@@ -26,7 +26,7 @@ import (
 	"time"
 	"encoding/csv"
 	"os"
-	//"ScanEvalApp/internal/gui/themeUI"
+	"ScanEvalApp/internal/gui/themeUI"
 	themeIU "ScanEvalApp/internal/gui/themeUI"
 	"ScanEvalApp/internal/gui/widgets"
 )
@@ -112,10 +112,24 @@ func (t *UploadCsv) CreateTest(gtx layout.Context, th *themeIU.Theme, db *gorm.D
 			})
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return material.Button(th.Theme, &createButton, "Vytvoriť test").Layout(gtx)
+			btn := widgets.Button(th.Theme, &createButton, widgets.PlusIcon, widgets.IconPositionStart, "Vytvoriť test")
+			btn.Background = themeUI.LightBlue
+			btn.Color = themeUI.White
+			if printAllButton.Clicked(gtx) {
+				logger.Info("Kliknutie na tlačidlo Tlačiť všetky hárky")
+				printAllSheets()
+			}
+			return btn.Layout(gtx, th)
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return material.Button(th.Theme, &t.button, "Vybrať súbor").Layout(gtx)
+			btn := widgets.Button(th.Theme, &t.button, widgets.FileFolderIcon, widgets.IconPositionStart, "Nahrať študentov (.csv)")
+			btn.Background = themeUI.LightYellow
+			btn.Color = themeUI.Black
+			if printAllButton.Clicked(gtx) {
+				logger.Info("Kliknutie na tlačidlo Tlačiť všetky hárky")
+				printAllSheets()
+			}
+			return btn.Layout(gtx, th)
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			text := "Žiadny súbor nebol vybraný"
