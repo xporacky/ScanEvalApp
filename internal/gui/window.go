@@ -55,7 +55,7 @@ func RunWindow(db *gorm.DB) error {
 					case 1:
 						return tabs.Students(gtx, th.Material(), db)
 					case 2:
-						return uploadCsv.CreateTest(gtx, th.Material(), db)
+						return uploadCsv.CreateTest(gtx, th, db)
 					case 3:
 						if selectedTestID != 0 {
 							uploadTab.SetTestID(selectedTestID) // Nastavenie ID testu v UploadTab

@@ -26,6 +26,9 @@ import (
 	"time"
 	"encoding/csv"
 	"os"
+	//"ScanEvalApp/internal/gui/themeUI"
+	themeIU "ScanEvalApp/internal/gui/themeUI"
+	"ScanEvalApp/internal/gui/widgets"
 )
 
 var (
@@ -57,9 +60,10 @@ type questionForm struct {
 }
 
 // CreateTest renders the content for the "Vytvorenie Písomky" tab.
-func (t *UploadCsv) CreateTest(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimensions {
+func (t *UploadCsv) CreateTest(gtx layout.Context, th *themeIU.Theme, db *gorm.DB) layout.Dimensions {
 	logger := logging.GetLogger()
-
+	columnWidths := []float32{0.4, 0.2, 0.2, 0.2}
+	insetwidth := unit.Dp(10)
 	if createButton.Clicked(gtx) {
 		logger.Info("Kliknutie na tlačidlo Vytvoriť test")
 		if questionsInput.Text() != "" {
@@ -79,41 +83,39 @@ func (t *UploadCsv) CreateTest(gtx layout.Context, th *material.Theme, db *gorm.
 	}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return layout.Inset{Top: 4, Bottom: 2}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-				return layout.Flex{
-					Axis:    layout.Horizontal,
-					Spacing: layout.SpaceBetween,
-				}.Layout(gtx,
-					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return layout.UniformInset(unit.Dp(4)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-							return material.Editor(th, &nameInput, "Názov                  ").Layout(gtx)
-						})
-					}),
-					
-					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return layout.UniformInset(unit.Dp(4)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-							return material.Editor(th, &roomInput, "Miestnosť").Layout(gtx)
-						})
-					}),
-					
-					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return layout.UniformInset(unit.Dp(4)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-							return material.Editor(th, &timeInput, "Čas   ").Layout(gtx)
-						})
-					}),
-					
-					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return layout.UniformInset(unit.Dp(4)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-							return material.Editor(th, &questionsInput, "Počet otázok").Layout(gtx)
-						})
-					}),
-				)
+				return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
+						layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
+							return layout.UniformInset(insetwidth).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+								editor := widgets.NewEditorField(th.Theme, &nameInput, "Názov") // Šírku riadi columnWidths
+								return editor.Layout(gtx, th)
+							})
+						}),
+						layout.Flexed(columnWidths[1], func(gtx layout.Context) layout.Dimensions {
+							return layout.UniformInset(insetwidth).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+								editor := widgets.NewEditorField(th.Theme, &roomInput, "Miestnosť")
+								return editor.Layout(gtx, th)
+							})
+						}),
+						layout.Flexed(columnWidths[2], func(gtx layout.Context) layout.Dimensions {
+							return layout.UniformInset(insetwidth).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+								editor := widgets.NewEditorField(th.Theme, &timeInput, "Čas")
+								return editor.Layout(gtx, th)
+							})
+						}),
+						layout.Flexed(columnWidths[3], func(gtx layout.Context) layout.Dimensions {
+							return layout.UniformInset(insetwidth).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+								editor := widgets.NewEditorField(th.Theme, &questionsInput, "Počet otázok")
+								return editor.Layout(gtx, th)
+							})
+						}),
+					)
 			})
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return material.Button(th, &createButton, "Vytvoriť test").Layout(gtx)
+			return material.Button(th.Theme, &createButton, "Vytvoriť test").Layout(gtx)
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return material.Button(th, &t.button, "Vybrať súbor").Layout(gtx)
+			return material.Button(th.Theme, &t.button, "Vybrať súbor").Layout(gtx)
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			text := "Žiadny súbor nebol vybraný"
@@ -122,11 +124,12 @@ func (t *UploadCsv) CreateTest(gtx layout.Context, th *material.Theme, db *gorm.
 				
 				
 			}
-			return material.Label(th, unit.Sp(16), text).Layout(gtx)
+			return material.Label(th.Theme, unit.Sp(16), text).Layout(gtx)
 		}),
+		
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			if showQuestions {
-				btn := material.Button(th, &submitButton, "Odoslať")
+				btn := material.Button(th.Theme, &submitButton, "Odoslať")
 				if submitButton.Clicked(gtx) {
 					logger.Info("Kliknutie na tlačidlo Odoslať")
 					submitForm(db, t)
@@ -137,7 +140,7 @@ func (t *UploadCsv) CreateTest(gtx layout.Context, th *material.Theme, db *gorm.
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			if showQuestions {
-				return material.List(th, &questionList).Layout(gtx, len(questionForms), func(gtx layout.Context, i int) layout.Dimensions {
+				return material.List(th.Theme, &questionList).Layout(gtx, len(questionForms), func(gtx layout.Context, i int) layout.Dimensions {
 					qf := &questionForms[i]
 					return layout.Flex{
 						Axis:    layout.Horizontal,
@@ -204,7 +207,7 @@ func updateQuestionForms(n int) {
 	}
 }
 
-func renderQuestionForms(gtx layout.Context, th *material.Theme) []layout.FlexChild {
+func renderQuestionForms(gtx layout.Context, th *themeIU.Theme) []layout.FlexChild {
 	children := make([]layout.FlexChild, len(questionForms))
 	for i := range questionForms { // Prechádzame len indexy, aby sme pracovali priamo so slice-om
 		qf := &questionForms[i] // Uložíme si pointer na konkrétny prvok
@@ -220,20 +223,20 @@ func renderQuestionForms(gtx layout.Context, th *material.Theme) []layout.FlexCh
 
 
 
-func renderOptions(gtx layout.Context, th *material.Theme, questionIndex int, qf *questionForm) []layout.FlexChild {
+func renderOptions(gtx layout.Context,th *themeIU.Theme, questionIndex int, qf *questionForm) []layout.FlexChild {
 	options := []string{"A", "B", "C", "D", "E"}
 	children := make([]layout.FlexChild, len(options)+1) // Prvý prvok je číslo otázky
 
 	// Pridáme číslo otázky (napr. "01:")
 	children[0] = layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-		return material.Label(th, unit.Sp(15), fmt.Sprintf("%02d:", questionIndex)).Layout(gtx)
+		return material.Label(th.Theme, unit.Sp(15), fmt.Sprintf("%02d:", questionIndex)).Layout(gtx)
 	})
 
 	// Vykreslíme rádio tlačidlá pre možnosti A–E
 	for i, option := range options {
 		i, option := i, option
 		children[i+1] = layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return material.RadioButton(th, &qf.selectedOption, option, option).Layout(gtx)
+			return material.RadioButton(th.Theme, &qf.selectedOption, option, option).Layout(gtx)
 		})
 	}
 
