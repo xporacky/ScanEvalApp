@@ -115,20 +115,12 @@ func (t *UploadCsv) CreateTest(gtx layout.Context, th *themeIU.Theme, db *gorm.D
 			btn := widgets.Button(th.Theme, &createButton, widgets.PlusIcon, widgets.IconPositionStart, "Vytvoriť test")
 			btn.Background = themeUI.LightBlue
 			btn.Color = themeUI.White
-			if printAllButton.Clicked(gtx) {
-				logger.Info("Kliknutie na tlačidlo Vytvoriť test")
-				printAllSheets()
-			}
 			return btn.Layout(gtx, th)
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			btn := widgets.Button(th.Theme, &t.button, widgets.FileFolderIcon, widgets.IconPositionStart, "Nahrať študentov (.csv)")
 			btn.Background = themeUI.LightYellow
 			btn.Color = themeUI.Black
-			if printAllButton.Clicked(gtx) {
-				logger.Info("Kliknutie na tlačidlo nahrať študentov")
-				printAllSheets()
-			}
 			return btn.Layout(gtx, th)
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
