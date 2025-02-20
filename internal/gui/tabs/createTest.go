@@ -112,38 +112,38 @@ func (t *UploadCsv) CreateTest(gtx layout.Context, th *themeIU.Theme, db *gorm.D
 			})
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			btn := widgets.Button(th.Theme, &createButton, widgets.PlusIcon, widgets.IconPositionStart, "Vytvoriť test")
-			btn.Background = themeUI.LightBlue
-			btn.Color = themeUI.White
-			return btn.Layout(gtx, th)
-		}),
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			btn := widgets.Button(th.Theme, &t.button, widgets.FileFolderIcon, widgets.IconPositionStart, "Nahrať študentov (.csv)")
-			btn.Background = themeUI.LightYellow
-			btn.Color = themeUI.Black
-			return btn.Layout(gtx, th)
-		}),
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			text := "Žiadny súbor nebol vybraný"
-			if t.selectedFile != "" {
-				text = fmt.Sprintf("Vybraný súbor: %s", t.filePath)
-				
-				
-			}
-			return material.Label(th.Theme, unit.Sp(16), text).Layout(gtx)
+			return layout.Flex{Axis: layout.Horizontal, Spacing: layout.SpaceBetween}.Layout(gtx,
+				layout.Flexed(0.3, func(gtx layout.Context) layout.Dimensions {
+					return layout.UniformInset(insetwidth).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+						btn := widgets.Button(th.Theme, &t.button, widgets.FileFolderIcon, widgets.IconPositionStart, "Nahrať študentov (.csv)")
+						btn.Background = themeUI.LightYellow
+						btn.Color = themeUI.Black
+						return btn.Layout(gtx, th)
+					})
+				}),
+				layout.Flexed(0.4, func(gtx layout.Context) layout.Dimensions {
+					return layout.UniformInset(insetwidth).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+						text := "Žiadny súbor nebol vybraný"
+						if t.selectedFile != "" {
+							text = fmt.Sprintf("Vybraný súbor: %s", t.filePath)
+						}
+						return material.Label(th.Theme, unit.Sp(16), text).Layout(gtx)
+					})
+				}),
+				layout.Flexed(0.3, func(gtx layout.Context) layout.Dimensions {
+					return layout.UniformInset(insetwidth).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+						btn := widgets.Button(th.Theme, &createButton, widgets.PlusIcon, widgets.IconPositionStart, "Generovať test")
+						btn.Background = themeUI.LightBlue
+						btn.Color = themeUI.White
+						return btn.Layout(gtx, th)
+					})
+				}),
+			)
 		}),
 		
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			if showQuestions {
-				btn := material.Button(th.Theme, &submitButton, "Odoslať")
-				if submitButton.Clicked(gtx) {
-					logger.Info("Kliknutie na tlačidlo Odoslať")
-					submitForm(db, t)
-				}
-				return btn.Layout(gtx)
-			}
-			return layout.Dimensions{}
-		}),
+		
+		
+		
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			if showQuestions {
 				return material.List(th.Theme, &questionList).Layout(gtx, len(questionForms), func(gtx layout.Context, i int) layout.Dimensions {
@@ -155,6 +155,21 @@ func (t *UploadCsv) CreateTest(gtx layout.Context, th *themeIU.Theme, db *gorm.D
 				})
 			}
 			return layout.Dimensions{}
+		}),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return layout.UniformInset(insetwidth).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+				if showQuestions {
+					btn := widgets.Button(th.Theme, &submitButton, widgets.SaveIcon, widgets.IconPositionStart, "Vytvoriť test")
+					btn.Background = themeUI.LightGreen
+					btn.Color = themeUI.Black
+					if submitButton.Clicked(gtx) {
+						logger.Info("Kliknutie na tlačidlo Odoslať")
+						submitForm(db, t)
+					}
+					return btn.Layout(gtx, th)
+				}
+			return layout.Dimensions{}
+			})
 		}),
 	)
 }
