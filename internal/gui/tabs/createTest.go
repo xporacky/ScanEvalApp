@@ -116,7 +116,7 @@ func (t *UploadCsv) CreateTest(gtx layout.Context, th *themeIU.Theme, db *gorm.D
 			btn.Background = themeUI.LightBlue
 			btn.Color = themeUI.White
 			if printAllButton.Clicked(gtx) {
-				logger.Info("Kliknutie na tlačidlo Tlačiť všetky hárky")
+				logger.Info("Kliknutie na tlačidlo Vytvoriť test")
 				printAllSheets()
 			}
 			return btn.Layout(gtx, th)
@@ -126,7 +126,7 @@ func (t *UploadCsv) CreateTest(gtx layout.Context, th *themeIU.Theme, db *gorm.D
 			btn.Background = themeUI.LightYellow
 			btn.Color = themeUI.Black
 			if printAllButton.Clicked(gtx) {
-				logger.Info("Kliknutie na tlačidlo Tlačiť všetky hárky")
+				logger.Info("Kliknutie na tlačidlo nahrať študentov")
 				printAllSheets()
 			}
 			return btn.Layout(gtx, th)
