@@ -122,7 +122,7 @@ func (t *UploadCsv) CreateTest(gtx layout.Context, th *themeIU.Theme, db *gorm.D
 					})
 				}),
 				layout.Flexed(0.4, func(gtx layout.Context) layout.Dimensions {
-					return layout.UniformInset(insetwidth).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+					return layout.UniformInset(unit.Dp(20)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 						text := "Žiadny súbor nebol vybraný"
 						if t.selectedFile != "" {
 							text = fmt.Sprintf("Vybraný súbor: %s", t.filePath)
@@ -146,31 +146,31 @@ func (t *UploadCsv) CreateTest(gtx layout.Context, th *themeIU.Theme, db *gorm.D
 		
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			if showQuestions {
-				return material.List(th.Theme, &questionList).Layout(gtx, len(questionForms), func(gtx layout.Context, i int) layout.Dimensions {
-					qf := &questionForms[i]
-					return layout.Flex{
-						Axis:    layout.Horizontal,
-						Spacing: layout.SpaceAround,
-					}.Layout(gtx, renderOptions(gtx, th, i+1, qf)...)
+				return material.List(th.Theme, &questionList).Layout(gtx, len(questionForms)+1, func(gtx layout.Context, i int) layout.Dimensions {
+					if i < len(questionForms) {
+						qf := &questionForms[i]
+						return layout.Flex{
+							Axis:    layout.Horizontal,
+							Spacing: layout.SpaceAround,
+						}.Layout(gtx, renderOptions(gtx, th, i+1, qf)...)
+					}
+		
+					// Posledný element - tlačidlo "Vytvoriť test"
+					return layout.UniformInset(insetwidth).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+						btn := widgets.Button(th.Theme, &submitButton, widgets.SaveIcon, widgets.IconPositionStart, "Vytvoriť test")
+						btn.Background = themeUI.LightGreen
+						btn.Color = themeUI.Black
+						if submitButton.Clicked(gtx) {
+							logger.Info("Kliknutie na tlačidlo Odoslať")
+							submitForm(db, t)
+						}
+						return btn.Layout(gtx, th)
+					})
 				})
 			}
 			return layout.Dimensions{}
 		}),
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return layout.UniformInset(insetwidth).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-				if showQuestions {
-					btn := widgets.Button(th.Theme, &submitButton, widgets.SaveIcon, widgets.IconPositionStart, "Vytvoriť test")
-					btn.Background = themeUI.LightGreen
-					btn.Color = themeUI.Black
-					if submitButton.Clicked(gtx) {
-						logger.Info("Kliknutie na tlačidlo Odoslať")
-						submitForm(db, t)
-					}
-					return btn.Layout(gtx, th)
-				}
-			return layout.Dimensions{}
-			})
-		}),
+		
 	)
 }
 
