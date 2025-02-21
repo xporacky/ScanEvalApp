@@ -12,6 +12,8 @@ import (
 	//"reflect"
 	"ScanEvalApp/internal/logging"
 	"log/slog"
+
+	"ScanEvalApp/internal/latex"
 )
 
 // Tlačidlo na tlač všetkých hárkov
@@ -64,7 +66,7 @@ func Students(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimens
 			btn := material.Button(th, &printAllButton, "Tlačiť všetky hárky")
 			if printAllButton.Clicked(gtx) {
 				logger.Info("Kliknutie na tlačidlo Tlačiť všetky hárky")
-				printAllSheets()
+				printAllSheets() // TODO - ako je v maine, latex.ParallelGeneratePDFs a nad danou db to bude generovat asi
 			}
 			return btn.Layout(gtx)
 		}),
@@ -97,7 +99,14 @@ func Students(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimens
 			return material.List(th, &studentList).Layout(gtx, len(students), func(gtx layout.Context, i int) layout.Dimensions {
 				student := students[i]
 				if printButtons[i].Clicked(gtx) {
-					printSheet(fmt.Sprintf("%d", student.RegistrationNumber))
+					// PrintSheet(fmt.Sprintf("%d", student.RegistrationNumber))
+					// TODO - toto over ci to tak moze byt
+					err := latex.PrintSheet(db, student.RegistrationNumber)
+					if err != nil {
+						errorLogger.Error("Chyba pri tlači hárku pre študenta", slog.String("error", err.Error()))
+					} else {
+						logger.Info("Úspešne vytlačený hárok pre študenta", slog.String("registrationNumber", fmt.Sprintf("%d", student.RegistrationNumber)))
+					}
 				}
 
 				return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
@@ -129,14 +138,16 @@ func Students(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimens
 	)
 }
 
+// TODO - asi pozri main, latex.ParallelGeneratePDFs() generuje pdf nad db
 func printAllSheets() {
 	logger := logging.GetLogger()
 
 	logger.Info("Volám tlač všetky hárky")
 }
 
-func printSheet(registrationNumber string) {
-	logger := logging.GetLogger()
+// TODO -> toto som hodil do latex.go ako novu funkciu, a odtial ju volam v tomto subore
+// func printSheet(registrationNumber string) {
+// 	logger := logging.GetLogger()
 
-	logger.Info("Volám tlač hárku pre študenta ID", slog.String("ID", registrationNumber))
-}
+// 	logger.Info("Volám tlač hárku pre študenta ID", slog.String("ID", registrationNumber))
+// }

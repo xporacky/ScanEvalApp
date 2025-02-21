@@ -243,3 +243,89 @@ func ParallelGeneratePDFs(db *gorm.DB, templatePath, outputPDFPath string) error
 	logger.Info("Výsledné PDF úspešne uložené do", slog.String("output_PDF_path", outputPDFPath))
 	return nil
 }
+
+// FindStudentByRegistrationNumber nájde študenta v DB podľa RegistrationNumber
+func FindStudentByRegistrationNumber(db *gorm.DB, registrationNumber int) (*models.Student, error) {
+	var student models.Student
+	if err := db.Where("registration_number = ?", registrationNumber).First(&student).Error; err != nil {
+		return nil, fmt.Errorf("student not found with RegistrationNumber %d: %w", registrationNumber, err)
+	}
+	return &student, nil
+}
+
+func PrintSheet(db *gorm.DB, registrationNumber int) error {
+
+	// Inicializácia loggera
+	logger := logging.GetLogger()
+	errorLogger := logging.GetErrorLogger()
+
+	// Najprv nájdi študenta podľa RegistrationNumber
+	student, err := FindStudentByRegistrationNumber(db, registrationNumber)
+	if err != nil {
+		errorLogger.Error("Error finding student", "registration_number", registrationNumber, slog.String("error", err.Error()))
+		return err // Ak študent neexistuje, vráti sa chyba
+	}
+
+	// Logovanie úspešného nájdenia študenta
+	logger.Info("Student found", "student_id", student.ID, "registration_number", student.RegistrationNumber)
+
+	// Nacitanie LaTeX sablony
+	latexTemplate, err := os.ReadFile(TemplatePath)
+	if err != nil {
+		errorLogger.Error("Error reading LaTeX template for student", "student_id", student.ID, slog.String("error", err.Error()))
+		return err
+	}
+	// Logovanie načítania LaTeX šablóny
+	logger.Info("LaTeX template loaded", "template_path", TemplatePath)
+
+	// Nacitanie testu pre studenta z databazy
+	var test models.Test
+	if err := db.First(&test, student.TestID).Error; err != nil {
+		errorLogger.Error("Error fetching test for student", "student_id", student.ID, slog.String("error", err.Error()))
+		return err
+	}
+	// Logovanie úspešného načítania testu
+	logger.Info("Test fetched for student", "test_id", test.ID, "test_title", test.Title)
+
+	// Vytvorenie dat, ktore budu nacitane namiesto placeholderov v LaTeX sablone
+	data := TemplateData{
+		ID:        fmt.Sprintf("%d", student.RegistrationNumber),
+		Meno:      fmt.Sprintf("%s %s", student.Name, student.Surname),
+		Datum:     test.Date.Format("02. 01. 2006"), // datum v tvare DD. MM. YYYY
+		Miestnost: student.Room,
+		Cas:       test.Date.Format("15:04"), // čas v tvare HH:MM
+		Bloky:     test.QuestionCount,
+		QrCode:    fmt.Sprintf("%d", student.ID),
+	}
+	// Logovanie dát, ktoré sa použijú pre šablónu
+	logger.Info("Template data prepared", "student_id", student.ID, "registration_number", student.RegistrationNumber)
+
+	// Nahradenie placeholderov v LaTeX sablone udajmi studenta
+	updatedLatex, err := ReplaceTemplatePlaceholders(latexTemplate, data)
+	if err != nil {
+		errorLogger.Error("Error replacing placeholders for student", "student_id", student.ID, slog.String("error", err.Error()))
+		return err
+	}
+	// Logovanie úspešného nahradenia placeholderov
+	logger.Info("Placeholders replaced successfully for student", "student_id", student.ID)
+
+	// Kompilacia latex sablony do pdf studenta
+	studentPDF, err := CompileLatexToPDF(updatedLatex)
+	if err != nil {
+		errorLogger.Error("Error generating PDF for student", "student_id", student.ID, slog.String("error", err.Error()))
+		return err
+	}
+	// Logovanie úspešnej kompilácie PDF
+	logger.Info("PDF generated for student", "student_id", student.ID)
+
+	// Ulozenie generovaneho/kompilovaneho pdf studenta do docasneho suboru
+	studentPDFPath := filepath.Join(TemporaryPDFPath, fmt.Sprintf("student_%d.pdf", student.RegistrationNumber))
+	if err := os.WriteFile(studentPDFPath, studentPDF, FilePermission); err != nil {
+		errorLogger.Error("Error saving PDF for student", "student_id", student.ID, slog.String("error", err.Error()))
+		return err
+	}
+	// Logovanie úspešného uloženia PDF
+	logger.Info("PDF saved successfully for student", "student_id", student.ID, "pdf_path", studentPDFPath)
+
+	return nil
+}
