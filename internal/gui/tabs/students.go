@@ -66,7 +66,7 @@ func Students(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimens
 			btn := material.Button(th, &printAllButton, "Tlačiť všetky hárky")
 			if printAllButton.Clicked(gtx) {
 				logger.Info("Kliknutie na tlačidlo Tlačiť všetky hárky")
-				printAllSheets() // TODO - ako je v maine, latex.ParallelGeneratePDFs a nad danou db to bude generovat asi
+				printAllSheets()
 			}
 			return btn.Layout(gtx)
 		}),
@@ -138,7 +138,7 @@ func Students(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimens
 	)
 }
 
-// TODO - asi pozri main, latex.ParallelGeneratePDFs() generuje pdf nad db
+// TODO - TOTO pojde prec, lebo nebudeme tlacit harky vsetkych studentov vsetkych testov
 func printAllSheets() {
 	logger := logging.GetLogger()
 
