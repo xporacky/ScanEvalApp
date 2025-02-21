@@ -156,9 +156,9 @@ func ParallelGeneratePDFs(db *gorm.DB, templatePath, outputPDFPath string) error
 			data := TemplateData{
 				ID:        fmt.Sprintf("%d", student.RegistrationNumber),
 				Meno:      fmt.Sprintf("%s %s", student.Name, student.Surname),
-				Datum:     "25. 1. 2025", // TODO -> pri vytvarani testu tiez bude musiet admin zadat datum toho testu
+				Datum:     test.Date.Format("02. 01. 2006"), // datum v tvare DD. MM. YYYY
 				Miestnost: student.Room,
-				Cas:       "10:30", // TODO - beh treba dopocitat z noveho stlpca (Beh testu (budu asi 2 behy, a z kazdeho je vzdy jasny cas, napr 1.beh = 10:00))
+				Cas:       test.Date.Format("15:04"), // čas v tvare HH:MM
 				Bloky:     test.QuestionCount,
 				QrCode:    fmt.Sprintf("%d", student.ID),
 			}
