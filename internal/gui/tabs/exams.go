@@ -12,7 +12,7 @@ import (
 	"log/slog"
 
 	"gioui.org/layout"
-	"gioui.org/unit"
+	//"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"gorm.io/gorm"
@@ -22,14 +22,13 @@ var deleteButtons []widget.Clickable
 var showAnsButtons []widget.Clickable
 var evaluateTestBtns []widget.Clickable
 var printTestBtns []widget.Clickable
-var printAllButton widget.Clickable
 
 // scrollovanie
 var examList widget.List = widget.List{List: layout.List{Axis: layout.Vertical}}
 
 // Exams renders the "Exams" tab with dynamically generated columns based on data from the database.
 func Exams(gtx layout.Context, th *themeIU.Theme, selectedTestID *uint, db *gorm.DB, tm *tabmanager.TabManager) layout.Dimensions {
-	logger := logging.GetLogger()
+	//logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
 	tests, err := repository.GetAllTests(db)
@@ -54,28 +53,6 @@ func Exams(gtx layout.Context, th *themeIU.Theme, selectedTestID *uint, db *gorm
 	}
 
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			margin := unit.Dp(16) // Nastav si veľkosť marginu podľa potreby
-
-			inset := layout.Inset{
-				Top:    margin,
-				Bottom: margin,
-				Left:   margin,
-				Right:  margin,
-			}
-
-			//btn := material.Button(th.Theme, &printAllButton, "Tlačiť všetky hárky")
-			btn := widgets.Button(th.Theme, &printAllButton, widgets.SaveIcon, widgets.IconPositionStart, "Tlačiť všetky hárky")
-			btn.Background = themeUI.Gray
-			btn.Color = themeUI.White
-			if printAllButton.Clicked(gtx) {
-				logger.Info("Kliknutie na tlačidlo Tlačiť všetky hárky")
-				printAllSheets()
-			}
-			btn.Inset = inset
-			//treba nejako fixnut
-			return btn.Layout(gtx, th)
-		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
 				layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
@@ -202,11 +179,6 @@ func showAnsTest(Id uint) {
 	logger.Info("Ukázanie opovedí testu s ID", slog.Uint64("ID", uint64(Id)))
 }
 
-func printAllSheets() {
-	logger := logging.GetLogger()
-
-	logger.Info("Volám tlač všetky hárky")
-}
 
 func printTest(Id uint) {
 	logger := logging.GetLogger()
