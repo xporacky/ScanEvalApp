@@ -53,7 +53,7 @@ func RunWindow(db *gorm.DB) error {
 					case 0:
 						return tabs.Exams(gtx, th, &selectedTestID, db, tm)
 					case 1:
-						return tabs.Students(gtx, th.Material(), db)
+						return tabs.Students(gtx, th, db)
 					case 2:
 						return uploadCsv.CreateTest(gtx, th, db)
 					case 3:
