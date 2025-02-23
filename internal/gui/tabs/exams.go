@@ -12,7 +12,7 @@ import (
 	"log/slog"
 
 	"gioui.org/layout"
-	//"gioui.org/unit"
+	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"gorm.io/gorm"
@@ -30,6 +30,8 @@ var examList widget.List = widget.List{List: layout.List{Axis: layout.Vertical}}
 func Exams(gtx layout.Context, th *themeIU.Theme, selectedTestID *uint, db *gorm.DB, tm *tabmanager.TabManager) layout.Dimensions {
 	//logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
+	headerSize := unit.Sp(17)
+	insetWidth := unit.Dp(15)
 
 	tests, err := repository.GetAllTests(db)
 	if err != nil {
@@ -54,102 +56,119 @@ func Exams(gtx layout.Context, th *themeIU.Theme, selectedTestID *uint, db *gorm
 
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
-				layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
-					return material.Body1(th.Theme, columns[0]).Layout(gtx)
-				}),
-				layout.Flexed(columnWidths[1], func(gtx layout.Context) layout.Dimensions {
-					return material.Body1(th.Theme, columns[1]).Layout(gtx)
-				}),
-				layout.Flexed(columnWidths[2], func(gtx layout.Context) layout.Dimensions {
-					return material.Body1(th.Theme, columns[2]).Layout(gtx)
-				}),
-				layout.Flexed(columnWidths[3], func(gtx layout.Context) layout.Dimensions {
-					return material.Body1(th.Theme, columns[3]).Layout(gtx)
-				}),
-				layout.Flexed(columnWidths[4], func(gtx layout.Context) layout.Dimensions {
-					return material.Body1(th.Theme, columns[4]).Layout(gtx)
-				}),
-				layout.Flexed(columnWidths[5], func(gtx layout.Context) layout.Dimensions {
-					return material.Body1(th.Theme, columns[5]).Layout(gtx)
-				}),
-				layout.Flexed(columnWidths[6], func(gtx layout.Context) layout.Dimensions {
-					return material.Body1(th.Theme, columns[6]).Layout(gtx)
-				}),
-				layout.Flexed(columnWidths[7], func(gtx layout.Context) layout.Dimensions {
-					return material.Body1(th.Theme, columns[7]).Layout(gtx)
-				}),
-				layout.Flexed(columnWidths[8], func(gtx layout.Context) layout.Dimensions {
-					return material.Body1(th.Theme, columns[8]).Layout(gtx)
-				}),
-			)
-		}),
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return material.List(th.Theme, &examList).Layout(gtx, len(tests), func(gtx layout.Context, i int) layout.Dimensions {
-				test := tests[i]
-				if deleteButtons[i].Clicked(gtx) {
-					deleteTest(test.ID, db)
-					tests = removeTestFromList(tests, i) // Remove test from the list for UI update
-				}
-				if showAnsButtons[i].Clicked(gtx) {
-					showAnsTest(test.ID)
-
-				}
-				if evaluateTestBtns[i].Clicked(gtx) {
-					*selectedTestID = test.ID // Nastavenie ID testu
-					tm.ActiveTab = 3          // Prechod na UploadTab
-
-				}
-				if printTestBtns[i].Clicked(gtx) {
-					printTest(test.ID)
-
-				}
+			return layout.Inset{Left: insetWidth, Right: insetWidth}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
 					layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
-						return material.Body1(th.Theme, test.Title).Layout(gtx)
+						return widgets.LabelBorder(gtx, th, headerSize, columns[0])						
 					}),
 					layout.Flexed(columnWidths[1], func(gtx layout.Context) layout.Dimensions {
-						return material.Body1(th.Theme, test.SchoolYear).Layout(gtx)
+						//return material.Label(th.Material(), headerSize, columns[1]).Layout(gtx)
+						return widgets.LabelBorder(gtx, th, headerSize, columns[1])
 					}),
 					layout.Flexed(columnWidths[2], func(gtx layout.Context) layout.Dimensions {
-						return material.Body1(th.Theme, fmt.Sprintf("%d", test.QuestionCount)).Layout(gtx)
+						//return material.Label(th.Material(), headerSize, columns[2]).Layout(gtx)
+						return widgets.LabelBorder(gtx, th, headerSize, columns[2])
 					}),
 					layout.Flexed(columnWidths[3], func(gtx layout.Context) layout.Dimensions {
-						return material.Body1(th.Theme, fmt.Sprintf("%d", len(test.Students))).Layout(gtx)
+						//return material.Label(th.Material(), headerSize, columns[3]).Layout(gtx)
+						return widgets.LabelBorder(gtx, th, headerSize, columns[3])
 					}),
 					layout.Flexed(columnWidths[4], func(gtx layout.Context) layout.Dimensions {
-						return material.Body1(th.Theme, "datum").Layout(gtx)
+						//return material.Label(th.Material(), headerSize, columns[4]).Layout(gtx)
+						return widgets.LabelBorder(gtx, th, headerSize, columns[4])
 					}),
 					layout.Flexed(columnWidths[5], func(gtx layout.Context) layout.Dimensions {
-						//btn := material.Button(th.Theme, &showAnsButtons[i], "Zobraziť")
-						btn := widgets.Button(th.Theme, &showAnsButtons[i], widgets.SearchIcon, widgets.IconPositionStart, "Zobraziť")
-						btn.Background = themeUI.LightBlue
-						btn.Color = themeUI.White
-						return btn.Layout(gtx, th)
+						//return material.Label(th.Material(), headerSize, columns[5]).Layout(gtx)
+						return widgets.LabelBorder(gtx, th, headerSize, columns[5])
 					}),
 					layout.Flexed(columnWidths[6], func(gtx layout.Context) layout.Dimensions {
-						//btns := material.Button(th.Theme, &deleteButtons[i], "V")
-						btn := widgets.Button(th.Theme, &deleteButtons[i], widgets.DeleteIcon, widgets.IconPositionStart, "Vymazať")
-						btn.Background = themeUI.Red
-						btn.Color = themeUI.White
-						return btn.Layout(gtx, th)
+						//return material.Label(th.Material(), headerSize, columns[6]).Layout(gtx)
+						return widgets.LabelBorder(gtx, th, headerSize, columns[6])
 					}),
 					layout.Flexed(columnWidths[7], func(gtx layout.Context) layout.Dimensions {
-
-						//btn := material.Button(th.Theme, &evaluateTestBtns[i], ")
-						btn := widgets.Button(th.Theme, &evaluateTestBtns[i], widgets.UploadIcon, widgets.IconPositionStart, "Vyhodnotiť")
-						btn.Background = themeUI.LightGreen
-						btn.Color = themeUI.White
-						return btn.Layout(gtx, th)
+						//return material.Label(th.Material(), headerSize, columns[5]).Layout(gtx)
+						return widgets.LabelBorder(gtx, th, headerSize, columns[7])
 					}),
 					layout.Flexed(columnWidths[8], func(gtx layout.Context) layout.Dimensions {
-						//btn := material.Button(th.Theme, &printTestBtns[i], "")
-						btn := widgets.Button(th.Theme, &printTestBtns[i], widgets.SaveIcon, widgets.IconPositionStart, "Tlačiť")
-						btn.Background = themeUI.Gray
-						btn.Color = themeUI.White
-						return btn.Layout(gtx, th)
+						//return material.Label(th.Material(), headerSize, columns[6]).Layout(gtx)
+						return widgets.LabelBorder(gtx, th, headerSize, columns[8])
 					}),
 				)
+			})
+		}),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return layout.Inset{Left: insetWidth, Right: insetWidth}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+				return material.List(th.Theme, &examList).Layout(gtx, len(tests), func(gtx layout.Context, i int) layout.Dimensions {
+					test := tests[i]
+					if deleteButtons[i].Clicked(gtx) {
+						deleteTest(test.ID, db)
+						tests = removeTestFromList(tests, i) // Remove test from the list for UI update
+					}
+					if showAnsButtons[i].Clicked(gtx) {
+						showAnsTest(test.ID)
+
+					}
+					if evaluateTestBtns[i].Clicked(gtx) {
+						*selectedTestID = test.ID // Nastavenie ID testu
+						tm.ActiveTab = 3          // Prechod na UploadTab
+
+					}
+					if printTestBtns[i].Clicked(gtx) {
+						printTest(test.ID)
+
+					}
+					return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
+						layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
+							//return material.Body1(th.Theme, test.Title).Layout(gtx)
+							return widgets.Body1Border(gtx, th, test.Title)
+						}),
+						layout.Flexed(columnWidths[1], func(gtx layout.Context) layout.Dimensions {
+							//return material.Body1(th.Theme, test.SchoolYear).Layout(gtx)
+							return widgets.Body1Border(gtx, th, test.SchoolYear)
+						}),
+						layout.Flexed(columnWidths[2], func(gtx layout.Context) layout.Dimensions {
+							//return material.Body1(th.Theme, fmt.Sprintf("%d", test.QuestionCount)).Layout(gtx)
+							return widgets.Body1Border(gtx, th, fmt.Sprintf("%d", test.QuestionCount))
+						}),
+						layout.Flexed(columnWidths[3], func(gtx layout.Context) layout.Dimensions {
+							//return material.Body1(th.Theme, fmt.Sprintf("%d", len(test.Students))).Layout(gtx)
+							return widgets.Body1Border(gtx, th, fmt.Sprintf("%d", len(test.Students)))
+						}),
+						layout.Flexed(columnWidths[4], func(gtx layout.Context) layout.Dimensions {
+							//return material.Body1(th.Theme, "datum").Layout(gtx)
+							return widgets.Body1Border(gtx, th, "datum")
+						}),
+						layout.Flexed(columnWidths[5], func(gtx layout.Context) layout.Dimensions {
+							//btn := material.Button(th.Theme, &showAnsButtons[i], "Zobraziť")
+							btn := widgets.Button(th.Theme, &showAnsButtons[i], widgets.SearchIcon, widgets.IconPositionStart, "Zobraziť")
+							btn.Background = themeUI.LightBlue
+							btn.Color = themeUI.White
+							return btn.Layout(gtx, th)
+						}),
+						layout.Flexed(columnWidths[6], func(gtx layout.Context) layout.Dimensions {
+							//btns := material.Button(th.Theme, &deleteButtons[i], "V")
+							btn := widgets.Button(th.Theme, &deleteButtons[i], widgets.DeleteIcon, widgets.IconPositionStart, "Vymazať")
+							btn.Background = themeUI.Red
+							btn.Color = themeUI.White
+							return btn.Layout(gtx, th)
+						}),
+						layout.Flexed(columnWidths[7], func(gtx layout.Context) layout.Dimensions {
+
+							//btn := material.Button(th.Theme, &evaluateTestBtns[i], ")
+							btn := widgets.Button(th.Theme, &evaluateTestBtns[i], widgets.UploadIcon, widgets.IconPositionStart, "Vyhodnotiť")
+							btn.Background = themeUI.LightGreen
+							btn.Color = themeUI.White
+							return btn.Layout(gtx, th)
+						}),
+						layout.Flexed(columnWidths[8], func(gtx layout.Context) layout.Dimensions {
+							//btn := material.Button(th.Theme, &printTestBtns[i], "")
+							btn := widgets.Button(th.Theme, &printTestBtns[i], widgets.SaveIcon, widgets.IconPositionStart, "Tlačiť")
+							btn.Background = themeUI.Gray
+							btn.Color = themeUI.White
+							return btn.Layout(gtx, th)
+						}),
+					)
+				})
 			})
 		}),
 	)
