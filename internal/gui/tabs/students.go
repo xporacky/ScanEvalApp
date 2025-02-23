@@ -8,13 +8,14 @@ import (
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"gorm.io/gorm"
+	//"image/color"
 
 	//"reflect"
 	"ScanEvalApp/internal/logging"
 	"log/slog"
 	"ScanEvalApp/internal/gui/widgets"
 	"gioui.org/unit"
-	//"ScanEvalApp/internal/gui/themeUI"
+	"ScanEvalApp/internal/gui/themeUI"
 	themeIU "ScanEvalApp/internal/gui/themeUI"
 )
 
@@ -31,6 +32,7 @@ func Students(gtx layout.Context, th *themeIU.Theme, db *gorm.DB) layout.Dimensi
 	//logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 	insetWidth := unit.Dp(15)
+	headerSize := unit.Sp(17)
 
 	students, err := repository.GetAllStudents(db)
 	if err != nil {
@@ -55,7 +57,7 @@ func Students(gtx layout.Context, th *themeIU.Theme, db *gorm.DB) layout.Dimensi
 		}
 	}
 	columns := []string{"Meno", "Priezvisko", "Dátum narodenia", "Registračné číslo", "Miestnosť", "Skóre", "Tlačiť hárok"}
-	columnWidths := []float32{0.15, 0.15, 0.2, 0.2, 0.1, 0.1, 0.1} // Pomery šírok
+	columnWidths := []float32{0.2, 0.2, 0.15, 0.2, 0.1, 0.05, 0.1} // Pomery šírok
 	if len(printButtons) != len(students) {
 		printButtons = make([]widget.Clickable, len(students))
 	}
@@ -69,28 +71,34 @@ func Students(gtx layout.Context, th *themeIU.Theme, db *gorm.DB) layout.Dimensi
 		}),
 
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return layout.UniformInset(insetWidth).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			return layout.Inset{Left: insetWidth, Right: insetWidth}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
 					layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
-						return material.Body1(th.Material(), columns[0]).Layout(gtx)
+						return widgets.LabelBorder(gtx, th, headerSize, columns[0])						
 					}),
 					layout.Flexed(columnWidths[1], func(gtx layout.Context) layout.Dimensions {
-						return material.Body1(th.Material(), columns[1]).Layout(gtx)
+						//return material.Label(th.Material(), headerSize, columns[1]).Layout(gtx)
+						return widgets.LabelBorder(gtx, th, headerSize, columns[1])
 					}),
 					layout.Flexed(columnWidths[2], func(gtx layout.Context) layout.Dimensions {
-						return material.Body1(th.Material(), columns[2]).Layout(gtx)
+						//return material.Label(th.Material(), headerSize, columns[2]).Layout(gtx)
+						return widgets.LabelBorder(gtx, th, headerSize, columns[2])
 					}),
 					layout.Flexed(columnWidths[3], func(gtx layout.Context) layout.Dimensions {
-						return material.Body1(th.Material(), columns[3]).Layout(gtx)
+						//return material.Label(th.Material(), headerSize, columns[3]).Layout(gtx)
+						return widgets.LabelBorder(gtx, th, headerSize, columns[3])
 					}),
 					layout.Flexed(columnWidths[4], func(gtx layout.Context) layout.Dimensions {
-						return material.Body1(th.Material(), columns[4]).Layout(gtx)
+						//return material.Label(th.Material(), headerSize, columns[4]).Layout(gtx)
+						return widgets.LabelBorder(gtx, th, headerSize, columns[4])
 					}),
 					layout.Flexed(columnWidths[5], func(gtx layout.Context) layout.Dimensions {
-						return material.Body1(th.Material(), columns[5]).Layout(gtx)
+						//return material.Label(th.Material(), headerSize, columns[5]).Layout(gtx)
+						return widgets.LabelBorder(gtx, th, headerSize, columns[5])
 					}),
 					layout.Flexed(columnWidths[6], func(gtx layout.Context) layout.Dimensions {
-						return material.Body1(th.Material(), columns[6]).Layout(gtx)
+						//return material.Label(th.Material(), headerSize, columns[6]).Layout(gtx)
+						return widgets.LabelBorder(gtx, th, headerSize, columns[6])
 					}),
 				)
 			})
@@ -105,26 +113,34 @@ func Students(gtx layout.Context, th *themeIU.Theme, db *gorm.DB) layout.Dimensi
 
 					return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
 						layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
-							return material.Body1(th.Material(), student.Name).Layout(gtx)
+							//return material.Body1(th.Material(), student.Name).Layout(gtx)
+							return widgets.Body1Border(gtx, th, student.Name)
 						}),
 						layout.Flexed(columnWidths[1], func(gtx layout.Context) layout.Dimensions {
-							return material.Body1(th.Material(), student.Surname).Layout(gtx)
+							//return material.Body1(th.Material(), student.Surname).Layout(gtx)
+							return widgets.Body1Border(gtx, th, student.Surname)
 						}),
 						layout.Flexed(columnWidths[2], func(gtx layout.Context) layout.Dimensions {
-							return material.Body1(th.Material(), student.BirthDate.Format("2006-01-02")).Layout(gtx)
+							//return material.Body1(th.Material(), student.BirthDate.Format("2006-01-02")).Layout(gtx)
+							return widgets.Body1Border(gtx, th, student.BirthDate.Format("2006-01-02"))
 						}),
 						layout.Flexed(columnWidths[3], func(gtx layout.Context) layout.Dimensions {
-							return material.Body1(th.Material(), student.RegistrationNumber).Layout(gtx)
+							//return material.Body1(th.Material(), student.RegistrationNumber).Layout(gtx)
+							return widgets.Body1Border(gtx, th, student.RegistrationNumber)
 						}),
 						layout.Flexed(columnWidths[4], func(gtx layout.Context) layout.Dimensions {
-							return material.Body1(th.Material(), student.Room).Layout(gtx)
+							//return material.Body1(th.Material(), student.Room).Layout(gtx)
+							return widgets.Body1Border(gtx, th, student.Room)
 						}),
 						layout.Flexed(columnWidths[5], func(gtx layout.Context) layout.Dimensions {
-							return material.Body1(th.Material(), fmt.Sprintf("%d", student.Score)).Layout(gtx)
+							//return material.Body1(th.Material(), fmt.Sprintf("%d", student.Score)).Layout(gtx)
+							return widgets.Body1Border(gtx, th, fmt.Sprintf("%d", student.Score))
 						}),
 						layout.Flexed(columnWidths[6], func(gtx layout.Context) layout.Dimensions {
-							btn := material.Button(th.Material(), &printButtons[i], "Tlačiť hárok")
-							return btn.Layout(gtx)
+							btn := widgets.Button(th.Theme, &printButtons[i], widgets.SaveIcon, widgets.IconPositionStart, "Tlačiť")
+							btn.Background = themeUI.Gray
+							btn.Color = themeUI.White
+							return btn.Layout(gtx, th)
 						}),
 					)
 				})
