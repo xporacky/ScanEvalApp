@@ -21,7 +21,11 @@ func RunWindow(db *gorm.DB) error {
 	logger := logging.GetLogger()
 
 	w := new(app.Window)
-	w.Option(app.Title("ScanEvalApp"))
+	w.Option(
+		app.Title("ScanEvalApp"),
+		app.Size(1500,700),
+	)
+
 	var ops op.Ops
 	tm := tabmanager.NewTabManager(4) // Vytvor TabManager
 	tabNames := []string{"Písomky", "Študenti", "Vytvorenie Písomky", "Vyhodnotenie testu"}
