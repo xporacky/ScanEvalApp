@@ -30,6 +30,7 @@ var studentList widget.List = widget.List{List: layout.List{Axis: layout.Vertica
 func Students(gtx layout.Context, th *themeIU.Theme, db *gorm.DB) layout.Dimensions {
 	//logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
+	insetWidth := unit.Dp(15)
 
 	students, err := repository.GetAllStudents(db)
 	if err != nil {
@@ -68,7 +69,7 @@ func Students(gtx layout.Context, th *themeIU.Theme, db *gorm.DB) layout.Dimensi
 		}),
 
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return layout.UniformInset(unit.Dp(15)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			return layout.UniformInset(insetWidth).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
 					layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
 						return material.Body1(th.Material(), columns[0]).Layout(gtx)
@@ -95,7 +96,7 @@ func Students(gtx layout.Context, th *themeIU.Theme, db *gorm.DB) layout.Dimensi
 			})
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return layout.Inset{Left: unit.Dp(15), Right: unit.Dp(15)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			return layout.Inset{Left: insetWidth, Right: insetWidth}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				return material.List(th.Material(), &studentList).Layout(gtx, len(students), func(gtx layout.Context, i int) layout.Dimensions {
 					student := students[i]
 					if printButtons[i].Clicked(gtx) {
