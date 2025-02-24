@@ -78,27 +78,21 @@ func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensi
 								return widgets.LabelBorder(gtx, th, headerSize, columns[0])						
 							}),
 							layout.Flexed(columnWidths[1], func(gtx layout.Context) layout.Dimensions {
-								//return material.Label(th.Material(), headerSize, columns[1]).Layout(gtx)
 								return widgets.LabelBorder(gtx, th, headerSize, columns[1])
 							}),
 							layout.Flexed(columnWidths[2], func(gtx layout.Context) layout.Dimensions {
-								//return material.Label(th.Material(), headerSize, columns[2]).Layout(gtx)
 								return widgets.LabelBorder(gtx, th, headerSize, columns[2])
 							}),
 							layout.Flexed(columnWidths[3], func(gtx layout.Context) layout.Dimensions {
-								//return material.Label(th.Material(), headerSize, columns[3]).Layout(gtx)
 								return widgets.LabelBorder(gtx, th, headerSize, columns[3])
 							}),
 							layout.Flexed(columnWidths[4], func(gtx layout.Context) layout.Dimensions {
-								//return material.Label(th.Material(), headerSize, columns[4]).Layout(gtx)
 								return widgets.LabelBorder(gtx, th, headerSize, columns[4])
 							}),
 							layout.Flexed(columnWidths[5], func(gtx layout.Context) layout.Dimensions {
-								//return material.Label(th.Material(), headerSize, columns[5]).Layout(gtx)
 								return widgets.LabelBorder(gtx, th, headerSize, columns[5])
 							}),
 							layout.Flexed(columnWidths[6], func(gtx layout.Context) layout.Dimensions {
-								//return material.Label(th.Material(), headerSize, columns[6]).Layout(gtx)
 								return widgets.LabelBorder(gtx, th, headerSize, columns[6])
 							}),
 						)
@@ -112,27 +106,21 @@ func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensi
 
 					return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
 						layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
-							//return material.Body1(th.Material(), student.Name).Layout(gtx)
 							return widgets.Body1Border(gtx, th, student.Name)
 						}),
 						layout.Flexed(columnWidths[1], func(gtx layout.Context) layout.Dimensions {
-							//return material.Body1(th.Material(), student.Surname).Layout(gtx)
 							return widgets.Body1Border(gtx, th, student.Surname)
 						}),
 						layout.Flexed(columnWidths[2], func(gtx layout.Context) layout.Dimensions {
-							//return material.Body1(th.Material(), student.BirthDate.Format("2006-01-02")).Layout(gtx)
 							return widgets.Body1Border(gtx, th, student.BirthDate.Format("2006-01-02"))
 						}),
 						layout.Flexed(columnWidths[3], func(gtx layout.Context) layout.Dimensions {
-							//return material.Body1(th.Material(), student.RegistrationNumber).Layout(gtx)
 							return widgets.Body1Border(gtx, th, student.RegistrationNumber)
 						}),
 						layout.Flexed(columnWidths[4], func(gtx layout.Context) layout.Dimensions {
-							//return material.Body1(th.Material(), student.Room).Layout(gtx)
 							return widgets.Body1Border(gtx, th, student.Room)
 						}),
 						layout.Flexed(columnWidths[5], func(gtx layout.Context) layout.Dimensions {
-							//return material.Body1(th.Material(), fmt.Sprintf("%d", student.Score)).Layout(gtx)
 							return widgets.Body1Border(gtx, th, fmt.Sprintf("%d", student.Score))
 						}),
 						layout.Flexed(columnWidths[6], func(gtx layout.Context) layout.Dimensions {

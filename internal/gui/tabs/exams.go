@@ -108,49 +108,39 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedTestID *uint, db *gorm
 					}
 					return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
 						layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
-							//return material.Body1(th.Theme, test.Title).Layout(gtx)
 							return widgets.Body1Border(gtx, th, test.Title)
 						}),
 						layout.Flexed(columnWidths[1], func(gtx layout.Context) layout.Dimensions {
-							//return material.Body1(th.Theme, test.SchoolYear).Layout(gtx)
 							return widgets.Body1Border(gtx, th, test.SchoolYear)
 						}),
 						layout.Flexed(columnWidths[2], func(gtx layout.Context) layout.Dimensions {
-							//return material.Body1(th.Theme, fmt.Sprintf("%d", test.QuestionCount)).Layout(gtx)
 							return widgets.Body1Border(gtx, th, fmt.Sprintf("%d", test.QuestionCount))
 						}),
 						layout.Flexed(columnWidths[3], func(gtx layout.Context) layout.Dimensions {
-							//return material.Body1(th.Theme, fmt.Sprintf("%d", len(test.Students))).Layout(gtx)
 							return widgets.Body1Border(gtx, th, fmt.Sprintf("%d", len(test.Students)))
 						}),
 						layout.Flexed(columnWidths[4], func(gtx layout.Context) layout.Dimensions {
-							//return material.Body1(th.Theme, "datum").Layout(gtx)
 							return widgets.Body1Border(gtx, th, "datum")
 						}),
 						layout.Flexed(columnWidths[5], func(gtx layout.Context) layout.Dimensions {
-							//btn := material.Button(th.Theme, &showAnsButtons[i], "Zobraziť")
 							btn := widgets.Button(th.Theme, &showAnsButtons[i], widgets.SearchIcon, widgets.IconPositionStart, "Zobraziť")
 							btn.Background = themeUI.LightBlue
 							btn.Color = themeUI.White
 							return btn.Layout(gtx, th)
 						}),
 						layout.Flexed(columnWidths[6], func(gtx layout.Context) layout.Dimensions {
-							//btns := material.Button(th.Theme, &deleteButtons[i], "V")
 							btn := widgets.Button(th.Theme, &deleteButtons[i], widgets.DeleteIcon, widgets.IconPositionStart, "Vymazať")
 							btn.Background = themeUI.Red
 							btn.Color = themeUI.White
 							return btn.Layout(gtx, th)
 						}),
 						layout.Flexed(columnWidths[7], func(gtx layout.Context) layout.Dimensions {
-
-							//btn := material.Button(th.Theme, &evaluateTestBtns[i], ")
 							btn := widgets.Button(th.Theme, &evaluateTestBtns[i], widgets.UploadIcon, widgets.IconPositionStart, "Vyhodnotiť")
 							btn.Background = themeUI.LightGreen
 							btn.Color = themeUI.White
 							return btn.Layout(gtx, th)
 						}),
 						layout.Flexed(columnWidths[8], func(gtx layout.Context) layout.Dimensions {
-							//btn := material.Button(th.Theme, &printTestBtns[i], "")
 							btn := widgets.Button(th.Theme, &printTestBtns[i], widgets.SaveIcon, widgets.IconPositionStart, "Tlačiť")
 							btn.Background = themeUI.Gray
 							btn.Color = themeUI.White
