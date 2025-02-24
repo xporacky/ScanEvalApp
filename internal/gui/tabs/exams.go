@@ -5,7 +5,6 @@ import (
 	"ScanEvalApp/internal/database/repository"
 	"ScanEvalApp/internal/gui/tabmanager"
 	"ScanEvalApp/internal/gui/themeUI"
-	themeIU "ScanEvalApp/internal/gui/themeUI"
 	"ScanEvalApp/internal/gui/widgets"
 	"ScanEvalApp/internal/logging"
 	"fmt"
@@ -27,7 +26,7 @@ var printTestBtns []widget.Clickable
 var examList widget.List = widget.List{List: layout.List{Axis: layout.Vertical}}
 
 // Exams renders the "Exams" tab with dynamically generated columns based on data from the database.
-func Exams(gtx layout.Context, th *themeIU.Theme, selectedTestID *uint, db *gorm.DB, tm *tabmanager.TabManager) layout.Dimensions {
+func Exams(gtx layout.Context, th *themeUI.Theme, selectedTestID *uint, db *gorm.DB, tm *tabmanager.TabManager) layout.Dimensions {
 	//logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 	headerSize := unit.Sp(17)
@@ -187,7 +186,6 @@ func showAnsTest(Id uint) {
 
 	logger.Info("Ukázanie opovedí testu s ID", slog.Uint64("ID", uint64(Id)))
 }
-
 
 func printTest(Id uint) {
 	logger := logging.GetLogger()
