@@ -16,7 +16,6 @@ import (
 	"ScanEvalApp/internal/gui/widgets"
 	"gioui.org/unit"
 	"ScanEvalApp/internal/gui/themeUI"
-	themeIU "ScanEvalApp/internal/gui/themeUI"
 )
 
 // Tlačidlo na tlač všetkých hárkov
@@ -28,7 +27,7 @@ var searchQuery widget.Editor
 var studentList widget.List = widget.List{List: layout.List{Axis: layout.Vertical}}
 
 // StudentsTab renders the "Students" tab with a table of students.
-func Students(gtx layout.Context, th *themeIU.Theme, db *gorm.DB) layout.Dimensions {
+func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensions {
 	//logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 	insetWidth := unit.Dp(15)

@@ -27,7 +27,6 @@ import (
 	"encoding/csv"
 	"os"
 	"ScanEvalApp/internal/gui/themeUI"
-	themeIU "ScanEvalApp/internal/gui/themeUI"
 	"ScanEvalApp/internal/gui/widgets"
 )
 
@@ -60,7 +59,7 @@ type questionForm struct {
 }
 
 // CreateTest renders the content for the "Vytvorenie Písomky" tab.
-func (t *UploadCsv) CreateTest(gtx layout.Context, th *themeIU.Theme, db *gorm.DB) layout.Dimensions {
+func (t *UploadCsv) CreateTest(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensions {
 	logger := logging.GetLogger()
 	columnWidths := []float32{0.4, 0.2, 0.2, 0.2}
 	insetwidth := unit.Dp(10)
@@ -228,7 +227,7 @@ func updateQuestionForms(n int) {
 	}
 }
 
-func renderQuestionForms(gtx layout.Context, th *themeIU.Theme) []layout.FlexChild {
+func renderQuestionForms(gtx layout.Context, th *themeUI.Theme) []layout.FlexChild {
 	children := make([]layout.FlexChild, len(questionForms))
 	for i := range questionForms { // Prechádzame len indexy, aby sme pracovali priamo so slice-om
 		qf := &questionForms[i] // Uložíme si pointer na konkrétny prvok
@@ -244,7 +243,7 @@ func renderQuestionForms(gtx layout.Context, th *themeIU.Theme) []layout.FlexChi
 
 
 
-func renderOptions(gtx layout.Context,th *themeIU.Theme, questionIndex int, qf *questionForm) []layout.FlexChild {
+func renderOptions(gtx layout.Context,th *themeUI.Theme, questionIndex int, qf *questionForm) []layout.FlexChild {
 	options := []string{"A", "B", "C", "D", "E"}
 	children := make([]layout.FlexChild, len(options)+1) // Prvý prvok je číslo otázky
 
