@@ -23,7 +23,7 @@ func RunWindow(db *gorm.DB) error {
 	w := new(app.Window)
 	w.Option(
 		app.Title("ScanEvalApp"),
-		app.Size(1500,700),
+		app.Size(1600,700),
 	)
 
 	var ops op.Ops

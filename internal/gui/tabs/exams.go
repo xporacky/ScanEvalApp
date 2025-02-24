@@ -57,49 +57,39 @@ func Exams(gtx layout.Context, th *themeIU.Theme, selectedTestID *uint, db *gorm
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return layout.Inset{Left: insetWidth, Right: insetWidth}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-				return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
-					layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
-						return widgets.LabelBorder(gtx, th, headerSize, columns[0])						
-					}),
-					layout.Flexed(columnWidths[1], func(gtx layout.Context) layout.Dimensions {
-						//return material.Label(th.Material(), headerSize, columns[1]).Layout(gtx)
-						return widgets.LabelBorder(gtx, th, headerSize, columns[1])
-					}),
-					layout.Flexed(columnWidths[2], func(gtx layout.Context) layout.Dimensions {
-						//return material.Label(th.Material(), headerSize, columns[2]).Layout(gtx)
-						return widgets.LabelBorder(gtx, th, headerSize, columns[2])
-					}),
-					layout.Flexed(columnWidths[3], func(gtx layout.Context) layout.Dimensions {
-						//return material.Label(th.Material(), headerSize, columns[3]).Layout(gtx)
-						return widgets.LabelBorder(gtx, th, headerSize, columns[3])
-					}),
-					layout.Flexed(columnWidths[4], func(gtx layout.Context) layout.Dimensions {
-						//return material.Label(th.Material(), headerSize, columns[4]).Layout(gtx)
-						return widgets.LabelBorder(gtx, th, headerSize, columns[4])
-					}),
-					layout.Flexed(columnWidths[5], func(gtx layout.Context) layout.Dimensions {
-						//return material.Label(th.Material(), headerSize, columns[5]).Layout(gtx)
-						return widgets.LabelBorder(gtx, th, headerSize, columns[5])
-					}),
-					layout.Flexed(columnWidths[6], func(gtx layout.Context) layout.Dimensions {
-						//return material.Label(th.Material(), headerSize, columns[6]).Layout(gtx)
-						return widgets.LabelBorder(gtx, th, headerSize, columns[6])
-					}),
-					layout.Flexed(columnWidths[7], func(gtx layout.Context) layout.Dimensions {
-						//return material.Label(th.Material(), headerSize, columns[5]).Layout(gtx)
-						return widgets.LabelBorder(gtx, th, headerSize, columns[7])
-					}),
-					layout.Flexed(columnWidths[8], func(gtx layout.Context) layout.Dimensions {
-						//return material.Label(th.Material(), headerSize, columns[6]).Layout(gtx)
-						return widgets.LabelBorder(gtx, th, headerSize, columns[8])
-					}),
-				)
-			})
-		}),
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return layout.Inset{Left: insetWidth, Right: insetWidth}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				return material.List(th.Theme, &examList).Layout(gtx, len(tests), func(gtx layout.Context, i int) layout.Dimensions {
-					test := tests[i]
+					if i == 0 { // Prvá položka je hlavička
+						return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
+							layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
+								return widgets.LabelBorder(gtx, th, headerSize, columns[0])						
+							}),
+							layout.Flexed(columnWidths[1], func(gtx layout.Context) layout.Dimensions {
+								return widgets.LabelBorder(gtx, th, headerSize, columns[1])
+							}),
+							layout.Flexed(columnWidths[2], func(gtx layout.Context) layout.Dimensions {
+								return widgets.LabelBorder(gtx, th, headerSize, columns[2])
+							}),
+							layout.Flexed(columnWidths[3], func(gtx layout.Context) layout.Dimensions {
+								return widgets.LabelBorder(gtx, th, headerSize, columns[3])
+							}),
+							layout.Flexed(columnWidths[4], func(gtx layout.Context) layout.Dimensions {
+								return widgets.LabelBorder(gtx, th, headerSize, columns[4])
+							}),
+							layout.Flexed(columnWidths[5], func(gtx layout.Context) layout.Dimensions {
+								return widgets.LabelBorder(gtx, th, headerSize, columns[5])
+							}),
+							layout.Flexed(columnWidths[6], func(gtx layout.Context) layout.Dimensions {
+								return widgets.LabelBorder(gtx, th, headerSize, columns[6])
+							}),
+							layout.Flexed(columnWidths[7], func(gtx layout.Context) layout.Dimensions {
+								return widgets.LabelBorder(gtx, th, headerSize, columns[7])
+							}),
+							layout.Flexed(columnWidths[8], func(gtx layout.Context) layout.Dimensions {
+								return widgets.LabelBorder(gtx, th, headerSize, columns[8])
+							}),
+						)
+					}
+					test := tests[i-1]
 					if deleteButtons[i].Clicked(gtx) {
 						deleteTest(test.ID, db)
 						tests = removeTestFromList(tests, i) // Remove test from the list for UI update
@@ -113,7 +103,7 @@ func Exams(gtx layout.Context, th *themeIU.Theme, selectedTestID *uint, db *gorm
 						tm.ActiveTab = 3          // Prechod na UploadTab
 
 					}
-					if printTestBtns[i].Clicked(gtx) {
+					if printTestBtns[i-1].Clicked(gtx) {
 						printTest(test.ID)
 
 					}
