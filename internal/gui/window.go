@@ -2,59 +2,83 @@
 package window
 
 import (
-    "gioui.org/app"
-    "gioui.org/layout"
-    "gioui.org/op"
-    "gioui.org/widget/material"
-    "os"
-    "ScanEvalApp/internal/gui/tabmanager"  // Import tabmanager balíka
-    "ScanEvalApp/internal/gui/tabs"
-    "gorm.io/gorm"
-    "ScanEvalApp/internal/logging"
+	"ScanEvalApp/internal/gui/fonts"
+	"ScanEvalApp/internal/gui/tabmanager" // Import tabmanager balíka
+	"ScanEvalApp/internal/gui/tabs"
+	"ScanEvalApp/internal/gui/themeUI"
+	"ScanEvalApp/internal/logging"
+	"os"
+
+	"gioui.org/app"
+	"gioui.org/layout"
+	"gioui.org/op"
+	"gioui.org/text"
+	"gioui.org/widget/material"
+	"gorm.io/gorm"
 )
 
-func RunWindow(db *gorm.DB) {
-    logger := logging.GetLogger()
+func RunWindow(db *gorm.DB) error {
+	logger := logging.GetLogger()
 
-    w := new(app.Window)
-    w.Option(app.Title("ScanEvalApp"))
-    var ops op.Ops
-    tm := tabmanager.NewTabManager(4) // Vytvor TabManager
-    tabNames := []string{"Písomky", "Študenti", "Vytvorenie Písomky", "Upload CSV"}
+	w := new(app.Window)
+	w.Option(
+		app.Title("ScanEvalApp"),
+		app.Size(1600,700),
+	)
 
-    for {
-        evt := w.Event()
-        switch typ := evt.(type) {
-        case app.FrameEvent:
-            gtx := app.NewContext(&ops, typ)
-            ops.Reset()
+	var ops op.Ops
+	tm := tabmanager.NewTabManager(4) // Vytvor TabManager
+	tabNames := []string{"Písomky", "Študenti", "Vytvorenie Písomky", "Vyhodnotenie testu"}
 
-            th := material.NewTheme()
+	uploadTab := tabs.NewUploadTab(w)
+	uploadCsv := tabs.NewUploadCsv(w)
+	var selectedTestID uint
 
-            layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-                layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-                    return tm.LayoutTabs(gtx, th, tabNames) // Vykreslenie záložiek
-                }),
-                layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-                    switch tm.ActiveTab {
-                    case 0:
-                        return tabs.Exams(gtx, th, db)
-                    case 1:
-                        return tabs.Students(gtx, th, db)
-                    case 2:
-                        return tabs.CreateTest(gtx, th)
-                    case 3:
-                        return tabs.Upload(gtx, th)
-                    default:
-                        return layout.Dimensions{}
-                    }
-                }),
-            )
-            typ.Frame(gtx.Ops)
+	for {
+		evt := w.Event()
+		switch typ := evt.(type) {
+		case app.FrameEvent:
+			gtx := app.NewContext(&ops, typ)
+			ops.Reset()
+			fontCollection, err := fonts.Prepare()
+			if err != nil {
+				return err
+			}
+			theme := material.NewTheme()
+			theme.Shaper = text.NewShaper(text.WithCollection(fontCollection))
+			th := themeUI.New(theme)
 
-        case app.DestroyEvent:
-            logger.Info("Zatvorenie aplikácie.")
-            os.Exit(0)
-        }
-    }
+			layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+					return tm.LayoutTabs(gtx, th, tabNames) // Vykreslenie záložiek
+				}),
+				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+					switch tm.ActiveTab {
+					case 0:
+						return tabs.Exams(gtx, th, &selectedTestID, db, tm)
+					case 1:
+						return tabs.Students(gtx, th, db)
+					case 2:
+						return uploadCsv.CreateTest(gtx, th, db)
+					case 3:
+						if selectedTestID != 0 {
+							uploadTab.SetTestID(selectedTestID) // Nastavenie ID testu v UploadTab
+						}
+						return uploadTab.Layout(gtx, th.Material(), db) // Použitie inicializovaného UploadTab
+						//return tabs.Upload(gtx, th,w)
+					default:
+						return layout.Dimensions{}
+					}
+				}),
+			)
+			if tm.ActiveTab == 3 {
+				uploadTab.HandleEvent(evt)
+			}
+			typ.Frame(gtx.Ops)
+
+		case app.DestroyEvent:
+			logger.Info("Zatvorenie aplikácie.")
+			os.Exit(0)
+		}
+	}
 }

@@ -38,14 +38,14 @@ func GetTest(db *gorm.DB, id uint) (*models.Test, error) {
 }
 
 func GetAllTests(db *gorm.DB) ([]models.Test, error) {
-	errorLogger := logging.GetErrorLogger()
+    errorLogger := logging.GetErrorLogger()
 
-	var tests []models.Test
-	result := db.Find(&tests)
-	if result.Error != nil {
-		errorLogger.Error("Chyba pri načítavaní testov", slog.Group("CRITICAL", slog.String("error", result.Error.Error())))
-	}
-	return tests, result.Error
+    var tests []models.Test
+    result := db.Preload("Students").Find(&tests) // Načítame aj priradených študentov
+    if result.Error != nil {
+        errorLogger.Error("Chyba pri načítavaní testov", slog.Group("CRITICAL", slog.String("error", result.Error.Error())))
+    }
+    return tests, result.Error
 }
 
 func UpdateTest(db *gorm.DB, test *models.Test) error {

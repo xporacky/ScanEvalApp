@@ -9,15 +9,20 @@ import (
 	"gioui.org/widget/material"
 	"gorm.io/gorm"
 
+	//"image/color"
+
+
 	//"reflect"
 	"ScanEvalApp/internal/logging"
 	"log/slog"
+	"ScanEvalApp/internal/gui/widgets"
+	"gioui.org/unit"
+	"ScanEvalApp/internal/gui/themeUI"
+
 
 	"ScanEvalApp/internal/latex"
 )
 
-// Tlačidlo na tlač všetkých hárkov
-var printAllButton widget.Clickable
 var printButtons []widget.Clickable
 var searchQuery widget.Editor
 
@@ -25,9 +30,11 @@ var searchQuery widget.Editor
 var studentList widget.List = widget.List{List: layout.List{Axis: layout.Vertical}}
 
 // StudentsTab renders the "Students" tab with a table of students.
-func Students(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimensions {
-	logger := logging.GetLogger()
+func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensions {
+	//logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
+	insetWidth := unit.Dp(15)
+	headerSize := unit.Sp(17)
 
 	students, err := repository.GetAllStudents(db)
 	if err != nil {
@@ -52,102 +59,95 @@ func Students(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimens
 		}
 	}
 	columns := []string{"Meno", "Priezvisko", "Dátum narodenia", "Registračné číslo", "Miestnosť", "Skóre", "Tlačiť hárok"}
-	columnWidths := []float32{0.15, 0.15, 0.2, 0.2, 0.1, 0.1, 0.1} // Pomery šírok
+	columnWidths := []float32{0.2, 0.2, 0.15, 0.2, 0.1, 0.05, 0.1} // Pomery šírok
 	if len(printButtons) != len(students) {
 		printButtons = make([]widget.Clickable, len(students))
 	}
 
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			editor := material.Editor(th, &searchQuery, "Vyhľadávanie (Meno, Priezvisko, Registračné číslo)")
-			return editor.Layout(gtx)
+			return layout.UniformInset(unit.Dp(10)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+				editor := widgets.NewEditorField(th.Theme, &searchQuery, "🔎   Vyhľadávanie (Meno, Priezvisko, Registračné číslo)") // Šírku riadi columnWidths
+				return editor.Layout(gtx, th)
+			})
 		}),
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			btn := material.Button(th, &printAllButton, "Tlačiť všetky hárky")
-			if printAllButton.Clicked(gtx) {
-				logger.Info("Kliknutie na tlačidlo Tlačiť všetky hárky")
-				printAllSheets()
-			}
-			return btn.Layout(gtx)
-		}),
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
-				layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
-					return material.Body1(th, columns[0]).Layout(gtx)
-				}),
-				layout.Flexed(columnWidths[1], func(gtx layout.Context) layout.Dimensions {
-					return material.Body1(th, columns[1]).Layout(gtx)
-				}),
-				layout.Flexed(columnWidths[2], func(gtx layout.Context) layout.Dimensions {
-					return material.Body1(th, columns[2]).Layout(gtx)
-				}),
-				layout.Flexed(columnWidths[3], func(gtx layout.Context) layout.Dimensions {
-					return material.Body1(th, columns[3]).Layout(gtx)
-				}),
-				layout.Flexed(columnWidths[4], func(gtx layout.Context) layout.Dimensions {
-					return material.Body1(th, columns[4]).Layout(gtx)
-				}),
-				layout.Flexed(columnWidths[5], func(gtx layout.Context) layout.Dimensions {
-					return material.Body1(th, columns[5]).Layout(gtx)
-				}),
-				layout.Flexed(columnWidths[6], func(gtx layout.Context) layout.Dimensions {
-					return material.Body1(th, columns[6]).Layout(gtx)
-				}),
-			)
-		}),
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return material.List(th, &studentList).Layout(gtx, len(students), func(gtx layout.Context, i int) layout.Dimensions {
-				student := students[i]
-				if printButtons[i].Clicked(gtx) {
-					// PrintSheet(fmt.Sprintf("%d", student.RegistrationNumber))
-					// TODO - toto over ci to tak moze byt
-					err := latex.PrintSheet(db, student.RegistrationNumber)
-					if err != nil {
-						errorLogger.Error("Chyba pri tlači hárku pre študenta", slog.String("error", err.Error()))
-					} else {
-						logger.Info("Úspešne vytlačený hárok pre študenta", slog.String("registrationNumber", fmt.Sprintf("%d", student.RegistrationNumber)))
-					}
-				}
 
-				return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
-					layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
-						return material.Body1(th, student.Name).Layout(gtx)
-					}),
-					layout.Flexed(columnWidths[1], func(gtx layout.Context) layout.Dimensions {
-						return material.Body1(th, student.Surname).Layout(gtx)
-					}),
-					layout.Flexed(columnWidths[2], func(gtx layout.Context) layout.Dimensions {
-						return material.Body1(th, student.BirthDate.Format("2006-01-02")).Layout(gtx)
-					}),
-					layout.Flexed(columnWidths[3], func(gtx layout.Context) layout.Dimensions {
-						return material.Body1(th, fmt.Sprintf("%d", student.RegistrationNumber)).Layout(gtx)
-					}),
-					layout.Flexed(columnWidths[4], func(gtx layout.Context) layout.Dimensions {
-						return material.Body1(th, student.Room).Layout(gtx)
-					}),
-					layout.Flexed(columnWidths[5], func(gtx layout.Context) layout.Dimensions {
-						return material.Body1(th, fmt.Sprintf("%d", student.Score)).Layout(gtx)
-					}),
-					layout.Flexed(columnWidths[6], func(gtx layout.Context) layout.Dimensions {
-						btn := material.Button(th, &printButtons[i], "Tlačiť hárok")
-						return btn.Layout(gtx)
-					}),
-				)
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return layout.Inset{Left: insetWidth, Right: insetWidth}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+				return material.List(th.Material(), &studentList).Layout(gtx, len(students), func(gtx layout.Context, i int) layout.Dimensions {
+					if(i==0){
+						return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
+							layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
+								return widgets.LabelBorder(gtx, th, headerSize, columns[0])						
+							}),
+							layout.Flexed(columnWidths[1], func(gtx layout.Context) layout.Dimensions {
+								return widgets.LabelBorder(gtx, th, headerSize, columns[1])
+							}),
+							layout.Flexed(columnWidths[2], func(gtx layout.Context) layout.Dimensions {
+								return widgets.LabelBorder(gtx, th, headerSize, columns[2])
+							}),
+							layout.Flexed(columnWidths[3], func(gtx layout.Context) layout.Dimensions {
+								return widgets.LabelBorder(gtx, th, headerSize, columns[3])
+							}),
+							layout.Flexed(columnWidths[4], func(gtx layout.Context) layout.Dimensions {
+								return widgets.LabelBorder(gtx, th, headerSize, columns[4])
+							}),
+							layout.Flexed(columnWidths[5], func(gtx layout.Context) layout.Dimensions {
+								return widgets.LabelBorder(gtx, th, headerSize, columns[5])
+							}),
+							layout.Flexed(columnWidths[6], func(gtx layout.Context) layout.Dimensions {
+								return widgets.LabelBorder(gtx, th, headerSize, columns[6])
+							}),
+						)
+					}
+					
+					
+					student := students[i-1]
+					if printButtons[i].Clicked(gtx) {
+						//printSheet(student.RegistrationNumber)
+            err := latex.PrintSheet(db, student.RegistrationNumber)
+            if err != nil {
+              errorLogger.Error("Chyba pri tlači hárku pre študenta", slog.String("error", err.Error()))
+            } else {
+              logger.Info("Úspešne vytlačený hárok pre študenta", slog.String("registrationNumber", fmt.Sprintf("%d", student.RegistrationNumber)))
+            }
+					}
+
+					return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
+						layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
+							return widgets.Body1Border(gtx, th, student.Name)
+						}),
+						layout.Flexed(columnWidths[1], func(gtx layout.Context) layout.Dimensions {
+							return widgets.Body1Border(gtx, th, student.Surname)
+						}),
+						layout.Flexed(columnWidths[2], func(gtx layout.Context) layout.Dimensions {
+							return widgets.Body1Border(gtx, th, student.BirthDate.Format("2006-01-02"))
+						}),
+						layout.Flexed(columnWidths[3], func(gtx layout.Context) layout.Dimensions {
+							return widgets.Body1Border(gtx, th, student.RegistrationNumber)
+						}),
+						layout.Flexed(columnWidths[4], func(gtx layout.Context) layout.Dimensions {
+							return widgets.Body1Border(gtx, th, student.Room)
+						}),
+						layout.Flexed(columnWidths[5], func(gtx layout.Context) layout.Dimensions {
+							return widgets.Body1Border(gtx, th, fmt.Sprintf("%d", student.Score))
+						}),
+						layout.Flexed(columnWidths[6], func(gtx layout.Context) layout.Dimensions {
+							btn := widgets.Button(th.Theme, &printButtons[i], widgets.SaveIcon, widgets.IconPositionStart, "Tlačiť")
+							btn.Background = themeUI.Gray
+							btn.Color = themeUI.White
+							return btn.Layout(gtx, th)
+						}),
+					)
+				})
 			})
 		}),
 	)
 }
 
-// TODO - TOTO pojde prec, lebo nebudeme tlacit harky vsetkych studentov vsetkych testov
-func printAllSheets() {
+func printSheet(registrationNumber string) {
 	logger := logging.GetLogger()
 
-	logger.Info("Volám tlač všetky hárky")
+	logger.Info("Volám tlač hárku pre študenta ID", slog.String("ID", registrationNumber))
 }
 
-// TODO -> toto som hodil do latex.go ako novu funkciu, a odtial ju volam v tomto subore
-// func printSheet(registrationNumber string) {
-// 	logger := logging.GetLogger()
-
-// 	logger.Info("Volám tlač hárku pre študenta ID", slog.String("ID", registrationNumber))
-// }

@@ -11,14 +11,17 @@ require (
 )
 
 require (
-	gioui.org v0.7.1 // indirect
+	gioui.org v0.8.0 // indirect
 	gioui.org/cpu v0.0.0-20210817075930-8d6a761490d2 // indirect
 	gioui.org/shader v1.0.8 // indirect
+	gioui.org/x v0.8.1 // indirect
+	git.wow.st/gmp/jni v0.0.0-20210610011705-34026c7e22d0 // indirect
 	github.com/dsoprea/go-exif v0.0.0-20230826092837-6579e82b732d // indirect
 	github.com/dsoprea/go-logging v0.0.0-20190624164917-c4f10aab7696 // indirect
 	github.com/go-errors/errors v1.0.1 // indirect
 	github.com/go-pdf/fpdf v0.9.0 // indirect
-	github.com/go-text/typesetting v0.1.1 // indirect
+	github.com/go-text/typesetting v0.2.1 // indirect
+	github.com/godbus/dbus/v5 v5.0.6 // indirect
 	github.com/golang/geo v0.0.0-20190916061304-5b978397cfec // indirect
 	github.com/hhrutter/lzw v1.0.0 // indirect
 	github.com/hhrutter/tiff v1.0.1 // indirect

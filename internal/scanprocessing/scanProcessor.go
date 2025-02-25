@@ -3,8 +3,6 @@ package scanprocessing
 import (
 	"ScanEvalApp/internal/database/models"
 	"ScanEvalApp/internal/database/repository"
-	"os"
-	"path/filepath"
 
 	"ScanEvalApp/internal/logging"
 	"log/slog"
@@ -14,33 +12,15 @@ import (
 )
 
 // Process PDF
-func ProcessPDF(scanPath string, outputPath string, test *models.Test, db *gorm.DB) {
+func ProcessPDF(scanPath string, test *models.Test, db *gorm.DB) {
 	errorLogger := logging.GetErrorLogger()
-
-	var files []string
-
-	err := filepath.Walk(scanPath, func(path string, info os.FileInfo, err error) error {
-		if filepath.Ext(path) == ".pdf" {
-			files = append(files, path)
-		}
-		return nil
-	})
+	doc, err := fitz.New(scanPath)
 	if err != nil {
-		errorLogger.Error("Chyba pri prechádzaní adresára", slog.String("error", err.Error()))
+		errorLogger.Error("Chyba pri načítaní PDF súboru", slog.String("file", scanPath), slog.String("error", err.Error()))
 		panic(err)
 	}
-	for _, file := range files {
-		doc, err := fitz.New(file)
-		if err != nil {
-			errorLogger.Error("Chyba pri načítaní PDF súboru", slog.String("file", file), slog.String("error", err.Error()))
-			panic(err)
-		}
-		//folder := strings.TrimSuffix(path.Base(file), filepath.Ext(path.Base(file)))
-
-		// Extract pages as images
-		for n := 0; n < doc.NumPage(); n++ {
-			ProcessPage(doc, n, test, db)
-		}
+	for n := 0; n < doc.NumPage(); n++ {
+		ProcessPage(doc, n, test, db)
 	}
 }
 
@@ -66,7 +46,6 @@ func ProcessPage(doc *fitz.Document, n int, test *models.Test, db *gorm.DB) {
 		return
 	}
 	errorLogger.Info("Našiel sa študent v databáze", "studentID", student.ID, "name", student.Name)
-	//path := filepath.Join("./"+outputPath+"/", fmt.Sprintf("%s-image-%05d.png", folder, n)) //na testovanie zatial takto
 	EvaluateAnswers(&mat, test.QuestionCount, student)
 	err = repository.UpdateStudent(db, student)
 	if err != nil {

@@ -7,14 +7,27 @@ povolit iba jednu moznost pri danej otazke
 osetrit vstupy
 */
 import (
+	"gioui.org/app"
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"gioui.org/unit"
+	"gioui.org/x/explorer"
+	"io"
 	"fmt"
 	"strconv"
 	"ScanEvalApp/internal/logging"
 	"log/slog"
+	"ScanEvalApp/internal/database/repository"
+	"ScanEvalApp/internal/database/models"
+	"gorm.io/gorm"
+	"log"
+	"strings"
+	"time"
+	"encoding/csv"
+	"os"
+	"ScanEvalApp/internal/gui/themeUI"
+	"ScanEvalApp/internal/gui/widgets"
 )
 
 var (
@@ -27,7 +40,18 @@ var (
 	questionForms  []questionForm
 	showQuestions  bool
 )
+type UploadCsv struct {
+	button       	widget.Clickable
+	explorer     	*explorer.Explorer
+	selectedFile 	string
+	filePath		string
 
+}
+func NewUploadCsv(w *app.Window) *UploadCsv {
+	return &UploadCsv{
+		explorer: explorer.NewExplorer(w),
+	}
+}
 var questionList widget.List = widget.List{List: layout.List{Axis: layout.Vertical}}
 
 type questionForm struct {
@@ -35,9 +59,10 @@ type questionForm struct {
 }
 
 // CreateTest renders the content for the "Vytvorenie Písomky" tab.
-func CreateTest(gtx layout.Context, th *material.Theme) layout.Dimensions {
+func (t *UploadCsv) CreateTest(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensions {
 	logger := logging.GetLogger()
-
+	columnWidths := []float32{0.4, 0.2, 0.2, 0.2}
+	insetwidth := unit.Dp(10)
 	if createButton.Clicked(gtx) {
 		logger.Info("Kliknutie na tlačidlo Vytvoriť test")
 		if questionsInput.Text() != "" {
@@ -48,70 +73,137 @@ func CreateTest(gtx layout.Context, th *material.Theme) layout.Dimensions {
 			}
 		}
 	}
+	if t.button.Clicked(gtx) {
+		go t.openFileDialog(db)
+	}
 
 	return layout.Flex{
 		Axis:    layout.Vertical,
 	}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return layout.Inset{Top: 4, Bottom: 2}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-				return layout.Flex{
-					Axis:    layout.Horizontal,
-					Spacing: layout.SpaceBetween,
-				}.Layout(gtx,
-					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return layout.UniformInset(unit.Dp(4)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-							return material.Editor(th, &nameInput, "Názov                  ").Layout(gtx)
-						})
-					}),
-					
-					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return layout.UniformInset(unit.Dp(4)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-							return material.Editor(th, &roomInput, "Miestnosť").Layout(gtx)
-						})
-					}),
-					
-					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return layout.UniformInset(unit.Dp(4)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-							return material.Editor(th, &timeInput, "Čas   ").Layout(gtx)
-						})
-					}),
-					
-					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return layout.UniformInset(unit.Dp(4)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-							return material.Editor(th, &questionsInput, "Počet otázok").Layout(gtx)
-						})
-					}),
-				)
+				return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
+						layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
+							return layout.UniformInset(insetwidth).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+								editor := widgets.NewEditorField(th.Theme, &nameInput, "Názov") // Šírku riadi columnWidths
+								return editor.Layout(gtx, th)
+							})
+						}),
+						layout.Flexed(columnWidths[1], func(gtx layout.Context) layout.Dimensions {
+							return layout.UniformInset(insetwidth).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+								editor := widgets.NewEditorField(th.Theme, &roomInput, "Miestnosť")
+								return editor.Layout(gtx, th)
+							})
+						}),
+						layout.Flexed(columnWidths[2], func(gtx layout.Context) layout.Dimensions {
+							return layout.UniformInset(insetwidth).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+								editor := widgets.NewEditorField(th.Theme, &timeInput, "Čas")
+								return editor.Layout(gtx, th)
+							})
+						}),
+						layout.Flexed(columnWidths[3], func(gtx layout.Context) layout.Dimensions {
+							return layout.UniformInset(insetwidth).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+								editor := widgets.NewEditorField(th.Theme, &questionsInput, "Počet otázok")
+								return editor.Layout(gtx, th)
+							})
+						}),
+					)
 			})
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return material.Button(th, &createButton, "Vytvoriť test").Layout(gtx)
+			return layout.Flex{Axis: layout.Horizontal, Spacing: layout.SpaceBetween}.Layout(gtx,
+				layout.Flexed(0.3, func(gtx layout.Context) layout.Dimensions {
+					return layout.UniformInset(insetwidth).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+						btn := widgets.Button(th.Theme, &t.button, widgets.FileFolderIcon, widgets.IconPositionStart, "Nahrať študentov (.csv)")
+						btn.Background = themeUI.LightYellow
+						btn.Color = themeUI.Black
+						return btn.Layout(gtx, th)
+					})
+				}),
+				layout.Flexed(0.4, func(gtx layout.Context) layout.Dimensions {
+					return layout.UniformInset(unit.Dp(20)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+						text := "Žiadny súbor nebol vybraný"
+						if t.selectedFile != "" {
+							text = fmt.Sprintf("Vybraný súbor: %s", t.filePath)
+						}
+						return material.Label(th.Theme, unit.Sp(16), text).Layout(gtx)
+					})
+				}),
+				layout.Flexed(0.3, func(gtx layout.Context) layout.Dimensions {
+					return layout.UniformInset(insetwidth).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+						btn := widgets.Button(th.Theme, &createButton, widgets.PlusIcon, widgets.IconPositionStart, "Generovať test")
+						btn.Background = themeUI.LightBlue
+						btn.Color = themeUI.White
+						return btn.Layout(gtx, th)
+					})
+				}),
+			)
 		}),
+		
+		
+		
+		
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			if showQuestions {
-				btn := material.Button(th, &submitButton, "Odoslať")
-				if submitButton.Clicked(gtx) {
-					logger.Info("Kliknutie na tlačidlo Odoslať")
-					submitForm()
-				}
-				return btn.Layout(gtx)
-			}
-			return layout.Dimensions{}
-		}),
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			if showQuestions {
-				return material.List(th, &questionList).Layout(gtx, len(questionForms), func(gtx layout.Context, i int) layout.Dimensions {
-					qf := &questionForms[i]
-					return layout.Flex{
-						Axis:    layout.Horizontal,
-						Spacing: layout.SpaceAround,
-					}.Layout(gtx, renderOptions(gtx, th, i+1, qf)...)
+				return material.List(th.Theme, &questionList).Layout(gtx, len(questionForms)+1, func(gtx layout.Context, i int) layout.Dimensions {
+					if i < len(questionForms) {
+						qf := &questionForms[i]
+						return layout.Flex{
+							Axis:    layout.Horizontal,
+							Spacing: layout.SpaceAround,
+						}.Layout(gtx, renderOptions(gtx, th, i+1, qf)...)
+					}
+		
+					// Posledný element - tlačidlo "Vytvoriť test"
+					return layout.UniformInset(insetwidth).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+						btn := widgets.Button(th.Theme, &submitButton, widgets.SaveIcon, widgets.IconPositionStart, "Vytvoriť test")
+						btn.Background = themeUI.LightGreen
+						btn.Color = themeUI.Black
+						if submitButton.Clicked(gtx) {
+							logger.Info("Kliknutie na tlačidlo Odoslať")
+							submitForm(db, t)
+						}
+						return btn.Layout(gtx, th)
+					})
 				})
 			}
 			return layout.Dimensions{}
 		}),
+		
 	)
 }
+
+// Funkcia na otvorenie dialógového okna na výber súboru
+func (t *UploadCsv) openFileDialog(db *gorm.DB) {
+	file, err := t.explorer.ChooseFile()
+	if err != nil {
+		log.Println("Chyba pri výbere súboru:", err)
+		return
+	}
+	if file != nil {
+		defer file.Close() // Nezabudni zatvoriť súbor
+		if f, ok := file.(*os.File); ok {
+			t.filePath = f.Name()
+		} else {
+			log.Println("file nie je typu *os.File")
+		}	
+		b, err := io.ReadAll(file)
+		if err != nil {
+			log.Println("Chyba pri čítaní súboru:", err)
+			return
+		}
+		t.selectedFile = string(b)
+	}
+}
+
+// Spracovanie eventov (pre Explorer)
+func (t *UploadCsv) HandleEvent(evt interface{}) { // Zmena na interface{}
+	switch e := evt.(type) {
+	case app.FrameEvent:
+		t.explorer.ListenEvents(e)
+	}
+}
+
 
 func parseNumber(input string) int {
 	logger := logging.GetLogger()
@@ -135,7 +227,7 @@ func updateQuestionForms(n int) {
 	}
 }
 
-func renderQuestionForms(gtx layout.Context, th *material.Theme) []layout.FlexChild {
+func renderQuestionForms(gtx layout.Context, th *themeUI.Theme) []layout.FlexChild {
 	children := make([]layout.FlexChild, len(questionForms))
 	for i := range questionForms { // Prechádzame len indexy, aby sme pracovali priamo so slice-om
 		qf := &questionForms[i] // Uložíme si pointer na konkrétny prvok
@@ -151,27 +243,27 @@ func renderQuestionForms(gtx layout.Context, th *material.Theme) []layout.FlexCh
 
 
 
-func renderOptions(gtx layout.Context, th *material.Theme, questionIndex int, qf *questionForm) []layout.FlexChild {
+func renderOptions(gtx layout.Context,th *themeUI.Theme, questionIndex int, qf *questionForm) []layout.FlexChild {
 	options := []string{"A", "B", "C", "D", "E"}
 	children := make([]layout.FlexChild, len(options)+1) // Prvý prvok je číslo otázky
 
 	// Pridáme číslo otázky (napr. "01:")
 	children[0] = layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-		return material.Label(th, unit.Sp(15), fmt.Sprintf("%02d:", questionIndex)).Layout(gtx)
+		return material.Label(th.Theme, unit.Sp(15), fmt.Sprintf("%02d:", questionIndex)).Layout(gtx)
 	})
 
 	// Vykreslíme rádio tlačidlá pre možnosti A–E
 	for i, option := range options {
 		i, option := i, option
 		children[i+1] = layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return material.RadioButton(th, &qf.selectedOption, option, option).Layout(gtx)
+			return material.RadioButton(th.Theme, &qf.selectedOption, option, option).Layout(gtx)
 		})
 	}
 
 	return children
 }
 
-func submitForm() {
+func submitForm(db *gorm.DB, t *UploadCsv) {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
@@ -185,39 +277,75 @@ func submitForm() {
 		return
 	}
 
+	var answers []string
+	for _, qf := range questionForms {
+		answers = append(answers, qf.selectedOption.Value)
+	}
+	answersStr := strings.Join(answers, "")
+
+
+
+	// Vytvorenie testu
+	test := models.Test{
+		Title:      nazov,
+		SchoolYear: cas,
+//		Room:       miestnost,
+		QuestionCount: pocetOtazok,
+		Questions : answersStr,
+	}
+	// ulozenie do db
+	err = repository.CreateTest(db, &test)
+	if err != nil {
+		errorLogger.Error("Chyba pri ukladaní testu", slog.Group("CRITICAL", slog.String("error", err.Error())))
+		return
+	}
 	// Vytvoríme si výsledný výpis
 	logger.Info("Formulár odoslaný", 
 		slog.String("nazov", nazov), 
 		slog.String("miestnost", miestnost), 
 		slog.String("cas", cas), 
-		slog.Int("pocetOtazok", pocetOtazok))
+		slog.Int("pocetOtazok", pocetOtazok),
+		slog.String("odpovede", answersStr))
 		// Premenná pre uchovávanie zaškrtnutých možností
-//	var selectedOptions string
-	// Prejdeme každú otázku a jej odpovede
-/*	for i, qf := range questionForms {
-		fmt.Printf("otazka c. %d", i)
-		// Pre každú možnosť otázky (A, B, C, D, E) skontrolujeme, či je zaškrtnutá
-		for j, option := range qf.options {
-			optionStr := string(rune('A' + j))
-			if option.Value {
-				// Ak je možnosť zaškrtnutá, pridáme ju do stringu
-				if selectedOptions != "" {
-					selectedOptions += ", "
-				}
-				selectedOptions += optionStr
-				fmt.Printf("  - Zaškrtnuté: %s\n", optionStr)
-			}
+
+	fmt.Println(t.selectedFile)
+
+
+	reader := csv.NewReader(strings.NewReader(t.selectedFile))
+	rows, err := reader.ReadAll()
+	if err != nil {
+		fmt.Println("error1: %s", err)
+		return 
+	}
+
+
+	fmt.Println("studenti v csv: %s", rows)
+
+	for i, row := range rows {
+		fmt.Println("som dnu for")
+		if i == 0 {
+			fmt.Println("hlavicka")
+			continue // Preskočiť hlavičku CSV
+		}
+		birthDate, err := time.Parse("2006-01-02", row[2]) 
+		if err != nil {
+			fmt.Println("error2: %s", err)
+			return
 		}
 
-		// Ak sú zaškrtnuté možnosti, vypíšeme ich
-
+		student := models.Student{
+			Name:               row[0],
+			Surname:            row[1],
+			BirthDate:          birthDate,
+			RegistrationNumber: row[3],
+			Room:               row[4],
+			TestID:             test.ID,					//TODO:preroobilt!!!!!!!!!!!!!!!!!!!!! 
+		}
+		if err := repository.CreateStudent(db, &student); err != nil {
+			fmt.Println("error3: ", err)
+			return 
+		}else{
+			fmt.Println("student pridany: %s", student)
+		}
 	}
-	if selectedOptions != "" {
-		fmt.Printf("  - Zaškrtnuté možnosti: %s\n", selectedOptions)
-	} else {
-		fmt.Println("  - Žiadna možnosť nie je zaškrtnutá")
-	}
-	
-
-*/
 }
