@@ -35,14 +35,9 @@ func ProcessPage(doc *fitz.Document, n int, test *models.Test, db *gorm.DB) {
 	mat := ImageToMat(img)
 	mat = MatToGrayscale(mat)
 	mat = FixImageRotation(mat)
-	studentID, err := GetStudentID(&mat)
+	student, err := GetStudent(&mat, db, test.ID)
 	if err != nil {
-		errorLogger.Error("Chyba pri získavaní ID študenta", slog.String("error", err.Error()))
-		return
-	}
-	student, err := repository.GetStudent(db, uint(studentID), test.ID)
-	if err != nil {
-		errorLogger.Error("Chyba pri získavaní ID študenta z databázy", "studentID", studentID, "error", err.Error())
+		errorLogger.Error("Chyba pri získavaní ID študenta z databázy", "PDF strana", n, "error", err.Error())
 		return
 	}
 	errorLogger.Info("Našiel sa študent v databáze", "studentID", student.ID, "name", student.Name)
@@ -52,7 +47,7 @@ func ProcessPage(doc *fitz.Document, n int, test *models.Test, db *gorm.DB) {
 		errorLogger.Error("Chyba pri aktualizácii študenta v databáze", "studentID", student.ID, "error", err.Error())
 		return
 	}
-	errorLogger.Info("Aktualizované odpovede študenta", "studentID", studentID, "answers", student.Answers)
+	errorLogger.Info("Aktualizované odpovede študenta", "studentID", student.ID, "answers", student.Answers)
 	//SaveMat("", mat)
 	defer mat.Close()
 	//println(student.Answers)
