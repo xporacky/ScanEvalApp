@@ -1,6 +1,8 @@
 package scanprocessing
 
 import (
+	"ScanEvalApp/internal/database/models"
+	"ScanEvalApp/internal/database/repository"
 	"ScanEvalApp/internal/files"
 	"ScanEvalApp/internal/ocr"
 	"fmt"
@@ -11,6 +13,7 @@ import (
 	"log/slog"
 
 	"gocv.io/x/gocv"
+	"gorm.io/gorm"
 )
 
 func FindContours(mat gocv.Mat) gocv.PointsVector {
@@ -58,11 +61,11 @@ func ImageToMat(imgRGBA *image.RGBA) gocv.Mat {
 }
 
 // Show image in window
-func ShowMat(mat gocv.Mat) {
+func ShowMat(mat *gocv.Mat) {
 	window := gocv.NewWindow("Image")
 	defer window.Close()
 	window.ResizeWindow(1100, 1400)
-	window.IMShow(mat)
+	window.IMShow(*mat)
 	window.WaitKey(0)
 }
 
@@ -124,7 +127,8 @@ func DrawCountours(mat *gocv.Mat, contours gocv.PointsVector) {
 	}
 }
 
-func GetStudentID(mat *gocv.Mat) (int, error) {
+// finds student from mat using qr code or ocr returns student
+func GetStudent(mat *gocv.Mat, db *gorm.DB, testID uint) (*models.Student, error) {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
@@ -134,21 +138,22 @@ func GetStudentID(mat *gocv.Mat) (int, error) {
 		_, err := fmt.Sscan(qrText, &id)
 		if err != nil {
 			errorLogger.Error("Chyba pri konverzii QR textu na ID", slog.String("qrText", qrText), slog.String("error", err.Error()))
-			return 0, err
+			return nil, err
 		}
-		return id, nil
+		return repository.GetStudentById(db, uint(id), testID)
 	}
-	logger.Warn("QR kód nebol nájdený, pokúšame sa získať ID zo záhlavia")
+	logger.Warn("QR kód nebol nájdený, pokúšame sa získať registrationNumber zo záhlavia")
 
 	rect := image.Rectangle{Min: image.Point{PADDING, PADDING}, Max: image.Point{mat.Cols() - PADDING, (mat.Rows() / 4) - PADDING}}
 	headerMat := mat.Region(rect)
 	defer headerMat.Close()
 	SaveMat(TEMP_HEADER_IMAGE_PATH, headerMat)
-	id, err := ocr.ExtractID(TEMP_HEADER_IMAGE_PATH)
+	registrationNumber, err := ocr.ExtractID(TEMP_HEADER_IMAGE_PATH)
 	files.DeleteFile(TEMP_HEADER_IMAGE_PATH)
 	if err != nil {
-		errorLogger.Error("Chyba pri extrakcii ID zo záhlavia obrázku", slog.String("error", err.Error()))
-		return 0, err
+		errorLogger.Error("Chyba pri extrakcii registrationNumber zo záhlavia obrázku", slog.String("error", err.Error()))
+		return nil, err
 	}
-	return id, nil
+
+	return repository.GetStudentByRegistrationNumber(db, uint(registrationNumber), testID)
 }

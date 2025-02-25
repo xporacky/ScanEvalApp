@@ -26,17 +26,32 @@ func CreateStudent(db *gorm.DB, student *models.Student) error {
 	}
 	return result.Error
 }
+func GetStudentById(db *gorm.DB, id uint, testID uint) (*models.Student, error) {
+	logger := logging.GetLogger()
+	errorLogger := logging.GetErrorLogger()
 
-func GetStudent(db *gorm.DB, registrationNumber uint, testID uint) (*models.Student, error) {
+	logger.Debug("Hľadanie študenta", slog.Uint64("id", uint64(id)), slog.Uint64("test ID", uint64(testID)))
+
+	var student models.Student
+	result := db.Where("ID = ? AND test_id = ?", id, testID).First(&student)
+	if result.Error != nil {
+		errorLogger.Error("Študent nebol nájdený", "student id", id, slog.Group("CRITICAL", slog.String("error", result.Error.Error())))
+		return nil, result.Error
+	}
+	logger.Debug("Študent nájdený", slog.String("name", student.Name), slog.String("surname", student.Surname))
+	return &student, nil
+}
+
+func GetStudentByRegistrationNumber(db *gorm.DB, registrationNumber uint, testID uint) (*models.Student, error) {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
 	logger.Debug("Hľadanie študenta", slog.Uint64("registration number", uint64(registrationNumber)), slog.Uint64("test ID", uint64(testID)))
 
 	var student models.Student
-	result := db.Where("ID = ? AND test_id = ?", registrationNumber, testID).First(&student)
+	result := db.Where("registration_number = ? AND test_id = ?", registrationNumber, testID).First(&student)
 	if result.Error != nil {
-		errorLogger.Error("Študent nebol nájdený", "student registration number", student.RegistrationNumber, slog.Group("CRITICAL", slog.String("error", result.Error.Error())))
+		errorLogger.Error("Študent nebol nájdený", "student registration number", registrationNumber, slog.Group("CRITICAL", slog.String("error", result.Error.Error())))
 		return nil, result.Error
 	}
 	logger.Debug("Študent nájdený", slog.String("name", student.Name), slog.String("surname", student.Surname))
