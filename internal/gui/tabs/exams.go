@@ -3,6 +3,7 @@ package tabs
 import (
 	"ScanEvalApp/internal/database/models"
 	"ScanEvalApp/internal/database/repository"
+
 	"ScanEvalApp/internal/gui/tabmanager"
 	"ScanEvalApp/internal/gui/themeUI"
 	"ScanEvalApp/internal/gui/widgets"
@@ -22,10 +23,12 @@ var showAnsButtons []widget.Clickable
 var evaluateTestBtns []widget.Clickable
 var printTestBtns []widget.Clickable
 
+
 // scrollovanie
 var examList widget.List = widget.List{List: layout.List{Axis: layout.Vertical}}
 
 // Exams renders the "Exams" tab with dynamically generated columns based on data from the database.
+
 func Exams(gtx layout.Context, th *themeUI.Theme, selectedTestID *uint, db *gorm.DB, tm *tabmanager.TabManager) layout.Dimensions {
 	//logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
@@ -169,16 +172,15 @@ func deleteTest(Id uint, db *gorm.DB) {
 func removeTestFromList(tests []models.Test, index int) []models.Test {
 	// Removing the test from the list at the specified index
 	return append(tests[:index], tests[index+1:]...)
+
 }
 
 func showAnsTest(Id uint) {
 	logger := logging.GetLogger()
-
 	logger.Info("Ukázanie opovedí testu s ID", slog.Uint64("ID", uint64(Id)))
 }
 
 func printTest(Id uint) {
 	logger := logging.GetLogger()
-
 	logger.Info("tlačenie testu s ID", slog.Uint64("ID", uint64(Id)))
 }

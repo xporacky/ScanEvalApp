@@ -8,7 +8,9 @@ import (
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"gorm.io/gorm"
+
 	//"image/color"
+
 
 	//"reflect"
 	"ScanEvalApp/internal/logging"
@@ -16,9 +18,10 @@ import (
 	"ScanEvalApp/internal/gui/widgets"
 	"gioui.org/unit"
 	"ScanEvalApp/internal/gui/themeUI"
-)
 
-// Tlačidlo na tlač všetkých hárkov
+
+	"ScanEvalApp/internal/latex"
+)
 
 var printButtons []widget.Clickable
 var searchQuery widget.Editor
@@ -101,7 +104,13 @@ func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensi
 					
 					student := students[i-1]
 					if printButtons[i].Clicked(gtx) {
-						printSheet(student.RegistrationNumber)
+						//printSheet(student.RegistrationNumber)
+            err := latex.PrintSheet(db, student.RegistrationNumber)
+            if err != nil {
+              errorLogger.Error("Chyba pri tlači hárku pre študenta", slog.String("error", err.Error()))
+            } else {
+              logger.Info("Úspešne vytlačený hárok pre študenta", slog.String("registrationNumber", fmt.Sprintf("%d", student.RegistrationNumber)))
+            }
 					}
 
 					return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
@@ -141,3 +150,4 @@ func printSheet(registrationNumber string) {
 
 	logger.Info("Volám tlač hárku pre študenta ID", slog.String("ID", registrationNumber))
 }
+
