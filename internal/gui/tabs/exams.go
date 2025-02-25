@@ -59,7 +59,7 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedTestID *uint, db *gorm
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return layout.Inset{Left: insetWidth, Right: insetWidth}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-				return material.List(th.Theme, &examList).Layout(gtx, len(tests), func(gtx layout.Context, i int) layout.Dimensions {
+				return material.List(th.Theme, &examList).Layout(gtx, len(tests)+1, func(gtx layout.Context, i int) layout.Dimensions {
 					if i == 0 { // Prvá položka je hlavička
 						return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
 							layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
@@ -92,15 +92,15 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedTestID *uint, db *gorm
 						)
 					}
 					test := tests[i-1]
-					if deleteButtons[i].Clicked(gtx) {
+					if deleteButtons[i-1].Clicked(gtx) {
 						deleteTest(test.ID, db)
-						tests = removeTestFromList(tests, i) // Remove test from the list for UI update
+						tests = removeTestFromList(tests, i-1) // Remove test from the list for UI update
 					}
-					if showAnsButtons[i].Clicked(gtx) {
+					if showAnsButtons[i-1].Clicked(gtx) {
 						showAnsTest(test.ID)
 
 					}
-					if evaluateTestBtns[i].Clicked(gtx) {
+					if evaluateTestBtns[i-1].Clicked(gtx) {
 						*selectedTestID = test.ID // Nastavenie ID testu
 						tm.ActiveTab = 3          // Prechod na UploadTab
 
@@ -126,25 +126,25 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedTestID *uint, db *gorm
 							return widgets.Body1Border(gtx, th, "datum")
 						}),
 						layout.Flexed(columnWidths[5], func(gtx layout.Context) layout.Dimensions {
-							btn := widgets.Button(th.Theme, &showAnsButtons[i], widgets.SearchIcon, widgets.IconPositionStart, "Zobraziť")
+							btn := widgets.Button(th.Theme, &showAnsButtons[i-1], widgets.SearchIcon, widgets.IconPositionStart, "Zobraziť")
 							btn.Background = themeUI.LightBlue
 							btn.Color = themeUI.White
 							return btn.Layout(gtx, th)
 						}),
 						layout.Flexed(columnWidths[6], func(gtx layout.Context) layout.Dimensions {
-							btn := widgets.Button(th.Theme, &deleteButtons[i], widgets.DeleteIcon, widgets.IconPositionStart, "Vymazať")
+							btn := widgets.Button(th.Theme, &deleteButtons[i-1], widgets.DeleteIcon, widgets.IconPositionStart, "Vymazať")
 							btn.Background = themeUI.Red
 							btn.Color = themeUI.White
 							return btn.Layout(gtx, th)
 						}),
 						layout.Flexed(columnWidths[7], func(gtx layout.Context) layout.Dimensions {
-							btn := widgets.Button(th.Theme, &evaluateTestBtns[i], widgets.UploadIcon, widgets.IconPositionStart, "Vyhodnotiť")
+							btn := widgets.Button(th.Theme, &evaluateTestBtns[i-1], widgets.UploadIcon, widgets.IconPositionStart, "Vyhodnotiť")
 							btn.Background = themeUI.LightGreen
 							btn.Color = themeUI.White
 							return btn.Layout(gtx, th)
 						}),
 						layout.Flexed(columnWidths[8], func(gtx layout.Context) layout.Dimensions {
-							btn := widgets.Button(th.Theme, &printTestBtns[i], widgets.SaveIcon, widgets.IconPositionStart, "Tlačiť")
+							btn := widgets.Button(th.Theme, &printTestBtns[i-1], widgets.SaveIcon, widgets.IconPositionStart, "Tlačiť")
 							btn.Background = themeUI.Gray
 							btn.Color = themeUI.White
 							return btn.Layout(gtx, th)

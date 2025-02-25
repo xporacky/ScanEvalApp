@@ -73,7 +73,7 @@ func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensi
 
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return layout.Inset{Left: insetWidth, Right: insetWidth}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-				return material.List(th.Material(), &studentList).Layout(gtx, len(students), func(gtx layout.Context, i int) layout.Dimensions {
+				return material.List(th.Material(), &studentList).Layout(gtx, len(students)+1, func(gtx layout.Context, i int) layout.Dimensions {
 					if i == 0 {
 						return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
 							layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
@@ -101,7 +101,7 @@ func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensi
 					}
 
 					student := students[i-1]
-					if printButtons[i].Clicked(gtx) {
+					if printButtons[i-1].Clicked(gtx) {
 						//printSheet(student.RegistrationNumber)
 						err := latex.PrintSheet(db, student.RegistrationNumber)
 						if err != nil {
@@ -131,7 +131,7 @@ func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensi
 							return widgets.Body1Border(gtx, th, fmt.Sprintf("%d", student.Score))
 						}),
 						layout.Flexed(columnWidths[6], func(gtx layout.Context) layout.Dimensions {
-							btn := widgets.Button(th.Theme, &printButtons[i], widgets.SaveIcon, widgets.IconPositionStart, "Tlačiť")
+							btn := widgets.Button(th.Theme, &printButtons[i-1], widgets.SaveIcon, widgets.IconPositionStart, "Tlačiť")
 							btn.Background = themeUI.Gray
 							btn.Color = themeUI.White
 							return btn.Layout(gtx, th)
