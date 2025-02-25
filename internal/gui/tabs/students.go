@@ -11,14 +11,13 @@ import (
 
 	//"image/color"
 
-
 	//"reflect"
+	"ScanEvalApp/internal/gui/themeUI"
+	"ScanEvalApp/internal/gui/widgets"
 	"ScanEvalApp/internal/logging"
 	"log/slog"
-	"ScanEvalApp/internal/gui/widgets"
-	"gioui.org/unit"
-	"ScanEvalApp/internal/gui/themeUI"
 
+	"gioui.org/unit"
 
 	"ScanEvalApp/internal/latex"
 )
@@ -31,7 +30,7 @@ var studentList widget.List = widget.List{List: layout.List{Axis: layout.Vertica
 
 // StudentsTab renders the "Students" tab with a table of students.
 func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensions {
-	//logger := logging.GetLogger()
+	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 	insetWidth := unit.Dp(15)
 	headerSize := unit.Sp(17)
@@ -75,10 +74,10 @@ func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensi
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return layout.Inset{Left: insetWidth, Right: insetWidth}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				return material.List(th.Material(), &studentList).Layout(gtx, len(students), func(gtx layout.Context, i int) layout.Dimensions {
-					if(i==0){
+					if i == 0 {
 						return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
 							layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
-								return widgets.LabelBorder(gtx, th, headerSize, columns[0])						
+								return widgets.LabelBorder(gtx, th, headerSize, columns[0])
 							}),
 							layout.Flexed(columnWidths[1], func(gtx layout.Context) layout.Dimensions {
 								return widgets.LabelBorder(gtx, th, headerSize, columns[1])
@@ -100,17 +99,16 @@ func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensi
 							}),
 						)
 					}
-					
-					
+
 					student := students[i-1]
 					if printButtons[i].Clicked(gtx) {
 						//printSheet(student.RegistrationNumber)
-            err := latex.PrintSheet(db, student.RegistrationNumber)
-            if err != nil {
-              errorLogger.Error("Chyba pri tlači hárku pre študenta", slog.String("error", err.Error()))
-            } else {
-              logger.Info("Úspešne vytlačený hárok pre študenta", slog.String("registrationNumber", fmt.Sprintf("%d", student.RegistrationNumber)))
-            }
+						err := latex.PrintSheet(db, student.RegistrationNumber)
+						if err != nil {
+							errorLogger.Error("Chyba pri tlači hárku pre študenta", slog.String("error", err.Error()))
+						} else {
+							logger.Info("Úspešne vytlačený hárok pre študenta", slog.String("registrationNumber", fmt.Sprintf("%d", student.RegistrationNumber)))
+						}
 					}
 
 					return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
@@ -124,7 +122,7 @@ func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensi
 							return widgets.Body1Border(gtx, th, student.BirthDate.Format("2006-01-02"))
 						}),
 						layout.Flexed(columnWidths[3], func(gtx layout.Context) layout.Dimensions {
-							return widgets.Body1Border(gtx, th, student.RegistrationNumber)
+							return widgets.Body1Border(gtx, th, fmt.Sprintf("%d", student.RegistrationNumber))
 						}),
 						layout.Flexed(columnWidths[4], func(gtx layout.Context) layout.Dimensions {
 							return widgets.Body1Border(gtx, th, student.Room)
@@ -150,4 +148,3 @@ func printSheet(registrationNumber string) {
 
 	logger.Info("Volám tlač hárku pre študenta ID", slog.String("ID", registrationNumber))
 }
-

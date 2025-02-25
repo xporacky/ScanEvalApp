@@ -1,33 +1,35 @@
 package tabs
+
 /*
-TODO: 
+TODO:
 dorobit ulozenie do databazy
-dorobit scroll pri generovani otazok 
+dorobit scroll pri generovani otazok
 povolit iba jednu moznost pri danej otazke
 osetrit vstupy
 */
 import (
-	"gioui.org/app"
-	"gioui.org/layout"
-	"gioui.org/widget"
-	"gioui.org/widget/material"
-	"gioui.org/unit"
-	"gioui.org/x/explorer"
-	"io"
-	"fmt"
-	"strconv"
-	"ScanEvalApp/internal/logging"
-	"log/slog"
-	"ScanEvalApp/internal/database/repository"
 	"ScanEvalApp/internal/database/models"
-	"gorm.io/gorm"
-	"log"
-	"strings"
-	"time"
-	"encoding/csv"
-	"os"
+	"ScanEvalApp/internal/database/repository"
 	"ScanEvalApp/internal/gui/themeUI"
 	"ScanEvalApp/internal/gui/widgets"
+	"ScanEvalApp/internal/logging"
+	"encoding/csv"
+	"fmt"
+	"io"
+	"log"
+	"log/slog"
+	"os"
+	"strconv"
+	"strings"
+	"time"
+
+	"gioui.org/app"
+	"gioui.org/layout"
+	"gioui.org/unit"
+	"gioui.org/widget"
+	"gioui.org/widget/material"
+	"gioui.org/x/explorer"
+	"gorm.io/gorm"
 )
 
 var (
@@ -40,18 +42,20 @@ var (
 	questionForms  []questionForm
 	showQuestions  bool
 )
-type UploadCsv struct {
-	button       	widget.Clickable
-	explorer     	*explorer.Explorer
-	selectedFile 	string
-	filePath		string
 
+type UploadCsv struct {
+	button       widget.Clickable
+	explorer     *explorer.Explorer
+	selectedFile string
+	filePath     string
 }
+
 func NewUploadCsv(w *app.Window) *UploadCsv {
 	return &UploadCsv{
 		explorer: explorer.NewExplorer(w),
 	}
 }
+
 var questionList widget.List = widget.List{List: layout.List{Axis: layout.Vertical}}
 
 type questionForm struct {
@@ -78,36 +82,36 @@ func (t *UploadCsv) CreateTest(gtx layout.Context, th *themeUI.Theme, db *gorm.D
 	}
 
 	return layout.Flex{
-		Axis:    layout.Vertical,
+		Axis: layout.Vertical,
 	}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return layout.Inset{Top: 4, Bottom: 2}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
-						layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
-							return layout.UniformInset(insetwidth).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-								editor := widgets.NewEditorField(th.Theme, &nameInput, "Názov") // Šírku riadi columnWidths
-								return editor.Layout(gtx, th)
-							})
-						}),
-						layout.Flexed(columnWidths[1], func(gtx layout.Context) layout.Dimensions {
-							return layout.UniformInset(insetwidth).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-								editor := widgets.NewEditorField(th.Theme, &roomInput, "Miestnosť")
-								return editor.Layout(gtx, th)
-							})
-						}),
-						layout.Flexed(columnWidths[2], func(gtx layout.Context) layout.Dimensions {
-							return layout.UniformInset(insetwidth).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-								editor := widgets.NewEditorField(th.Theme, &timeInput, "Čas")
-								return editor.Layout(gtx, th)
-							})
-						}),
-						layout.Flexed(columnWidths[3], func(gtx layout.Context) layout.Dimensions {
-							return layout.UniformInset(insetwidth).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-								editor := widgets.NewEditorField(th.Theme, &questionsInput, "Počet otázok")
-								return editor.Layout(gtx, th)
-							})
-						}),
-					)
+					layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
+						return layout.UniformInset(insetwidth).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+							editor := widgets.NewEditorField(th.Theme, &nameInput, "Názov") // Šírku riadi columnWidths
+							return editor.Layout(gtx, th)
+						})
+					}),
+					layout.Flexed(columnWidths[1], func(gtx layout.Context) layout.Dimensions {
+						return layout.UniformInset(insetwidth).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+							editor := widgets.NewEditorField(th.Theme, &roomInput, "Miestnosť")
+							return editor.Layout(gtx, th)
+						})
+					}),
+					layout.Flexed(columnWidths[2], func(gtx layout.Context) layout.Dimensions {
+						return layout.UniformInset(insetwidth).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+							editor := widgets.NewEditorField(th.Theme, &timeInput, "Čas")
+							return editor.Layout(gtx, th)
+						})
+					}),
+					layout.Flexed(columnWidths[3], func(gtx layout.Context) layout.Dimensions {
+						return layout.UniformInset(insetwidth).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+							editor := widgets.NewEditorField(th.Theme, &questionsInput, "Počet otázok")
+							return editor.Layout(gtx, th)
+						})
+					}),
+				)
 			})
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
@@ -139,10 +143,7 @@ func (t *UploadCsv) CreateTest(gtx layout.Context, th *themeUI.Theme, db *gorm.D
 				}),
 			)
 		}),
-		
-		
-		
-		
+
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			if showQuestions {
 				return material.List(th.Theme, &questionList).Layout(gtx, len(questionForms)+1, func(gtx layout.Context, i int) layout.Dimensions {
@@ -153,7 +154,7 @@ func (t *UploadCsv) CreateTest(gtx layout.Context, th *themeUI.Theme, db *gorm.D
 							Spacing: layout.SpaceAround,
 						}.Layout(gtx, renderOptions(gtx, th, i+1, qf)...)
 					}
-		
+
 					// Posledný element - tlačidlo "Vytvoriť test"
 					return layout.UniformInset(insetwidth).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 						btn := widgets.Button(th.Theme, &submitButton, widgets.SaveIcon, widgets.IconPositionStart, "Vytvoriť test")
@@ -169,7 +170,6 @@ func (t *UploadCsv) CreateTest(gtx layout.Context, th *themeUI.Theme, db *gorm.D
 			}
 			return layout.Dimensions{}
 		}),
-		
 	)
 }
 
@@ -186,7 +186,7 @@ func (t *UploadCsv) openFileDialog(db *gorm.DB) {
 			t.filePath = f.Name()
 		} else {
 			log.Println("file nie je typu *os.File")
-		}	
+		}
 		b, err := io.ReadAll(file)
 		if err != nil {
 			log.Println("Chyba pri čítaní súboru:", err)
@@ -203,7 +203,6 @@ func (t *UploadCsv) HandleEvent(evt interface{}) { // Zmena na interface{}
 		t.explorer.ListenEvents(e)
 	}
 }
-
 
 func parseNumber(input string) int {
 	logger := logging.GetLogger()
@@ -241,9 +240,7 @@ func renderQuestionForms(gtx layout.Context, th *themeUI.Theme) []layout.FlexChi
 	return children
 }
 
-
-
-func renderOptions(gtx layout.Context,th *themeUI.Theme, questionIndex int, qf *questionForm) []layout.FlexChild {
+func renderOptions(gtx layout.Context, th *themeUI.Theme, questionIndex int, qf *questionForm) []layout.FlexChild {
 	options := []string{"A", "B", "C", "D", "E"}
 	children := make([]layout.FlexChild, len(options)+1) // Prvý prvok je číslo otázky
 
@@ -283,15 +280,13 @@ func submitForm(db *gorm.DB, t *UploadCsv) {
 	}
 	answersStr := strings.Join(answers, "")
 
-
-
 	// Vytvorenie testu
 	test := models.Test{
 		Title:      nazov,
 		SchoolYear: cas,
-//		Room:       miestnost,
+		//		Room:       miestnost,
 		QuestionCount: pocetOtazok,
-		Questions : answersStr,
+		Questions:     answersStr,
 	}
 	// ulozenie do db
 	err = repository.CreateTest(db, &test)
@@ -300,24 +295,22 @@ func submitForm(db *gorm.DB, t *UploadCsv) {
 		return
 	}
 	// Vytvoríme si výsledný výpis
-	logger.Info("Formulár odoslaný", 
-		slog.String("nazov", nazov), 
-		slog.String("miestnost", miestnost), 
-		slog.String("cas", cas), 
+	logger.Info("Formulár odoslaný",
+		slog.String("nazov", nazov),
+		slog.String("miestnost", miestnost),
+		slog.String("cas", cas),
 		slog.Int("pocetOtazok", pocetOtazok),
 		slog.String("odpovede", answersStr))
-		// Premenná pre uchovávanie zaškrtnutých možností
+	// Premenná pre uchovávanie zaškrtnutých možností
 
 	fmt.Println(t.selectedFile)
-
 
 	reader := csv.NewReader(strings.NewReader(t.selectedFile))
 	rows, err := reader.ReadAll()
 	if err != nil {
 		fmt.Println("error1: %s", err)
-		return 
+		return
 	}
-
 
 	fmt.Println("studenti v csv: %s", rows)
 
@@ -327,7 +320,12 @@ func submitForm(db *gorm.DB, t *UploadCsv) {
 			fmt.Println("hlavicka")
 			continue // Preskočiť hlavičku CSV
 		}
-		birthDate, err := time.Parse("2006-01-02", row[2]) 
+		birthDate, err := time.Parse("2006-01-02", row[2])
+		if err != nil {
+			fmt.Println("error2: %s", err)
+			return
+		}
+		registrationNumber, err := strconv.Atoi(row[3])
 		if err != nil {
 			fmt.Println("error2: %s", err)
 			return
@@ -337,14 +335,14 @@ func submitForm(db *gorm.DB, t *UploadCsv) {
 			Name:               row[0],
 			Surname:            row[1],
 			BirthDate:          birthDate,
-			RegistrationNumber: row[3],
+			RegistrationNumber: registrationNumber,
 			Room:               row[4],
-			TestID:             test.ID,					//TODO:preroobilt!!!!!!!!!!!!!!!!!!!!! 
+			TestID:             test.ID, //TODO:preroobilt!!!!!!!!!!!!!!!!!!!!!
 		}
 		if err := repository.CreateStudent(db, &student); err != nil {
 			fmt.Println("error3: ", err)
-			return 
-		}else{
+			return
+		} else {
 			fmt.Println("student pridany: %s", student)
 		}
 	}
