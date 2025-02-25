@@ -6,3 +6,4 @@ main.log
 assets/tmp/output.pdf
 assets/tmp/scan-images/*
 out.txt
+logs/*
