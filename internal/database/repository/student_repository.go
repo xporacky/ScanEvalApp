@@ -26,6 +26,7 @@ func CreateStudent(db *gorm.DB, student *models.Student) error {
 	}
 	return result.Error
 }
+
 func GetStudentById(db *gorm.DB, id uint, examID uint) (*models.Student, error) {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
@@ -34,6 +35,7 @@ func GetStudentById(db *gorm.DB, id uint, examID uint) (*models.Student, error) 
 
 	var student models.Student
 	result := db.Where("ID = ? AND exam_id = ?", id, examID).First(&student)
+
 	if result.Error != nil {
 		errorLogger.Error("Študent nebol nájdený", "student id", id, slog.Group("CRITICAL", slog.String("error", result.Error.Error())))
 		return nil, result.Error
@@ -42,14 +44,18 @@ func GetStudentById(db *gorm.DB, id uint, examID uint) (*models.Student, error) 
 	return &student, nil
 }
 
+
 func GetStudentByRegistrationNumber(db *gorm.DB, registrationNumber uint, examID uint) (*models.Student, error) {
+
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
 	logger.Debug("Hľadanie študenta", slog.Uint64("registration number", uint64(registrationNumber)), slog.Uint64("exam ID", uint64(examID)))
 
 	var student models.Student
+
 	result := db.Where("registration_number = ? AND exam_id = ?", registrationNumber, examID).First(&student)
+
 	if result.Error != nil {
 		errorLogger.Error("Študent nebol nájdený", "student registration number", registrationNumber, slog.Group("CRITICAL", slog.String("error", result.Error.Error())))
 		return nil, result.Error

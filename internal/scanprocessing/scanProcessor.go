@@ -35,7 +35,9 @@ func ProcessPage(doc *fitz.Document, n int, exam *models.Exam, db *gorm.DB) {
 	mat := ImageToMat(img)
 	mat = MatToGrayscale(mat)
 	mat = FixImageRotation(mat)
+
 	student, err := GetStudent(&mat, db, exam.ID)
+
 	if err != nil {
 		errorLogger.Error("Chyba pri získavaní ID študenta z databázy", "PDF strana", n, "error", err.Error())
 		return

@@ -128,7 +128,9 @@ func DrawCountours(mat *gocv.Mat, contours gocv.PointsVector) {
 }
 
 // finds student from mat using qr code or ocr returns student
+
 func GetStudent(mat *gocv.Mat, db *gorm.DB, examID uint) (*models.Student, error) {
+
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
@@ -140,7 +142,9 @@ func GetStudent(mat *gocv.Mat, db *gorm.DB, examID uint) (*models.Student, error
 			errorLogger.Error("Chyba pri konverzii QR textu na ID", slog.String("qrText", qrText), slog.String("error", err.Error()))
 			return nil, err
 		}
+
 		return repository.GetStudentById(db, uint(id), examID)
+
 	}
 	logger.Warn("QR kód nebol nájdený, pokúšame sa získať registrationNumber zo záhlavia")
 
@@ -155,5 +159,7 @@ func GetStudent(mat *gocv.Mat, db *gorm.DB, examID uint) (*models.Student, error
 		return nil, err
 	}
 
+
 	return repository.GetStudentByRegistrationNumber(db, uint(registrationNumber), examID)
+
 }
