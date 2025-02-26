@@ -92,11 +92,11 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 					}
 					exam := exams[i-1]
 					if deleteButtons[i-1].Clicked(gtx) {
-						deleteExam(exam.ID, db)
+						deleteExam(db, &exam)
 						exams = removeExamFromList(exams, i-1) // Remove exam from the list for UI update
 					}
 					if showAnsButtons[i-1].Clicked(gtx) {
-						showAnsExam(exam.ID)
+						showAnsExam(&exam)
 
 					}
 					if evaluateExamBtns[i-1].Clicked(gtx) {
@@ -105,7 +105,7 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 
 					}
 					if printExamBtns[i-1].Clicked(gtx) {
-						printExam(exam.ID)
+						printExam(&exam)
 
 					}
 					return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
@@ -155,17 +155,17 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 	)
 }
 
-func deleteExam(Id uint, db *gorm.DB) {
+func deleteExam(db *gorm.DB, exam *models.Exam) {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
 	// Deleting the test from the database
-	if err := repository.DeleteExam(db, Id); err != nil {
-		errorLogger.Error("Chyba pri vymazávaní testu", slog.Uint64("ID", uint64(Id)), slog.String("error", err.Error()))
+	if err := repository.DeleteExam(db, exam); err != nil {
+		errorLogger.Error("Chyba pri vymazávaní testu", slog.Uint64("ID", uint64(exam.ID)), slog.String("error", err.Error()))
 		return
 	}
 
-	logger.Info("Vymazanie testu s ID", slog.Uint64("ID", uint64(Id)))
+	logger.Info("Vymazanie testu s ID", slog.Uint64("ID", uint64(exam.ID)))
 }
 
 func removeExamFromList(exams []models.Exam, index int) []models.Exam {
@@ -174,12 +174,12 @@ func removeExamFromList(exams []models.Exam, index int) []models.Exam {
 
 }
 
-func showAnsExam(Id uint) {
+func showAnsExam(exam *models.Exam) {
 	logger := logging.GetLogger()
-	logger.Info("Ukázanie opovedí testu s ID", slog.Uint64("ID", uint64(Id)))
+	logger.Info("Ukázanie opovedí testu s ID", slog.Uint64("ID", uint64(exam.ID)))
 }
 
-func printExam(Id uint) {
+func printExam(exam *models.Exam) {
 	logger := logging.GetLogger()
-	logger.Info("tlačenie testu s ID", slog.Uint64("ID", uint64(Id)))
+	logger.Info("tlačenie testu s ID", slog.Uint64("ID", uint64(exam.ID)))
 }

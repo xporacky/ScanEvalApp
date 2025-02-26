@@ -86,10 +86,7 @@ func (t *UploadTab) openFileDialog(db *gorm.DB) {
 	}
 	if file != nil {
 		defer file.Close() // Nezabudni zatvoriť súbor
-		if err != nil {
-			log.Println("Chyba pri čítaní súboru:", err)
-			return
-		}
+
 		// Pretypovanie na *os.File
 		if f, ok := file.(*os.File); ok {
 			t.filePath = f.Name()

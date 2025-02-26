@@ -60,16 +60,23 @@ func UpdateExam(db *gorm.DB, exam *models.Exam) error {
 	return result.Error
 }
 
-func DeleteExam(db *gorm.DB, id uint) error {
+func DeleteExam(db *gorm.DB, exam *models.Exam) error {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
-	result := db.Delete(&models.Exam{}, id)
+	for _, student := range exam.Students {
+		err := DeleteStudent(db, &student)
+		if err != nil {
+			return err
+		}
+	}
+
+	result := db.Delete(&models.Exam{}, exam.ID)
 	if result.Error != nil {
 		errorLogger.Error("Chyba pri mazaní testu", slog.Group("CRITICAL", slog.String("error", result.Error.Error())))
 	}
 
-	logger.Debug("Test vymazaný", slog.Uint64("test ID", uint64(id)))
+	logger.Debug("Test vymazaný", slog.Uint64("test ID", uint64(exam.ID)))
 	return result.Error
 }
 
