@@ -3,6 +3,7 @@ package tabs
 import (
 	"ScanEvalApp/internal/database/models"
 	"ScanEvalApp/internal/database/repository"
+	"ScanEvalApp/internal/latex"
 
 	"ScanEvalApp/internal/gui/tabmanager"
 	"ScanEvalApp/internal/gui/themeUI"
@@ -29,7 +30,7 @@ var examList widget.List = widget.List{List: layout.List{Axis: layout.Vertical}}
 // Exams renders the "Exams" tab with dynamically generated columns based on data from the database.
 
 func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm.DB, tm *tabmanager.TabManager) layout.Dimensions {
-	//logger := logging.GetLogger()
+	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 	headerSize := unit.Sp(17)
 	insetWidth := unit.Dp(15)
@@ -105,8 +106,12 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 
 					}
 					if printExamBtns[i-1].Clicked(gtx) {
-						printExam(&exam)
-
+						err := latex.ParallelGeneratePDFs(db, latex.TemplatePath, latex.OutputPDFPath)
+						if err != nil {
+							errorLogger.Error("Chyba pri generovaní PDF", slog.String("error", err.Error()))
+						} else {
+							logger.Info("Úspešne vygenerované PDF pre skúšku", slog.String("examID", fmt.Sprintf("%d", exam.ID)))
+						}
 					}
 					return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
 						layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {

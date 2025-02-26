@@ -124,6 +124,9 @@ func ParallelGeneratePDFs(db *gorm.DB, templatePath, outputPDFPath string) error
 	var mainPDFPath string
 	var mainPDFSet bool // označuje, či bolo už hlavné PDF nastavené
 
+	// nacitanie testu
+	var exam models.Exam
+
 	logger.Debug("Starting parallel PDF generation")
 
 	// meranie celkoveho casu generovania a mergovania pdf
@@ -156,7 +159,6 @@ func ParallelGeneratePDFs(db *gorm.DB, templatePath, outputPDFPath string) error
 				}
 
 				// nacitanie pisomky pre studenta z databazy
-				var exam models.Exam
 				if err := db.First(&exam, student.ExamID).Error; err != nil {
 					errorLogger.Error("Error fetching exam for student", "student_id", student.ID, slog.String("error", err.Error()))
 					return
@@ -241,8 +243,12 @@ func ParallelGeneratePDFs(db *gorm.DB, templatePath, outputPDFPath string) error
 		wg.Wait()
 	}
 
+	// TODO -> podla zmeny DB mozno nejak inak premenovat vysledny subor, napr zobrat nieco z roku alebo neviem...
+	// Vytvorenie finálnej cesty pre PDF
+	finalPDFPath := filepath.Join(outputPDFPath, removeDiacritics(exam.Title)+fmt.Sprintf("%d", exam.ID)+".pdf")
+
 	// presun hlavného PDF na finálnu cestu
-	if err := os.Rename(mainPDFPath, outputPDFPath); err != nil {
+	if err := os.Rename(mainPDFPath, finalPDFPath); err != nil {
 		errorLogger.Error("error moving final PDF", slog.String("error", err.Error()))
 		return err
 	}
@@ -251,17 +257,8 @@ func ParallelGeneratePDFs(db *gorm.DB, templatePath, outputPDFPath string) error
 	duration := time.Since(startTime)
 	logger.Debug("Celkový čas generovania PDF", "duration", duration)
 
-	logger.Info("Výsledné PDF úspešne uložené do", slog.String("output_PDF_path", outputPDFPath))
+	logger.Info("Výsledné PDF úspešne uložené do", slog.String("output_PDF_path", finalPDFPath))
 	return nil
-}
-
-// FindStudentByRegistrationNumber nájde študenta v DB podľa RegistrationNumber
-func FindStudentByRegistrationNumber(db *gorm.DB, registrationNumber int) (*models.Student, error) {
-	var student models.Student
-	if err := db.Where("registration_number = ?", registrationNumber).First(&student).Error; err != nil {
-		return nil, fmt.Errorf("student not found with RegistrationNumber %d: %w", registrationNumber, err)
-	}
-	return &student, nil
 }
 
 func PrintSheet(db *gorm.DB, registrationNumber int) error {

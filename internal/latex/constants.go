@@ -6,6 +6,6 @@ const (
 
 	// Cesty
 	TemplatePath     = "./assets/latex/main.tex"
-	OutputPDFPath    = "./assets/tmp/final.pdf"
+	OutputPDFPath    = "./assets/tmp"
 	TemporaryPDFPath = "./assets/tmp"
 )
