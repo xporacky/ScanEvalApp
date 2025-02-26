@@ -62,8 +62,8 @@ type questionForm struct {
 	selectedOption widget.Enum // Uchováva vybranú možnosť (A, B, C, D, E)
 }
 
-// CreateTest renders the content for the "Vytvorenie Písomky" tab.
-func (t *UploadCsv) CreateTest(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensions {
+// CreateExam renders the content for the "Vytvorenie Písomky" tab.
+func (t *UploadCsv) CreateExam(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensions {
 	logger := logging.GetLogger()
 	columnWidths := []float32{0.4, 0.2, 0.2, 0.2}
 	insetwidth := unit.Dp(10)
@@ -281,7 +281,7 @@ func submitForm(db *gorm.DB, t *UploadCsv) {
 	answersStr := strings.Join(answers, "")
 
 	// Vytvorenie testu
-	test := models.Test{
+	exam := models.Exam{
 		Title:      nazov,
 		SchoolYear: cas,
 		//		Room:       miestnost,
@@ -289,7 +289,7 @@ func submitForm(db *gorm.DB, t *UploadCsv) {
 		Questions:     answersStr,
 	}
 	// ulozenie do db
-	err = repository.CreateTest(db, &test)
+	err = repository.CreateExam(db, &exam)
 	if err != nil {
 		errorLogger.Error("Chyba pri ukladaní testu", slog.Group("CRITICAL", slog.String("error", err.Error())))
 		return
@@ -337,7 +337,7 @@ func submitForm(db *gorm.DB, t *UploadCsv) {
 			BirthDate:          birthDate,
 			RegistrationNumber: registrationNumber,
 			Room:               row[4],
-			TestID:             test.ID, //TODO:preroobilt!!!!!!!!!!!!!!!!!!!!!
+			ExamID:             exam.ID, //TODO:preroobilt!!!!!!!!!!!!!!!!!!!!!
 		}
 		if err := repository.CreateStudent(db, &student); err != nil {
 			fmt.Println("error3: ", err)

@@ -146,8 +146,8 @@ func ParallelGeneratePDFs(db *gorm.DB, templatePath, outputPDFPath string) error
 			}
 
 			// nacitanie testu pre studenta z databazy
-			var test models.Test
-			if err := db.First(&test, student.TestID).Error; err != nil {
+			var test models.Exam
+			if err := db.First(&test, student.ExamID).Error; err != nil {
 				errorLogger.Error("Error fetching test for student", "student_id", student.ID, slog.String("error", err.Error()))
 				return
 			}
@@ -279,8 +279,8 @@ func PrintSheet(db *gorm.DB, registrationNumber int) error {
 	logger.Info("LaTeX template loaded", "template_path", TemplatePath)
 
 	// Nacitanie testu pre studenta z databazy
-	var test models.Test
-	if err := db.First(&test, student.TestID).Error; err != nil {
+	var test models.Exam
+	if err := db.First(&test, student.ExamID).Error; err != nil {
 		errorLogger.Error("Error fetching test for student", "student_id", student.ID, slog.String("error", err.Error()))
 		return err
 	}

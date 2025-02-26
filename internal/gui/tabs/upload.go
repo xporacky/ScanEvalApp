@@ -30,11 +30,11 @@ type UploadTab struct {
 	button   widget.Clickable
 	explorer *explorer.Explorer
 	filePath string
-	testID   uint
+	examID   uint
 }
 
 func (t *UploadTab) SetTestID(id uint) {
-	t.testID = id
+	t.examID = id
 }
 
 func NewUploadTab(w *app.Window) *UploadTab {
@@ -68,8 +68,8 @@ func (t *UploadTab) Layout(gtx layout.Context, th *material.Theme, db *gorm.DB) 
 			}),
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 				text := "Žiadny test nebol vybraný"
-				if t.testID != 0 {
-					text = fmt.Sprintf("Vybraný test ID: %d", t.testID)
+				if t.examID != 0 {
+					text = fmt.Sprintf("Vybraný test ID: %d", t.examID)
 				}
 				return material.Label(th, unit.Sp(16), text).Layout(gtx)
 			}),
@@ -111,14 +111,14 @@ func (t *UploadTab) HandleEvent(evt interface{}) { // Zmena na interface{}
 }
 
 func scanProcess(t *UploadTab, db *gorm.DB) {
-	if t.testID == 0 && t.filePath == "" {
+	if t.examID == 0 && t.filePath == "" {
 		fmt.Println("nevybrane povinne subory")
 		return
 	}
 
-	test, err := repository.GetTest(db, t.testID)
+	exam, err := repository.GetExam(db, t.examID)
 	if err != nil {
 		return
 	}
-	scanprocessing.ProcessPDF(t.filePath, test, db)
+	scanprocessing.ProcessPDF(t.filePath, exam, db)
 }

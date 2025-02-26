@@ -9,7 +9,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func CreateTest(db *gorm.DB, test *models.Test) error {
+func CreateExam(db *gorm.DB, test *models.Exam) error {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
@@ -21,13 +21,13 @@ func CreateTest(db *gorm.DB, test *models.Test) error {
 	return result.Error
 }
 
-func GetTest(db *gorm.DB, id uint) (*models.Test, error) {
+func GetExam(db *gorm.DB, id uint) (*models.Exam, error) {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
 	logger.Debug("Hľadanie testu", slog.Uint64("ID testu", uint64(id)))
 
-	var test models.Test
+	var test models.Exam
 	result := db.First(&test, id)
 	if result.Error != nil {
 		errorLogger.Error("Test nebol nájdený", slog.Uint64("ID testu", uint64(id)), slog.Group("CRITICAL", slog.String("error", result.Error.Error())))
@@ -37,18 +37,18 @@ func GetTest(db *gorm.DB, id uint) (*models.Test, error) {
 	return &test, nil
 }
 
-func GetAllTests(db *gorm.DB) ([]models.Test, error) {
-    errorLogger := logging.GetErrorLogger()
+func GetAllExams(db *gorm.DB) ([]models.Exam, error) {
+	errorLogger := logging.GetErrorLogger()
 
-    var tests []models.Test
-    result := db.Preload("Students").Find(&tests) // Načítame aj priradených študentov
-    if result.Error != nil {
-        errorLogger.Error("Chyba pri načítavaní testov", slog.Group("CRITICAL", slog.String("error", result.Error.Error())))
-    }
-    return tests, result.Error
+	var tests []models.Exam
+	result := db.Preload("Students").Find(&tests) // Načítame aj priradených študentov
+	if result.Error != nil {
+		errorLogger.Error("Chyba pri načítavaní testov", slog.Group("CRITICAL", slog.String("error", result.Error.Error())))
+	}
+	return tests, result.Error
 }
 
-func UpdateTest(db *gorm.DB, test *models.Test) error {
+func UpdateExam(db *gorm.DB, test *models.Exam) error {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
@@ -60,11 +60,11 @@ func UpdateTest(db *gorm.DB, test *models.Test) error {
 	return result.Error
 }
 
-func DeleteTest(db *gorm.DB, id uint) error {
+func DeleteExam(db *gorm.DB, id uint) error {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
-	result := db.Delete(&models.Test{}, id)
+	result := db.Delete(&models.Exam{}, id)
 	if result.Error != nil {
 		errorLogger.Error("Chyba pri mazaní testu", slog.Group("CRITICAL", slog.String("error", result.Error.Error())))
 	}
@@ -73,7 +73,7 @@ func DeleteTest(db *gorm.DB, id uint) error {
 	return result.Error
 }
 
-func ShowAnswers(test *models.Test) {
+func ShowAnswers(test *models.Exam) {
 	fmt.Println("Zobrazenie odpovedí na test: ")
 	// Neskôr tu pridáme logiku na zobrazenie odpovedí.
 }

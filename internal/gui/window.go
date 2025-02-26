@@ -23,7 +23,7 @@ func RunWindow(db *gorm.DB) error {
 	w := new(app.Window)
 	w.Option(
 		app.Title("ScanEvalApp"),
-		app.Size(1600,700),
+		app.Size(1600, 700),
 	)
 
 	var ops op.Ops
@@ -59,7 +59,7 @@ func RunWindow(db *gorm.DB) error {
 					case 1:
 						return tabs.Students(gtx, th, db)
 					case 2:
-						return uploadCsv.CreateTest(gtx, th, db)
+						return uploadCsv.CreateExam(gtx, th, db)
 					case 3:
 						if selectedTestID != 0 {
 							uploadTab.SetTestID(selectedTestID) // Nastavenie ID testu v UploadTab

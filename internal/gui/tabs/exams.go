@@ -20,22 +20,21 @@ import (
 
 var deleteButtons []widget.Clickable
 var showAnsButtons []widget.Clickable
-var evaluateTestBtns []widget.Clickable
-var printTestBtns []widget.Clickable
-
+var evaluateExamBtns []widget.Clickable
+var printExamBtns []widget.Clickable
 
 // scrollovanie
 var examList widget.List = widget.List{List: layout.List{Axis: layout.Vertical}}
 
 // Exams renders the "Exams" tab with dynamically generated columns based on data from the database.
 
-func Exams(gtx layout.Context, th *themeUI.Theme, selectedTestID *uint, db *gorm.DB, tm *tabmanager.TabManager) layout.Dimensions {
+func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm.DB, tm *tabmanager.TabManager) layout.Dimensions {
 	//logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 	headerSize := unit.Sp(17)
 	insetWidth := unit.Dp(15)
 
-	tests, err := repository.GetAllTests(db)
+	exams, err := repository.GetAllExams(db)
 	if err != nil {
 		errorLogger.Error("Chyba pri načítaní testov", slog.String("error", err.Error()))
 		return layout.Dimensions{}
@@ -43,27 +42,27 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedTestID *uint, db *gorm
 
 	columns := []string{"Názov", "Rok", "Počet otázok", "Počet študentov", "Dátum", "Ukázať odpovede", "Vymazať", "Vyhodnotiť", "Tlačiť"}
 	columnWidths := []float32{0.2, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1} // Pomery šírok
-	if len(deleteButtons) != len(tests) {
-		deleteButtons = make([]widget.Clickable, len(tests))
+	if len(deleteButtons) != len(exams) {
+		deleteButtons = make([]widget.Clickable, len(exams))
 	}
-	if len(showAnsButtons) != len(tests) {
-		showAnsButtons = make([]widget.Clickable, len(tests))
+	if len(showAnsButtons) != len(exams) {
+		showAnsButtons = make([]widget.Clickable, len(exams))
 	}
-	if len(evaluateTestBtns) != len(tests) {
-		evaluateTestBtns = make([]widget.Clickable, len(tests))
+	if len(evaluateExamBtns) != len(exams) {
+		evaluateExamBtns = make([]widget.Clickable, len(exams))
 	}
-	if len(printTestBtns) != len(tests) {
-		printTestBtns = make([]widget.Clickable, len(tests))
+	if len(printExamBtns) != len(exams) {
+		printExamBtns = make([]widget.Clickable, len(exams))
 	}
 
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return layout.Inset{Left: insetWidth, Right: insetWidth}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-				return material.List(th.Theme, &examList).Layout(gtx, len(tests)+1, func(gtx layout.Context, i int) layout.Dimensions {
+				return material.List(th.Theme, &examList).Layout(gtx, len(exams)+1, func(gtx layout.Context, i int) layout.Dimensions {
 					if i == 0 { // Prvá položka je hlavička
 						return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
 							layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
-								return widgets.LabelBorder(gtx, th, headerSize, columns[0])						
+								return widgets.LabelBorder(gtx, th, headerSize, columns[0])
 							}),
 							layout.Flexed(columnWidths[1], func(gtx layout.Context) layout.Dimensions {
 								return widgets.LabelBorder(gtx, th, headerSize, columns[1])
@@ -91,36 +90,36 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedTestID *uint, db *gorm
 							}),
 						)
 					}
-					test := tests[i-1]
+					exam := exams[i-1]
 					if deleteButtons[i-1].Clicked(gtx) {
-						deleteTest(test.ID, db)
-						tests = removeTestFromList(tests, i-1) // Remove test from the list for UI update
+						deleteExam(exam.ID, db)
+						exams = removeExamFromList(exams, i-1) // Remove exam from the list for UI update
 					}
 					if showAnsButtons[i-1].Clicked(gtx) {
-						showAnsTest(test.ID)
+						showAnsExam(exam.ID)
 
 					}
-					if evaluateTestBtns[i-1].Clicked(gtx) {
-						*selectedTestID = test.ID // Nastavenie ID testu
+					if evaluateExamBtns[i-1].Clicked(gtx) {
+						*selectedExamID = exam.ID // Nastavenie ID testu
 						tm.ActiveTab = 3          // Prechod na UploadTab
 
 					}
-					if printTestBtns[i-1].Clicked(gtx) {
-						printTest(test.ID)
+					if printExamBtns[i-1].Clicked(gtx) {
+						printExam(exam.ID)
 
 					}
 					return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
 						layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
-							return widgets.Body1Border(gtx, th, test.Title)
+							return widgets.Body1Border(gtx, th, exam.Title)
 						}),
 						layout.Flexed(columnWidths[1], func(gtx layout.Context) layout.Dimensions {
-							return widgets.Body1Border(gtx, th, test.SchoolYear)
+							return widgets.Body1Border(gtx, th, exam.SchoolYear)
 						}),
 						layout.Flexed(columnWidths[2], func(gtx layout.Context) layout.Dimensions {
-							return widgets.Body1Border(gtx, th, fmt.Sprintf("%d", test.QuestionCount))
+							return widgets.Body1Border(gtx, th, fmt.Sprintf("%d", exam.QuestionCount))
 						}),
 						layout.Flexed(columnWidths[3], func(gtx layout.Context) layout.Dimensions {
-							return widgets.Body1Border(gtx, th, fmt.Sprintf("%d", len(test.Students)))
+							return widgets.Body1Border(gtx, th, fmt.Sprintf("%d", len(exam.Students)))
 						}),
 						layout.Flexed(columnWidths[4], func(gtx layout.Context) layout.Dimensions {
 							return widgets.Body1Border(gtx, th, "datum")
@@ -138,13 +137,13 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedTestID *uint, db *gorm
 							return btn.Layout(gtx, th)
 						}),
 						layout.Flexed(columnWidths[7], func(gtx layout.Context) layout.Dimensions {
-							btn := widgets.Button(th.Theme, &evaluateTestBtns[i-1], widgets.UploadIcon, widgets.IconPositionStart, "Vyhodnotiť")
+							btn := widgets.Button(th.Theme, &evaluateExamBtns[i-1], widgets.UploadIcon, widgets.IconPositionStart, "Vyhodnotiť")
 							btn.Background = themeUI.LightGreen
 							btn.Color = themeUI.White
 							return btn.Layout(gtx, th)
 						}),
 						layout.Flexed(columnWidths[8], func(gtx layout.Context) layout.Dimensions {
-							btn := widgets.Button(th.Theme, &printTestBtns[i-1], widgets.SaveIcon, widgets.IconPositionStart, "Tlačiť")
+							btn := widgets.Button(th.Theme, &printExamBtns[i-1], widgets.SaveIcon, widgets.IconPositionStart, "Tlačiť")
 							btn.Background = themeUI.Gray
 							btn.Color = themeUI.White
 							return btn.Layout(gtx, th)
@@ -156,12 +155,12 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedTestID *uint, db *gorm
 	)
 }
 
-func deleteTest(Id uint, db *gorm.DB) {
+func deleteExam(Id uint, db *gorm.DB) {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
 	// Deleting the test from the database
-	if err := repository.DeleteTest(db, Id); err != nil {
+	if err := repository.DeleteExam(db, Id); err != nil {
 		errorLogger.Error("Chyba pri vymazávaní testu", slog.Uint64("ID", uint64(Id)), slog.String("error", err.Error()))
 		return
 	}
@@ -169,18 +168,18 @@ func deleteTest(Id uint, db *gorm.DB) {
 	logger.Info("Vymazanie testu s ID", slog.Uint64("ID", uint64(Id)))
 }
 
-func removeTestFromList(tests []models.Test, index int) []models.Test {
+func removeExamFromList(exams []models.Exam, index int) []models.Exam {
 	// Removing the test from the list at the specified index
-	return append(tests[:index], tests[index+1:]...)
+	return append(exams[:index], exams[index+1:]...)
 
 }
 
-func showAnsTest(Id uint) {
+func showAnsExam(Id uint) {
 	logger := logging.GetLogger()
 	logger.Info("Ukázanie opovedí testu s ID", slog.Uint64("ID", uint64(Id)))
 }
 
-func printTest(Id uint) {
+func printExam(Id uint) {
 	logger := logging.GetLogger()
 	logger.Info("tlačenie testu s ID", slog.Uint64("ID", uint64(Id)))
 }

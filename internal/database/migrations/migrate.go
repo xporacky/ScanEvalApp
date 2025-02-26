@@ -3,10 +3,11 @@ package migrations
 import (
 	"ScanEvalApp/internal/database/models"
 
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
 	"ScanEvalApp/internal/logging"
 	"log/slog"
+
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 func MigrateDB() (*gorm.DB, error) {
@@ -23,7 +24,7 @@ func MigrateDB() (*gorm.DB, error) {
 
 	logger.Debug("Spúšťam migrácie...")
 
-	err = db.AutoMigrate(&models.Test{}, &models.Student{})
+	err = db.AutoMigrate(&models.Exam{}, &models.Student{})
 	if err != nil {
 		errorLogger.Error("Chyba pri migrácii databázy", slog.Group("CRITICAL", slog.String("error", err.Error())))
 		return nil, err
