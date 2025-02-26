@@ -108,15 +108,12 @@ func ParallelGeneratePDFs(db *gorm.DB, templatePath, outputPDFPath string) error
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
-	// nacitanie vsetkych studentov z databazy
-	var students []models.Student
-	if err := db.Find(&students).Error; err != nil {
-		errorLogger.Error("Error fetching students", slog.String("error", err.Error()))
+	// Nacitanie unikatnych nazvov miestnosti (unique rooms)
+	var rooms []string
+	if err := db.Model(&models.Student{}).Distinct().Pluck("room", &rooms).Error; err != nil {
+		errorLogger.Error("Error fetching distinct rooms", slog.String("error", err.Error()))
 		return err
 	}
-
-	// meranie celkoveho casu generovania a mergovania pdf
-	startTime := time.Now()
 
 	// synchronizacia prace s goroutines pomocou WaitGroup
 	var wg sync.WaitGroup
@@ -129,106 +126,120 @@ func ParallelGeneratePDFs(db *gorm.DB, templatePath, outputPDFPath string) error
 
 	logger.Debug("Starting parallel PDF generation")
 
-	// paralelne generovanie pdf pre studentov
-	for _, student := range students {
-		wg.Add(1)
-		go func(student models.Student) {
-			defer wg.Done()
+	// meranie celkoveho casu generovania a mergovania pdf
+	startTime := time.Now()
 
-			// meranie casu spracovania generovanie pdf pre studenta
-			studentStartTime := time.Now()
+	for _, room := range rooms {
+		logger.Info("Processing students in room", slog.String("room", room))
 
-			// Nacitanie LaTeX sablony
-			latexTemplate, err := os.ReadFile(templatePath)
-			if err != nil {
-				errorLogger.Error("Error reading LaTeX template for student", "student_id", student.ID, slog.String("error", err.Error()))
-				return
-			}
+		// nacitanie vsetkych studentov z databazy
+		var students []models.Student
+		if err := db.Where("room = ?", room).Find(&students).Error; err != nil {
+			errorLogger.Error("Error fetching students", slog.String("error", err.Error()))
+			return err
+		}
 
-			// nacitanie pisomky pre studenta z databazy
-			var exam models.Exam
-			if err := db.First(&exam, student.ExamID).Error; err != nil {
-				errorLogger.Error("Error fetching exam for student", "student_id", student.ID, slog.String("error", err.Error()))
-				return
-			}
+		// paralelne generovanie pdf pre studentov
+		for _, student := range students {
+			wg.Add(1)
+			go func(student models.Student) {
+				defer wg.Done()
 
-			// vytvorenie dat, ktore budu nacitane namiesto placeholderov v LaTeX sablone
-			data := TemplateData{
-				ID:        fmt.Sprintf("%d", student.RegistrationNumber),
-				Meno:      fmt.Sprintf("%s %s", student.Name, student.Surname),
-				Datum:     exam.Date.Format("02. 01. 2006"), // datum v tvare DD. MM. YYYY
-				Miestnost: student.Room,
-				Cas:       exam.Date.Format("15:04"), // čas v tvare HH:MM
-				Bloky:     exam.QuestionCount,
-				QrCode:    fmt.Sprintf("%d", student.ID),
-			}
+				// meranie casu spracovania generovanie pdf pre studenta
+				studentStartTime := time.Now()
 
-			// nahradenie placeholderov v LaTeX sablone udajmi studenta
-			updatedLatex, err := ReplaceTemplatePlaceholders(latexTemplate, data)
-			if err != nil {
-				errorLogger.Error("Error replacing placeholders for student", "student_id", student.ID, slog.String("error", err.Error()))
-				return
-			}
-
-			// kompilacia latex sablony do pdf studenta
-			studentPDF, err := CompileLatexToPDF(updatedLatex)
-			if err != nil {
-				errorLogger.Error("Error generating PDF for student", "student_id", student.ID, slog.String("error", err.Error()))
-				return
-			}
-
-			// ulozenie generovaneho/kompilovaneho pdf studenta do docasneho suboru
-			studentPDFPath := filepath.Join(TemporaryPDFPath, fmt.Sprintf("student_%d.pdf", student.ID))
-			if err := os.WriteFile(studentPDFPath, studentPDF, FilePermission); err != nil {
-				errorLogger.Error("Error saving PDF for student", "student_id", student.ID, slog.String("error", err.Error()))
-				return
-			}
-
-			pdfMergeMutex.Lock()
-			defer pdfMergeMutex.Unlock()
-
-			// Ak ešte nie je nastavené hlavné PDF, použijeme toto ako hlavné
-			if !mainPDFSet {
-				mainPDFPath = studentPDFPath
-				mainPDFSet = true
-				errorLogger.Error("Set initial main PDF for student", "student_id", student.ID)
-			} else {
-				// zlucenie generovaneho pdf so zakladnym pdf
-				mergedPDFPath := filepath.Join(TemporaryPDFPath, "merged.pdf")
-				if err := MergePDFs(mainPDFPath, studentPDFPath, mergedPDFPath); err != nil {
-					errorLogger.Error("Error merging PDF for student", "student_id", student.ID, slog.String("error", err.Error()))
+				// Nacitanie LaTeX sablony
+				latexTemplate, err := os.ReadFile(templatePath)
+				if err != nil {
+					errorLogger.Error("Error reading LaTeX template for student", "student_id", student.ID, slog.String("error", err.Error()))
 					return
 				}
 
-				// nahradenie hlavneho pdf novym zlucenym pdf
-				if err := os.Rename(mergedPDFPath, mainPDFPath); err != nil {
-					errorLogger.Error("Error updating main PDF for student", "student_id", student.ID, slog.String("error", err.Error()))
+				// nacitanie pisomky pre studenta z databazy
+				var exam models.Exam
+				if err := db.First(&exam, student.ExamID).Error; err != nil {
+					errorLogger.Error("Error fetching exam for student", "student_id", student.ID, slog.String("error", err.Error()))
 					return
 				}
 
-				// Odstranenie docasneho pdf studenta s defer, ktore sa vykona vzdy na konci funkcie
-				defer func() {
-					if err := files.DeleteFile(studentPDFPath); err != nil {
-						errorLogger.Error("Error removing temporary PDF for student", "student_id", student.ID, slog.String("error", err.Error()))
+				// vytvorenie dat, ktore budu nacitane namiesto placeholderov v LaTeX sablone
+				data := TemplateData{
+					ID:        fmt.Sprintf("%d", student.RegistrationNumber),
+					Meno:      fmt.Sprintf("%s %s", student.Name, student.Surname),
+					Datum:     exam.Date.Format("02. 01. 2006"), // datum v tvare DD. MM. YYYY
+					Miestnost: student.Room,
+					Cas:       exam.Date.Format("15:04"), // čas v tvare HH:MM
+					Bloky:     exam.QuestionCount,
+					QrCode:    fmt.Sprintf("%d", student.ID),
+				}
+
+				// nahradenie placeholderov v LaTeX sablone udajmi studenta
+				updatedLatex, err := ReplaceTemplatePlaceholders(latexTemplate, data)
+				if err != nil {
+					errorLogger.Error("Error replacing placeholders for student", "student_id", student.ID, slog.String("error", err.Error()))
+					return
+				}
+
+				// kompilacia latex sablony do pdf studenta
+				studentPDF, err := CompileLatexToPDF(updatedLatex)
+				if err != nil {
+					errorLogger.Error("Error generating PDF for student", "student_id", student.ID, slog.String("error", err.Error()))
+					return
+				}
+
+				// ulozenie generovaneho/kompilovaneho pdf studenta do docasneho suboru
+				studentPDFPath := filepath.Join(TemporaryPDFPath, fmt.Sprintf("student_%d.pdf", student.ID))
+				if err := os.WriteFile(studentPDFPath, studentPDF, FilePermission); err != nil {
+					errorLogger.Error("Error saving PDF for student", "student_id", student.ID, slog.String("error", err.Error()))
+					return
+				}
+
+				pdfMergeMutex.Lock()
+				defer pdfMergeMutex.Unlock()
+
+				// Ak ešte nie je nastavené hlavné PDF, použijeme toto ako hlavné
+				if !mainPDFSet {
+					mainPDFPath = studentPDFPath
+					mainPDFSet = true
+					errorLogger.Error("Set initial main PDF for student", "student_id", student.ID)
+				} else {
+					// zlucenie generovaneho pdf so zakladnym pdf
+					mergedPDFPath := filepath.Join(TemporaryPDFPath, "merged.pdf")
+					if err := MergePDFs(mainPDFPath, studentPDFPath, mergedPDFPath); err != nil {
+						errorLogger.Error("Error merging PDF for student", "student_id", student.ID, slog.String("error", err.Error()))
+						return
 					}
-				}()
 
-			}
+					// nahradenie hlavneho pdf novym zlucenym pdf
+					if err := os.Rename(mergedPDFPath, mainPDFPath); err != nil {
+						errorLogger.Error("Error updating main PDF for student", "student_id", student.ID, slog.String("error", err.Error()))
+						return
+					}
 
-			// Zvýšenie počtu spracovaných PDF a výpis stavu
-			processedCount++
-			studentDuration := time.Since(studentStartTime)
-			logger.Debug("Generovanie PDF",
-				"spracovaných", processedCount,
-				"celkovo", len(students),
-				"exam", exam.Title,
-				"id študenta", student.ID,
-				"dokončené za", studentDuration)
-		}(student)
+					// Odstranenie docasneho pdf studenta s defer, ktore sa vykona vzdy na konci funkcie
+					defer func() {
+						if err := files.DeleteFile(studentPDFPath); err != nil {
+							errorLogger.Error("Error removing temporary PDF for student", "student_id", student.ID, slog.String("error", err.Error()))
+						}
+					}()
+
+				}
+
+				// Zvýšenie počtu spracovaných PDF a výpis stavu
+				processedCount++
+				studentDuration := time.Since(studentStartTime)
+				logger.Debug("Generovanie PDF",
+					"spracovaných", processedCount,
+					"celkovo", len(students),
+					"exam", exam.Title,
+					"id študenta", student.ID,
+					"dokončené za", studentDuration)
+			}(student)
+		}
+
+		// cakanie na vsetky goroutines
+		wg.Wait()
 	}
-
-	// cakanie na vsetky goroutines
-	wg.Wait()
 
 	// presun hlavného PDF na finálnu cestu
 	if err := os.Rename(mainPDFPath, outputPDFPath); err != nil {
