@@ -15,9 +15,9 @@ func Seed(db *gorm.DB, questionCount int, studentsCount int) {
 
 	exam := ExamGenerator(questionCount, studentsCount)
 	if err := db.Create(exam).Error; err != nil {
-		errorLogger.Error("Could not seed test", slog.Group("CRITICAL", slog.String("test", exam.Title)))
+		errorLogger.Error("Could not seed exam", slog.Group("CRITICAL", slog.String("exam", exam.Title)))
 	} else {
-		logger.Info("Seeded test", slog.String("test", exam.Title))
+		logger.Info("Seeded exam", slog.String("exam", exam.Title))
 	}
 }
 

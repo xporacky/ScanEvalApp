@@ -145,10 +145,10 @@ func ParallelGeneratePDFs(db *gorm.DB, templatePath, outputPDFPath string) error
 				return
 			}
 
-			// nacitanie testu pre studenta z databazy
-			var test models.Exam
-			if err := db.First(&test, student.ExamID).Error; err != nil {
-				errorLogger.Error("Error fetching test for student", "student_id", student.ID, slog.String("error", err.Error()))
+			// nacitanie pisomky pre studenta z databazy
+			var exam models.Exam
+			if err := db.First(&exam, student.ExamID).Error; err != nil {
+				errorLogger.Error("Error fetching exam for student", "student_id", student.ID, slog.String("error", err.Error()))
 				return
 			}
 
@@ -156,10 +156,10 @@ func ParallelGeneratePDFs(db *gorm.DB, templatePath, outputPDFPath string) error
 			data := TemplateData{
 				ID:        fmt.Sprintf("%d", student.RegistrationNumber),
 				Meno:      fmt.Sprintf("%s %s", student.Name, student.Surname),
-				Datum:     test.Date.Format("02. 01. 2006"), // datum v tvare DD. MM. YYYY
+				Datum:     exam.Date.Format("02. 01. 2006"), // datum v tvare DD. MM. YYYY
 				Miestnost: student.Room,
-				Cas:       test.Date.Format("15:04"), // čas v tvare HH:MM
-				Bloky:     test.QuestionCount,
+				Cas:       exam.Date.Format("15:04"), // čas v tvare HH:MM
+				Bloky:     exam.QuestionCount,
 				QrCode:    fmt.Sprintf("%d", student.ID),
 			}
 
@@ -221,7 +221,7 @@ func ParallelGeneratePDFs(db *gorm.DB, templatePath, outputPDFPath string) error
 			logger.Debug("Generovanie PDF",
 				"spracovaných", processedCount,
 				"celkovo", len(students),
-				"test", test.Title,
+				"exam", exam.Title,
 				"id študenta", student.ID,
 				"dokončené za", studentDuration)
 		}(student)
@@ -278,23 +278,23 @@ func PrintSheet(db *gorm.DB, registrationNumber int) error {
 	// Logovanie načítania LaTeX šablóny
 	logger.Info("LaTeX template loaded", "template_path", TemplatePath)
 
-	// Nacitanie testu pre studenta z databazy
-	var test models.Exam
-	if err := db.First(&test, student.ExamID).Error; err != nil {
-		errorLogger.Error("Error fetching test for student", "student_id", student.ID, slog.String("error", err.Error()))
+	// Nacitanie pisomky pre studenta z databazy
+	var exam models.Exam
+	if err := db.First(&exam, student.ExamID).Error; err != nil {
+		errorLogger.Error("Error fetching exam for student", "student_id", student.ID, slog.String("error", err.Error()))
 		return err
 	}
-	// Logovanie úspešného načítania testu
-	logger.Info("Test fetched for student", "test_id", test.ID, "test_title", test.Title)
+	// Logovanie úspešného načítania pisomky
+	logger.Info("Exam fetched for student", "exam_id", exam.ID, "exam_title", exam.Title)
 
 	// Vytvorenie dat, ktore budu nacitane namiesto placeholderov v LaTeX sablone
 	data := TemplateData{
 		ID:        fmt.Sprintf("%d", student.RegistrationNumber),
 		Meno:      fmt.Sprintf("%s %s", student.Name, student.Surname),
-		Datum:     test.Date.Format("02. 01. 2006"), // datum v tvare DD. MM. YYYY
+		Datum:     exam.Date.Format("02. 01. 2006"), // datum v tvare DD. MM. YYYY
 		Miestnost: student.Room,
-		Cas:       test.Date.Format("15:04"), // čas v tvare HH:MM
-		Bloky:     test.QuestionCount,
+		Cas:       exam.Date.Format("15:04"), // čas v tvare HH:MM
+		Bloky:     exam.QuestionCount,
 		QrCode:    fmt.Sprintf("%d", student.ID),
 	}
 	// Logovanie dát, ktoré sa použijú pre šablónu

@@ -30,7 +30,7 @@ func GetStudentById(db *gorm.DB, id uint, examID uint) (*models.Student, error) 
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
-	logger.Debug("Hľadanie študenta", slog.Uint64("id", uint64(id)), slog.Uint64("test ID", uint64(examID)))
+	logger.Debug("Hľadanie študenta", slog.Uint64("id", uint64(id)), slog.Uint64("exam ID", uint64(examID)))
 
 	var student models.Student
 	result := db.Where("ID = ? AND exam_id = ?", id, examID).First(&student)
@@ -46,7 +46,7 @@ func GetStudentByRegistrationNumber(db *gorm.DB, registrationNumber uint, examID
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
-	logger.Debug("Hľadanie študenta", slog.Uint64("registration number", uint64(registrationNumber)), slog.Uint64("test ID", uint64(examID)))
+	logger.Debug("Hľadanie študenta", slog.Uint64("registration number", uint64(registrationNumber)), slog.Uint64("exam ID", uint64(examID)))
 
 	var student models.Student
 	result := db.Where("registration_number = ? AND exam_id = ?", registrationNumber, examID).First(&student)
