@@ -17,7 +17,6 @@ import (
 func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int, student *models.Student) {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
-
 	studentAnswers := []rune(student.Answers)
 	var unknownQuestionsAnswers []rune
 	croppedMat := CropMatAnswersOnly(mat)
@@ -88,9 +87,9 @@ func FindRectangle(mat *gocv.Mat, minAreaSize float64, maxAreaSize float64) imag
 	return image.Rectangle{image.Pt(0, 0), image.Pt(0, 0)}
 }
 
+// Gets Number of question using ocr
 func GetQuestionNumber(mat *gocv.Mat, i int) (int, error) {
 	errorLogger := logging.GetErrorLogger()
-
 	rect := image.Rectangle{Min: image.Point{PADDING, PADDING + (i * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE)}, Max: image.Point{(mat.Cols() / (NUMBER_OF_CHOICES + 1)) - PADDING, ((i + 1) * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE) - PADDING}}
 	questionMat := mat.Region(rect)
 	defer questionMat.Close()
@@ -106,6 +105,7 @@ func GetQuestionNumber(mat *gocv.Mat, i int) (int, error) {
 	return questionNum, err
 }
 
+// Evaluate one questions returns answer to this question
 func GetAnswer(mat *gocv.Mat, i int) rune {
 	answer := rune('x')
 	state := StateEmpty
@@ -144,6 +144,7 @@ func GetAnswer(mat *gocv.Mat, i int) rune {
 	return answer
 }
 
+// If question number was not found on start of the page than this function will be called to fill answers to correct question after finding valid question number
 func fillUnknowQuestionsAnswers(questionNumber int, unknownQuestionsAnswers *[]rune, studentAnswers *[]rune) {
 	for i, val := range *unknownQuestionsAnswers {
 		indexStudentAnswers := questionNumber - len(*unknownQuestionsAnswers) + i

@@ -16,5 +16,5 @@ type Student struct {
 	Room               string    `gorm:"not null"`
 	Score              int
 	Answers            string
-	TestID             uint `gorm:"not null"`
+	ExamID             uint `gorm:"not null"`
 }

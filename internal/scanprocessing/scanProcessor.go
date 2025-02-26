@@ -12,7 +12,7 @@ import (
 )
 
 // Process PDF
-func ProcessPDF(scanPath string, test *models.Test, db *gorm.DB) {
+func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB) {
 	errorLogger := logging.GetErrorLogger()
 	doc, err := fitz.New(scanPath)
 	if err != nil {
@@ -20,11 +20,11 @@ func ProcessPDF(scanPath string, test *models.Test, db *gorm.DB) {
 		panic(err)
 	}
 	for n := 0; n < doc.NumPage(); n++ {
-		ProcessPage(doc, n, test, db)
+		ProcessPage(doc, n, exam, db)
 	}
 }
 
-func ProcessPage(doc *fitz.Document, n int, test *models.Test, db *gorm.DB) {
+func ProcessPage(doc *fitz.Document, n int, exam *models.Exam, db *gorm.DB) {
 	errorLogger := logging.GetErrorLogger()
 
 	img, err := doc.Image(n)
@@ -35,13 +35,15 @@ func ProcessPage(doc *fitz.Document, n int, test *models.Test, db *gorm.DB) {
 	mat := ImageToMat(img)
 	mat = MatToGrayscale(mat)
 	mat = FixImageRotation(mat)
-	student, err := GetStudent(&mat, db, test.ID)
+
+	student, err := GetStudent(&mat, db, exam.ID)
+
 	if err != nil {
 		errorLogger.Error("Chyba pri získavaní ID študenta z databázy", "PDF strana", n, "error", err.Error())
 		return
 	}
 	errorLogger.Info("Našiel sa študent v databáze", "studentID", student.ID, "name", student.Name)
-	EvaluateAnswers(&mat, test.QuestionCount, student)
+	EvaluateAnswers(&mat, exam.QuestionCount, student)
 	err = repository.UpdateStudent(db, student)
 	if err != nil {
 		errorLogger.Error("Chyba pri aktualizácii študenta v databáze", "studentID", student.ID, "error", err.Error())
