@@ -1,0 +1,296 @@
+-----------------------
+Študent 774776: správne 40/40, nesprávne 0, chýbajúce 0
+-----------------------
+Študent 375942: Otázka č. 4, očakávané x, rozpoznané a
+Študent 375942: Otázka č. 27, očakávané x, rozpoznané b
+Študent 375942: Otázka č. 29, očakávané x, rozpoznané b
+Študent 375942: Otázka č. 30, očakávané x, rozpoznané b
+Študent 375942: Otázka č. 31, očakávané x, rozpoznané b
+Študent 375942: Otázka č. 32, očakávané x, rozpoznané b
+Študent 375942: Otázka č. 33, očakávané x, rozpoznané b
+Študent 375942: Otázka č. 34, očakávané x, rozpoznané b
+Študent 375942: Otázka č. 37, očakávané x, rozpoznané b
+Študent 375942: Otázka č. 39, očakávané x, rozpoznané b
+Študent 375942: Otázka č. 40, očakávané x, rozpoznané b
+Študent 375942: správne 29/40, nesprávne 11, chýbajúce 0
+-----------------------
+Študent 753491: Otázka č. 1, očakávané c, rozpoznané x
+Študent 753491: Otázka č. 2, očakávané e, rozpoznané d
+Študent 753491: Otázka č. 3, očakávané b, rozpoznané x
+Študent 753491: Otázka č. 4, očakávané d, rozpoznané e
+Študent 753491: Otázka č. 5, očakávané a, rozpoznané x
+Študent 753491: Otázka č. 18, očakávané c, rozpoznané x
+Študent 753491: Otázka č. 19, očakávané c, rozpoznané x
+Študent 753491: Otázka č. 20, očakávané d, rozpoznané x
+Študent 753491: Otázka č. 21, očakávané e, rozpoznané c
+Študent 753491: Otázka č. 22, očakávané c, rozpoznané x
+Študent 753491: správne 30/40, nesprávne 10, chýbajúce 0
+-----------------------
+Študent 235850: správne 40/40, nesprávne 0, chýbajúce 0
+-----------------------
+Študent 984996: správne 40/40, nesprávne 0, chýbajúce 0
+-----------------------
+Študent 433835: správne 40/40, nesprávne 0, chýbajúce 0
+-----------------------
+Študent 658013: Otázka č. 13, očakávané c, rozpoznané x
+Študent 658013: správne 39/40, nesprávne 1, chýbajúce 0
+-----------------------
+Študent 913602: správne 40/40, nesprávne 0, chýbajúce 0
+-----------------------
+Študent 590787: Otázka č. 3, očakávané d, rozpoznané x
+Študent 590787: Otázka č. 4, očakávané d, rozpoznané x
+Študent 590787: správne 38/40, nesprávne 2, chýbajúce 0
+-----------------------
+Študent 404065: správne 40/40, nesprávne 0, chýbajúce 0
+-----------------------
+Študent 705932: správne 40/40, nesprávne 0, chýbajúce 0
+-----------------------
+Študent 537282: správne 40/40, nesprávne 0, chýbajúce 0
+-----------------------
+Študent 363580: Otázka č. 1, očakávané a, rozpoznané x
+Študent 363580: Otázka č. 2, očakávané a, rozpoznané x
+Študent 363580: Otázka č. 3, očakávané a, rozpoznané x
+Študent 363580: Otázka č. 4, očakávané a, rozpoznané x
+Študent 363580: Otázka č. 5, očakávané a, rozpoznané x
+Študent 363580: Otázka č. 6, očakávané a, rozpoznané b
+Študent 363580: Otázka č. 7, očakávané a, rozpoznané x
+Študent 363580: Otázka č. 8, očakávané a, rozpoznané x
+Študent 363580: Otázka č. 9, očakávané a, rozpoznané b
+Študent 363580: Otázka č. 10, očakávané a, rozpoznané x
+Študent 363580: Otázka č. 11, očakávané a, rozpoznané b
+Študent 363580: Otázka č. 12, očakávané a, rozpoznané x
+Študent 363580: Otázka č. 14, očakávané a, rozpoznané x
+Študent 363580: Otázka č. 16, očakávané a, rozpoznané x
+Študent 363580: Otázka č. 17, očakávané a, rozpoznané x
+Študent 363580: Otázka č. 18, očakávané a, rozpoznané x
+Študent 363580: Otázka č. 19, očakávané a, rozpoznané x
+Študent 363580: Otázka č. 20, očakávané a, rozpoznané x
+Študent 363580: Otázka č. 21, očakávané a, rozpoznané b
+Študent 363580: Otázka č. 22, očakávané a, rozpoznané x
+Študent 363580: Otázka č. 23, očakávané a, rozpoznané b
+Študent 363580: Otázka č. 24, očakávané a, rozpoznané x
+Študent 363580: Otázka č. 25, očakávané a, rozpoznané b
+Študent 363580: Otázka č. 26, očakávané a, rozpoznané b
+Študent 363580: Otázka č. 27, očakávané a, rozpoznané x
+Študent 363580: Otázka č. 28, očakávané a, rozpoznané x
+Študent 363580: Otázka č. 29, očakávané a, rozpoznané x
+Študent 363580: Otázka č. 30, očakávané a, rozpoznané b
+Študent 363580: Otázka č. 31, očakávané a, rozpoznané x
+Študent 363580: Otázka č. 32, očakávané a, rozpoznané x
+Študent 363580: Otázka č. 33, očakávané a, rozpoznané b
+Študent 363580: Otázka č. 34, očakávané a, rozpoznané b
+Študent 363580: Otázka č. 35, očakávané a, rozpoznané b
+Študent 363580: Otázka č. 36, očakávané a, rozpoznané b
+Študent 363580: Otázka č. 37, očakávané a, rozpoznané b
+Študent 363580: Otázka č. 38, očakávané a, rozpoznané x
+Študent 363580: Otázka č. 39, očakávané a, rozpoznané b
+Študent 363580: Otázka č. 40, očakávané a, rozpoznané x
+Študent 363580: správne 2/40, nesprávne 38, chýbajúce 0
+-----------------------
+Študent 798399: správne 40/40, nesprávne 0, chýbajúce 0
+-----------------------
+Študent 236273: správne 40/40, nesprávne 0, chýbajúce 0
+-----------------------
+Študent 188319: správne 40/40, nesprávne 0, chýbajúce 0
+-----------------------
+Študent 133168: Otázka č. 4, očakávané b, rozpoznané x
+Študent 133168: Otázka č. 13, očakávané b, rozpoznané x
+Študent 133168: Otázka č. 14, očakávané b, rozpoznané x
+Študent 133168: Otázka č. 23, očakávané b, rozpoznané x
+Študent 133168: Otázka č. 24, očakávané b, rozpoznané x
+Študent 133168: Otázka č. 28, očakávané b, rozpoznané x
+Študent 133168: Otázka č. 32, očakávané b, rozpoznané x
+Študent 133168: Otázka č. 35, očakávané b, rozpoznané x
+Študent 133168: Otázka č. 36, očakávané b, rozpoznané x
+Študent 133168: Otázka č. 37, očakávané b, rozpoznané x
+Študent 133168: Otázka č. 39, očakávané b, rozpoznané x
+Študent 133168: Otázka č. 40, očakávané b, rozpoznané x
+Študent 133168: správne 28/40, nesprávne 12, chýbajúce 0
+-----------------------
+Študent 870991: správne 40/40, nesprávne 0, chýbajúce 0
+-----------------------
+Študent 646042: Otázka č. 2, očakávané e, rozpoznané x
+Študent 646042: Otázka č. 8, očakávané e, rozpoznané x
+Študent 646042: Otázka č. 18, očakávané e, rozpoznané x
+Študent 646042: Otázka č. 20, očakávané e, rozpoznané x
+Študent 646042: Otázka č. 22, očakávané e, rozpoznané x
+Študent 646042: Otázka č. 24, očakávané e, rozpoznané x
+Študent 646042: Otázka č. 25, očakávané e, rozpoznané x
+Študent 646042: Otázka č. 28, očakávané e, rozpoznané x
+Študent 646042: Otázka č. 34, očakávané e, rozpoznané x
+Študent 646042: správne 31/40, nesprávne 9, chýbajúce 0
+-----------------------
+Študent 257457: Otázka č. 29, očakávané a, rozpoznané x
+Študent 257457: správne 39/40, nesprávne 1, chýbajúce 0
+-----------------------
+Študent 783456: Otázka č. 23, očakávané x, rozpoznané b
+Študent 783456: Otázka č. 29, očakávané x, rozpoznané c
+Študent 783456: Otázka č. 35, očakávané x, rozpoznané d
+Študent 783456: správne 37/40, nesprávne 3, chýbajúce 0
+-----------------------
+Študent 110198: správne 40/40, nesprávne 0, chýbajúce 0
+-----------------------
+Študent 761336: správne 40/40, nesprávne 0, chýbajúce 0
+-----------------------
+Študent 212971: Otázka č. 2, očakávané b, rozpoznané x
+Študent 212971: Otázka č. 3, očakávané c, rozpoznané x
+Študent 212971: Otázka č. 4, očakávané d, rozpoznané x
+Študent 212971: Otázka č. 5, očakávané e, rozpoznané x
+Študent 212971: Otázka č. 6, očakávané e, rozpoznané x
+Študent 212971: Otázka č. 8, očakávané d, rozpoznané x
+Študent 212971: Otázka č. 9, očakávané d, rozpoznané x
+Študent 212971: Otázka č. 11, očakávané d, rozpoznané x
+Študent 212971: Otázka č. 12, očakávané e, rozpoznané x
+Študent 212971: Otázka č. 13, očakávané e, rozpoznané x
+Študent 212971: Otázka č. 14, očakávané e, rozpoznané x
+Študent 212971: Otázka č. 15, očakávané e, rozpoznané x
+Študent 212971: Otázka č. 18, očakávané e, rozpoznané x
+Študent 212971: Otázka č. 19, očakávané e, rozpoznané x
+Študent 212971: Otázka č. 20, očakávané e, rozpoznané x
+Študent 212971: Otázka č. 25, očakávané x, rozpoznané e
+Študent 212971: Otázka č. 27, očakávané x, rozpoznané e
+Študent 212971: Otázka č. 28, očakávané x, rozpoznané e
+Študent 212971: Otázka č. 34, očakávané x, rozpoznané e
+Študent 212971: Otázka č. 35, očakávané x, rozpoznané e
+Študent 212971: Otázka č. 36, očakávané x, rozpoznané e
+Študent 212971: Otázka č. 37, očakávané x, rozpoznané e
+Študent 212971: Otázka č. 38, očakávané x, rozpoznané e
+Študent 212971: Otázka č. 39, očakávané x, rozpoznané e
+Študent 212971: správne 16/40, nesprávne 24, chýbajúce 0
+-----------------------
+Študent 872413: Otázka č. 1, očakávané a, rozpoznané c
+Študent 872413: správne 39/40, nesprávne 1, chýbajúce 0
+-----------------------
+Študent 988443: správne 40/40, nesprávne 0, chýbajúce 0
+-----------------------
+Študent 507113: Otázka č. 27, očakávané b, rozpoznané x
+Študent 507113: Otázka č. 28, očakávané a, rozpoznané x
+Študent 507113: správne 38/40, nesprávne 2, chýbajúce 0
+-----------------------
+Študent 567742: správne 40/40, nesprávne 0, chýbajúce 0
+-----------------------
+Študent 411098: správne 40/40, nesprávne 0, chýbajúce 0
+-----------------------
+Študent 801650: Otázka č. 4, očakávané c, rozpoznané a
+Študent 801650: Otázka č. 6, očakávané c, rozpoznané x
+Študent 801650: Otázka č. 7, očakávané e, rozpoznané x
+Študent 801650: Otázka č. 12, očakávané e, rozpoznané x
+Študent 801650: Otázka č. 26, očakávané a, rozpoznané x
+Študent 801650: Otázka č. 28, očakávané c, rozpoznané x
+Študent 801650: Otázka č. 35, očakávané b, rozpoznané x
+Študent 801650: správne 33/40, nesprávne 7, chýbajúce 0
+-----------------------
+Študent 639863: Otázka č. 22, očakávané a, rozpoznané x
+Študent 639863: Otázka č. 23, očakávané b, rozpoznané x
+Študent 639863: Otázka č. 32, očakávané c, rozpoznané x
+Študent 639863: správne 37/40, nesprávne 3, chýbajúce 0
+-----------------------
+Študent 985335: Otázka č. 13, očakávané d, rozpoznané x
+Študent 985335: správne 39/40, nesprávne 1, chýbajúce 0
+-----------------------
+Študent 300532: správne 40/40, nesprávne 0, chýbajúce 0
+-----------------------
+Študent 152342: Otázka č. 30, očakávané c, rozpoznané x
+Študent 152342: správne 39/40, nesprávne 1, chýbajúce 0
+-----------------------
+Študent 484470: správne 40/40, nesprávne 0, chýbajúce 0
+-----------------------
+Študent 422417: správne 40/40, nesprávne 0, chýbajúce 0
+-----------------------
+Študent 392411: Otázka č. 1, očakávané x, rozpoznané a
+Študent 392411: Otázka č. 2, očakávané x, rozpoznané a
+Študent 392411: Otázka č. 3, očakávané x, rozpoznané b
+Študent 392411: Otázka č. 5, očakávané x, rozpoznané d
+Študent 392411: Otázka č. 7, očakávané x, rozpoznané d
+Študent 392411: Otázka č. 9, očakávané x, rozpoznané e
+Študent 392411: Otázka č. 11, očakávané x, rozpoznané b
+Študent 392411: Otázka č. 14, očakávané x, rozpoznané c
+Študent 392411: Otázka č. 16, očakávané x, rozpoznané c
+Študent 392411: Otázka č. 18, očakávané x, rozpoznané d
+Študent 392411: Otázka č. 19, očakávané x, rozpoznané d
+Študent 392411: správne 29/40, nesprávne 11, chýbajúce 0
+-----------------------
+Študent 648037: správne 40/40, nesprávne 0, chýbajúce 0
+-----------------------
+Študent 760018: správne 40/40, nesprávne 0, chýbajúce 0
+-----------------------
+Študent 636975: Otázka č. 15, očakávané a, rozpoznané x
+Študent 636975: Otázka č. 32, očakávané d, rozpoznané x
+Študent 636975: Otázka č. 33, očakávané a, rozpoznané x
+Študent 636975: Otázka č. 35, očakávané e, rozpoznané x
+Študent 636975: Otázka č. 36, očakávané a, rozpoznané x
+Študent 636975: správne 35/40, nesprávne 5, chýbajúce 0
+-----------------------
+Študent 624245: správne 40/40, nesprávne 0, chýbajúce 0
+-----------------------
+Študent 526606: správne 40/40, nesprávne 0, chýbajúce 0
+-----------------------
+Študent 168030: Otázka č. 1, očakávané e, rozpoznané x
+Študent 168030: Otázka č. 11, očakávané b, rozpoznané x
+Študent 168030: Otázka č. 12, očakávané b, rozpoznané x
+Študent 168030: Otázka č. 15, očakávané b, rozpoznané x
+Študent 168030: Otázka č. 23, očakávané c, rozpoznané x
+Študent 168030: Otázka č. 24, očakávané c, rozpoznané x
+Študent 168030: Otázka č. 26, očakávané b, rozpoznané x
+Študent 168030: Otázka č. 27, očakávané b, rozpoznané x
+Študent 168030: Otázka č. 28, očakávané b, rozpoznané x
+Študent 168030: Otázka č. 29, očakávané b, rozpoznané x
+Študent 168030: Otázka č. 35, očakávané a, rozpoznané x
+Študent 168030: Otázka č. 37, očakávané c, rozpoznané x
+Študent 168030: správne 28/40, nesprávne 12, chýbajúce 0
+-----------------------
+Študent 631788: správne 40/40, nesprávne 0, chýbajúce 0
+-----------------------
+Študent 990337: správne 40/40, nesprávne 0, chýbajúce 0
+-----------------------
+Študent 227633: Otázka č. 1, očakávané x, rozpoznané c
+Študent 227633: Otázka č. 2, očakávané x, rozpoznané c
+Študent 227633: Otázka č. 3, očakávané x, rozpoznané c
+Študent 227633: Otázka č. 4, očakávané x, rozpoznané c
+Študent 227633: Otázka č. 21, očakávané x, rozpoznané c
+Študent 227633: Otázka č. 22, očakávané x, rozpoznané c
+Študent 227633: Otázka č. 23, očakávané x, rozpoznané c
+Študent 227633: Otázka č. 24, očakávané x, rozpoznané c
+Študent 227633: Otázka č. 25, očakávané x, rozpoznané c
+Študent 227633: Otázka č. 26, očakávané x, rozpoznané c
+Študent 227633: Otázka č. 27, očakávané x, rozpoznané c
+Študent 227633: Otázka č. 28, očakávané x, rozpoznané c
+Študent 227633: Otázka č. 29, očakávané x, rozpoznané c
+Študent 227633: Otázka č. 30, očakávané x, rozpoznané c
+Študent 227633: Otázka č. 31, očakávané x, rozpoznané c
+Študent 227633: Otázka č. 32, očakávané x, rozpoznané c
+Študent 227633: Otázka č. 33, očakávané x, rozpoznané c
+Študent 227633: Otázka č. 34, očakávané x, rozpoznané c
+Študent 227633: Otázka č. 35, očakávané x, rozpoznané c
+Študent 227633: Otázka č. 36, očakávané x, rozpoznané c
+Študent 227633: Otázka č. 37, očakávané x, rozpoznané c
+Študent 227633: správne 19/40, nesprávne 21, chýbajúce 0
+-----------------------
+Študent 385676: správne 40/40, nesprávne 0, chýbajúce 0
+-----------------------
+Študent 783424: Otázka č. 4, očakávané d, rozpoznané c
+Študent 783424: Otázka č. 5, očakávané e, rozpoznané c
+Študent 783424: Otázka č. 6, očakávané e, rozpoznané c
+Študent 783424: Otázka č. 7, očakávané d, rozpoznané c
+Študent 783424: Otázka č. 9, očakávané b, rozpoznané c
+Študent 783424: Otázka č. 10, očakávané a, rozpoznané c
+Študent 783424: Otázka č. 11, očakávané b, rozpoznané a
+Študent 783424: Otázka č. 12, očakávané c, rozpoznané b
+Študent 783424: Otázka č. 13, očakávané d, rozpoznané c
+Študent 783424: Otázka č. 14, očakávané e, rozpoznané d
+Študent 783424: Otázka č. 15, očakávané d, rozpoznané e
+Študent 783424: Otázka č. 16, očakávané c, rozpoznané e
+Študent 783424: Otázka č. 17, očakávané b, rozpoznané d
+Študent 783424: Otázka č. 18, očakávané a, rozpoznané c
+Študent 783424: Otázka č. 20, očakávané c, rozpoznané a
+Študent 783424: Otázka č. 29, očakávané c, rozpoznané x
+Študent 783424: správne 24/40, nesprávne 16, chýbajúce 0
+-----------------------
+Študent 731579: Otázka č. 7, očakávané b, rozpoznané x
+Študent 731579: správne 39/40, nesprávne 1, chýbajúce 0
+-----------------------
+Študent 123800: Otázka č. 1, očakávané a, rozpoznané x
+Študent 123800: správne 39/40, nesprávne 1, chýbajúce 0
+Celková úspešnosť OCR: 90.35% (1807/2000 správnych odpovedí, 0 chýbajúcich, 0 nezachytených)
+PASS
+ok  	ScanEvalApp/tests	0.020s
