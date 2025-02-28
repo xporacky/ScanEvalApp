@@ -44,7 +44,6 @@ func GetStudentById(db *gorm.DB, id uint, examID uint) (*models.Student, error) 
 	return &student, nil
 }
 
-
 func GetStudentByRegistrationNumber(db *gorm.DB, registrationNumber uint, examID uint) (*models.Student, error) {
 
 	logger := logging.GetLogger()
@@ -137,4 +136,18 @@ func GetStudentsQuery(db *gorm.DB, query string) ([]models.Student, error) {
 	logger.Info("Počet nájdených študentov", slog.Int("count", len(students)))
 
 	return students, nil
+}
+
+func UpdateStudentAnswers(db *gorm.DB, studentId uint, examId uint, questionNumber int, answers []rune) error {
+	student, err := GetStudentById(db, studentId, examId)
+	if err != nil {
+		return err
+	}
+	studentAnswers := []rune(student.Answers)
+	for i, answer := range answers {
+		studentAnswers[questionNumber-i] = answer
+	}
+	student.Answers = string(studentAnswers)
+	UpdateStudent(db, student)
+	return nil
 }

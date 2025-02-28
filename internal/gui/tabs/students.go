@@ -119,7 +119,7 @@ func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensi
 							return widgets.Body1Border(gtx, th, student.Surname)
 						}),
 						layout.Flexed(columnWidths[2], func(gtx layout.Context) layout.Dimensions {
-							return widgets.Body1Border(gtx, th, student.BirthDate.Format("2006-01-02"))
+							return widgets.Body1Border(gtx, th, student.Answers) //student.BirthDate.Format("2006-01-02"))
 						}),
 						layout.Flexed(columnWidths[3], func(gtx layout.Context) layout.Dimensions {
 							return widgets.Body1Border(gtx, th, fmt.Sprintf("%d", student.RegistrationNumber))

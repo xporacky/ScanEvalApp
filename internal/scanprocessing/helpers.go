@@ -142,7 +142,7 @@ func GetStudent(mat *gocv.Mat, db *gorm.DB, examID uint) (*models.Student, error
 			errorLogger.Error("Chyba pri konverzii QR textu na ID", slog.String("qrText", qrText), slog.String("error", err.Error()))
 			return nil, err
 		}
-
+		logger.Info("Id studenta bolo najdene z qr kodu", slog.Int("id", id))
 		return repository.GetStudentById(db, uint(id), examID)
 
 	}
@@ -158,8 +158,7 @@ func GetStudent(mat *gocv.Mat, db *gorm.DB, examID uint) (*models.Student, error
 		errorLogger.Error("Chyba pri extrakcii registrationNumber zo záhlavia obrázku", slog.String("error", err.Error()))
 		return nil, err
 	}
-
-
+	logger.Info("Registracne cislo bolo najdene z hlavicky", slog.Int("registrationNumber", registrationNumber))
 	return repository.GetStudentByRegistrationNumber(db, uint(registrationNumber), examID)
 
 }
