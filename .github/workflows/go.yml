@@ -25,7 +25,7 @@ jobs:
       run: chmod +x installDependencies.sh
 
     - name: Run installDependencies
-      run: ./installlDependencies.sh
+      run: ./installDependencies.sh
 
     - name: Build
       run: go build -v ./...
