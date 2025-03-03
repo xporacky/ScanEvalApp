@@ -22,7 +22,7 @@ jobs:
         go-version: '1.23.2'
 
     - name: Dependencies
-      run: chmod +x && ./installlDependencies.sh
+      run: chmod +x installDependencies && ./installlDependencies.sh
 
     - name: Build
       run: go build -v ./...
