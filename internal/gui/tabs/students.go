@@ -23,6 +23,7 @@ import (
 )
 
 var printButtons []widget.Clickable
+var downloadButtons []widget.Clickable
 var searchQuery widget.Editor
 
 // scrollovanie
@@ -57,10 +58,13 @@ func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensi
 			return layout.Dimensions{}
 		}
 	}
-	columns := []string{"Meno", "Priezvisko", "Dátum narodenia", "Registračné číslo", "Miestnosť", "Skóre", "Tlačiť hárok"}
-	columnWidths := []float32{0.2, 0.2, 0.15, 0.2, 0.1, 0.05, 0.1} // Pomery šírok
+	columns := []string{"Meno", "Priezvisko", "Dátum narodenia", "Registračné číslo", "Miestnosť", "Skóre", "Tlačiť hárok", "Stiahnúť hárok"}
+	columnWidths := []float32{0.2, 0.2, 0.15, 0.15, 0.1, 0.05, 0.075, 0.075} // Pomery šírok
 	if len(printButtons) != len(students) {
 		printButtons = make([]widget.Clickable, len(students))
+	}
+	if len(downloadButtons) != len(students) {
+		downloadButtons = make([]widget.Clickable, len(students))
 	}
 
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
@@ -97,6 +101,9 @@ func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensi
 							layout.Flexed(columnWidths[6], func(gtx layout.Context) layout.Dimensions {
 								return widgets.LabelBorder(gtx, th, headerSize, columns[6])
 							}),
+							layout.Flexed(columnWidths[6], func(gtx layout.Context) layout.Dimensions {
+								return widgets.LabelBorder(gtx, th, headerSize, columns[7])
+							}),
 						)
 					}
 
@@ -109,6 +116,10 @@ func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensi
 						} else {
 							logger.Info("Úspešne vytlačený hárok pre študenta", slog.String("registrationNumber", fmt.Sprintf("%d", student.RegistrationNumber)))
 						}
+					}
+					if downloadButtons[i-1].Clicked(gtx) {
+						fmt.Printf("stiahnuť vyplneny harok")
+						
 					}
 
 					return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
@@ -132,6 +143,12 @@ func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensi
 						}),
 						layout.Flexed(columnWidths[6], func(gtx layout.Context) layout.Dimensions {
 							btn := widgets.Button(th.Theme, &printButtons[i-1], widgets.SaveIcon, widgets.IconPositionStart, "Tlačiť")
+							btn.Background = themeUI.Gray
+							btn.Color = themeUI.White
+							return btn.Layout(gtx, th)
+						}),
+						layout.Flexed(columnWidths[7], func(gtx layout.Context) layout.Dimensions {
+							btn := widgets.Button(th.Theme, &downloadButtons[i-1], widgets.SaveIcon, widgets.IconPositionStart, "Stiahnúť")
 							btn.Background = themeUI.Gray
 							btn.Color = themeUI.White
 							return btn.Layout(gtx, th)
