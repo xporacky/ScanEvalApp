@@ -10,6 +10,7 @@ osetrit vstupy
 import (
 	"ScanEvalApp/internal/database/models"
 	"ScanEvalApp/internal/database/repository"
+	"ScanEvalApp/internal/gui/tabmanager"
 	"ScanEvalApp/internal/gui/themeUI"
 	"ScanEvalApp/internal/gui/widgets"
 	"ScanEvalApp/internal/logging"
@@ -63,7 +64,7 @@ type questionForm struct {
 }
 
 // CreateExam renders the content for the "Vytvorenie Písomky" tab.
-func (t *UploadCsv) CreateExam(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensions {
+func (t *UploadCsv) CreateExam(gtx layout.Context, th *themeUI.Theme, db *gorm.DB, tm *tabmanager.TabManager) layout.Dimensions {
 	logger := logging.GetLogger()
 	columnWidths := []float32{0.4, 0.2, 0.2, 0.2}
 	insetwidth := unit.Dp(10)
@@ -162,7 +163,7 @@ func (t *UploadCsv) CreateExam(gtx layout.Context, th *themeUI.Theme, db *gorm.D
 						btn.Color = themeUI.Black
 						if submitButton.Clicked(gtx) {
 							logger.Info("Kliknutie na tlačidlo Odoslať")
-							submitForm(db, t)
+							submitForm(db, t, tm)
 						}
 						return btn.Layout(gtx, th)
 					})
@@ -260,7 +261,7 @@ func renderOptions(gtx layout.Context, th *themeUI.Theme, questionIndex int, qf 
 	return children
 }
 
-func submitForm(db *gorm.DB, t *UploadCsv) {
+func submitForm(db *gorm.DB, t *UploadCsv, tm *tabmanager.TabManager) {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
@@ -346,4 +347,5 @@ func submitForm(db *gorm.DB, t *UploadCsv) {
 			fmt.Println("student pridany: %s", student)
 		}
 	}
+	tm.ActiveTab = 0
 }
