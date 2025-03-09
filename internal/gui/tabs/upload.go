@@ -31,6 +31,8 @@ type UploadTab struct {
 	explorer *explorer.Explorer
 	filePath string
 	examID   uint
+	progressChan chan string
+	progressText string
 }
 
 func (t *UploadTab) SetTestID(id uint) {
@@ -40,6 +42,7 @@ func (t *UploadTab) SetTestID(id uint) {
 func NewUploadTab(w *app.Window) *UploadTab {
 	return &UploadTab{
 		explorer: explorer.NewExplorer(w),
+		progressChan: make(chan string, 100),
 	}
 }
 
@@ -47,6 +50,11 @@ func (t *UploadTab) Layout(gtx layout.Context, th *material.Theme, db *gorm.DB) 
 	// Spracovanie kliknutí na tlačidlo
 	if t.button.Clicked(gtx) {
 		go t.openFileDialog(db)
+	}
+	select {
+	case msg := <-t.progressChan:
+		t.progressText = msg
+	default:
 	}
 
 	// Vykreslenie layoutu
@@ -72,6 +80,10 @@ func (t *UploadTab) Layout(gtx layout.Context, th *material.Theme, db *gorm.DB) 
 					text = fmt.Sprintf("Vybraný test ID: %d", t.examID)
 				}
 				return material.Label(th, unit.Sp(16), text).Layout(gtx)
+			}),
+
+			layout.Rigid(func(gtx layout.Context) layout.Dimensions {				
+				return material.Label(th, unit.Sp(16), t.progressText).Layout(gtx)
 			}),
 		)
 	})
@@ -117,5 +129,7 @@ func scanProcess(t *UploadTab, db *gorm.DB) {
 	if err != nil {
 		return
 	}
-	scanprocessing.ProcessPDF(t.filePath, exam, db)
+	t.progressChan <- "Spracovanie PDF sa začalo..."
+	scanprocessing.ProcessPDF(t.filePath, exam, db, t.progressChan)
+	t.progressChan <- "Spracovanie Dokončene"
 }
