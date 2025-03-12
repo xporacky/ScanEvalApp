@@ -34,6 +34,7 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 	errorLogger := logging.GetErrorLogger()
 	headerSize := unit.Sp(17)
 	insetWidth := unit.Dp(15)
+	modal := widgets.Modal{}
 
 	exams, err := repository.GetAllExams(db)
 	if err != nil {
@@ -98,6 +99,7 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 					}
 					if showAnsButtons[i-1].Clicked(gtx) {
 						showAnsExam(&exam)
+						modal.Visible = true
 
 					}
 					if evaluateExamBtns[i-1].Clicked(gtx) {
@@ -157,6 +159,16 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 				})
 			})
 		}),
+		// Render the modal only if it's visible
+	layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+		if modal.Visible {
+			return modal.Layout(gtx, th)
+		}
+		return layout.Dimensions{}
+	}),
+
+
+		
 	)
 }
 
@@ -180,8 +192,10 @@ func removeExamFromList(exams []models.Exam, index int) []models.Exam {
 }
 
 func showAnsExam(exam *models.Exam) {
+	fmt.Println("ukazanie odpovedi pre test ", exam.ID, " odpovede: ", exam.Questions)
 	logger := logging.GetLogger()
 	logger.Info("Ukázanie opovedí testu s ID", slog.Uint64("ID", uint64(exam.ID)))
+	
 }
 
 func printExam(exam *models.Exam) {
