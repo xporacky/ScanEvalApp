@@ -347,5 +347,17 @@ func submitForm(db *gorm.DB, t *UploadCsv, tm *tabmanager.TabManager) {
 			fmt.Println("student pridany: %s", student)
 		}
 	}
+
+	// Resetovanie vstupov
+	nameInput.SetText("")
+	roomInput.SetText("")
+	timeInput.SetText("")
+	questionsInput.SetText("")
+	t.selectedFile = ""
+	t.filePath = ""
+	showQuestions = false
+
+	// Resetovanie otázok
+	questionForms = nil
 	tm.ActiveTab = 0
 }
