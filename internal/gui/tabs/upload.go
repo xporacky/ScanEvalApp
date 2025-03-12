@@ -20,7 +20,7 @@ import (
 	"ScanEvalApp/internal/scanprocessing"
 
 	//"strings"
-	//"time"
+	"time"
 	"gorm.io/gorm"
 	//"encoding/csv"
 	"os"
@@ -40,13 +40,26 @@ func (t *UploadTab) SetTestID(id uint) {
 }
 
 func NewUploadTab(w *app.Window) *UploadTab {
-	return &UploadTab{
+	tab := &UploadTab{
 		explorer: explorer.NewExplorer(w),
 		progressChan: make(chan string, 100),
 	}
+	go func() {
+		for {
+			time.Sleep(1 * time.Second) // Čaká 1 sekundu
+			select {
+			case msg := <-tab.progressChan:
+				tab.progressText = msg
+				w.Invalidate() // Prekreslí GUI
+			default:
+				w.Invalidate() // Aj keď nie je správa, GUI sa aktualizuje
+			}
+		}
+	}()
+	return tab
 }
 
-func (t *UploadTab) Layout(gtx layout.Context, th *material.Theme, db *gorm.DB) layout.Dimensions {
+func (t *UploadTab) Layout(gtx layout.Context, th *material.Theme, db *gorm.DB, w *app.Window) layout.Dimensions {
 	// Spracovanie kliknutí na tlačidlo
 	if t.button.Clicked(gtx) {
 		go t.openFileDialog(db)
@@ -54,6 +67,7 @@ func (t *UploadTab) Layout(gtx layout.Context, th *material.Theme, db *gorm.DB) 
 	select {
 	case msg := <-t.progressChan:
 		t.progressText = msg
+		w.Invalidate()
 	default:
 	}
 
