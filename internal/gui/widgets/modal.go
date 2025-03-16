@@ -12,8 +12,9 @@ import (
 )
 
 type Modal struct {
-	Visible    bool
+	Visible    	bool
 	CloseButton widget.Clickable
+	Answers 		string
 }
 
 func NewModal() *Modal {
@@ -32,7 +33,7 @@ func (m *Modal) layout(gtx layout.Context, theme *themeUI.Theme) layout.Dimensio
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					// Title
 					return layout.UniformInset(unit.Dp(10)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-						return material.Label(theme.Material(), unit.Sp(20), "Toto je modál").Layout(gtx)
+						return material.Label(theme.Material(), unit.Sp(20), m.Answers).Layout(gtx)
 					})
 				}),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {

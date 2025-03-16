@@ -101,6 +101,7 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 					if showAnsButtons[i-1].Clicked(gtx) {
 						showAnsExam(&exam)
 						modal.Visible = true
+						modal.Answers = exam.Questions
 
 					}
 					if evaluateExamBtns[i-1].Clicked(gtx) {
@@ -196,6 +197,8 @@ func showAnsExam(exam *models.Exam) {
 	fmt.Println("ukazanie odpovedi pre test ", exam.ID, " odpovede: ", exam.Questions)
 	logger := logging.GetLogger()
 	logger.Info("Ukázanie opovedí testu s ID", slog.Uint64("ID", uint64(exam.ID)))
+	
+
 	
 }
 
