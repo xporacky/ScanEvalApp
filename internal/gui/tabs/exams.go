@@ -23,6 +23,7 @@ var deleteButtons []widget.Clickable
 var showAnsButtons []widget.Clickable
 var evaluateExamBtns []widget.Clickable
 var printExamBtns []widget.Clickable
+var modal widgets.Modal
 
 // scrollovanie
 var examList widget.List = widget.List{List: layout.List{Axis: layout.Vertical}}
@@ -34,7 +35,7 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 	errorLogger := logging.GetErrorLogger()
 	headerSize := unit.Sp(17)
 	insetWidth := unit.Dp(15)
-	modal := widgets.Modal{}
+	
 
 	exams, err := repository.GetAllExams(db)
 	if err != nil {
