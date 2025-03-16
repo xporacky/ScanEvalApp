@@ -8,6 +8,12 @@ import (
 	"gioui.org/widget/material"
 	//"gioui.org/x/component"
 	"ScanEvalApp/internal/gui/themeUI"
+	"fmt"
+	//"strings"
+	"gioui.org/op/paint"
+	"image/color"
+	"image"
+	"gioui.org/op/clip"
 
 )
 
@@ -28,28 +34,64 @@ func (m *Modal) layout(gtx layout.Context, theme *themeUI.Theme) layout.Dimensio
 
 	return layout.Stack{}.Layout(gtx,
 		layout.Expanded(func(gtx layout.Context) layout.Dimensions {
+			bgColor := color.NRGBA{R: 255, G: 255, B: 255, A: 240} // Takmer nepriehľadné biele pozadie
+
+			size := gtx.Constraints.Max
+			rect := image.Rect(0, 0, size.X, size.Y)
+			paint.FillShape(gtx.Ops, bgColor, clip.Rect(rect).Op())
+			return layout.Dimensions{Size: size}
+		}),
+
+		layout.Expanded(func(gtx layout.Context) layout.Dimensions {
+			return layout.Inset{Top: unit.Dp(50), Left: unit.Dp(20), Right: unit.Dp(20)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			// Main content of the modal
-			return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					// Title
-					return layout.UniformInset(unit.Dp(10)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-						return material.Label(theme.Material(), unit.Sp(20), m.Answers).Layout(gtx)
-					})
-				}),
-				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					// Close button
-					return layout.UniformInset(unit.Dp(10)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-						btn := material.Button(theme.Material(), &m.CloseButton, "Zavrieť")
-						if m.CloseButton.Clicked(gtx) {
-							m.Visible = false // Close the modal
+				return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+						// Title
+						return layout.UniformInset(unit.Dp(10)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+							return material.Label(theme.Material(), unit.Sp(20), "Odpovede testu:").Layout(gtx)
+						})
+					}),
+					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+						// Answers list in rows of 5
+						answers := []rune(m.Answers) // Convert string to rune slice
+						rows := []layout.FlexChild{}
+						for i := 0; i < len(answers); i += 10 {
+							row := []layout.FlexChild{}
+							for j := 0; j < 10 && i+j < len(answers); j++ {
+								index := i + j + 1
+								row = append(row, layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+									return layout.UniformInset(unit.Dp(5)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+										return material.Label(theme.Material(), unit.Sp(16), fmt.Sprintf("%2d:   %c", index, answers[i+j])).Layout(gtx)
+									})
+								}))
+							}
+							rows = append(rows, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+								return layout.Flex{Axis: layout.Horizontal}.Layout(gtx, row...)
+							}))
 						}
-						return btn.Layout(gtx)
-					})
-				}),
-			)
+						return layout.Flex{Axis: layout.Vertical}.Layout(gtx, rows...)
+					}),
+					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+						// Close button
+						return layout.UniformInset(unit.Dp(10)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+							//btn := widgets.Button(theme.Material(), &m.CloseButton, "Zavrieť")
+							btn := Button(theme.Theme, &m.CloseButton, CloseIcon, IconPositionStart, "Zavrieť")
+							btn.Background = themeUI.Gray
+							btn.Color = themeUI.White
+							
+							if m.CloseButton.Clicked(gtx) {
+								m.Visible = false // Close the modal
+							}
+							return btn.Layout(gtx, theme)
+						})
+					}),
+				)
+			})
 		}),
 	)
 }
+
 
 func (m *Modal) Layout(gtx layout.Context, theme *themeUI.Theme) layout.Dimensions {
 	ops := op.Record(gtx.Ops)
