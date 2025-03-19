@@ -3,10 +3,15 @@ package tests
 import (
 	"ScanEvalApp/internal/database/repository"
 	"ScanEvalApp/internal/logging"
+	"ScanEvalApp/internal/scanprocessing"
+
 	"fmt"
 	"log/slog"
 	"strings"
 	"testing"
+	"time"
+	"path/filepath"
+	"os"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -65,105 +70,7 @@ var expectedResults = map[int]string{
 	33: "baacecbdxbcbdaaeecdabbbdacedabcbaecabcce",
 }
 
-var expectedCorrectedResults = map[int]map[int]string{
-	13: {
-		1:  "c",
-		15: "c",
-		17: "c",
-		33: "b",
-	},
-	47: {
-		9:  "d",
-		10: "d",
-		13: "b",
-		25: "e",
-		30: "e",
-		37: "c",
-	},
-	14: {
-		6:  "e",
-		21: "d",
-	},
-	49: {
-		8:  "d",
-		9:  "c",
-		10: "c",
-		17: "c",
-		34: "d",
-	},
-	44: {
-		19: "b",
-		22: "c",
-		24: "b",
-		25: "d",
-		33: "d",
-	},
-	43: {
-		14: "e",
-		18: "e",
-		29: "a",
-		36: "b",
-	},
-	8: {
-		2:  "d",
-		23: "b",
-		39: "e",
-	},
-	21: {
-		13: "c",
-		23: "b",
-		39: "e",
-	},
-	12: {
-		17: "e",
-	},
-	7: {
-		4: "c",
-	},
-	4: {
-		15: "e",
-	},
-	34: {
-		6:  "c",
-		27: "e",
-	},
-	46: {
-		29: "c",
-	},
-	39: {
-		34: "c",
-		35: "a",
-	},
-	16: {
-		29: "d",
-	},
-	6: {
-		24: "c",
-		26: "a",
-	},
-	42: {
-		9: "a",
-	},
-	5: {
-		4:  "c",
-		15: "c",
-	},
-	23: {
-		9: "c",
-	},
-	37: {
-		25: "d",
-	},
-	10: {
-		13: "e",
-	},
-	48: {
-		11: "b",
-	},
-	33: {
-		24: "d",
-	},
-}
+
 
 var expectedAnswer_1_page = map[int]string{
 	392411: "bccdeeddccdddcxcxceddcxebxcceddbeababddc",
@@ -271,6 +178,114 @@ var expectedAnswer_both_page = map[int]string{
 	188319: "bbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaa",	
 }
 
+// test 5 (5 marec)
+var expectedAnswer_005 = map[int]string{
+	507113: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	227633: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	152342: "cccccccccccccccccccccccccccccccccccccccc",
+	870991: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+	590787: "dddddddddddddddddddddddddddddddddddddddd",
+	646042: "cccccccccccccccccccccccccccccccccccccccc",
+	984996: "ceabcedecdeexedeeecdbcdededcbcdedcbabcde",
+	404065: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	567742: "aaaaaaaaaaaaaaaaaaaaabababababababababab",
+	385676: "babbbcccccbbbbbcccccaaaaabbbbbcccccccccc",
+	774776: "aaaaaaaaaabbbbbcccccdddddeeeeeaaaaabbbbb",
+	375942: "ababababababababbbbbcdecdecdecdecdecdedd",
+	433835: "aaaaabbbbbaaaaabbbbbdddddeeeeeaaaaabbbbb",
+	411098: "bbbbbcccccdddddeeeeeeeeeedddddcccccbbbbb",
+	526606: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+	257457: "abababababababababababababababababababab",
+	783456: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	801650: "cddcdcddcccccccddddddddddcccccaaaaaaaaaa",
+	753491: "bcbcbcbcbcbcbcbcbcbcebecddeedddeeeeddddd",
+	110198: "abcdedcbabcdedcbabcdabcdedcbabcdedcbabcd",
+	705932: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	537282: "eeeeedddddcccccbbbbbeeeeeeeeeeeeeeeeeeee", // opilec vyplnal (zle kriziky)
+	484470: "eeeddcccccaaabbbbbabdddddcccccbbbbbaaaaa",
+	422417: "aabbaabbaabbaabbaabbdddddddddddddddeeeee",
+	761336: "aaaaabbbbbcccccdddddeeeeeeeeeeeeeeeccccc", // opilec
+	392411: "cbbbbxddddeeeeeaaaaacccccdddddaaaaaccbcc",
+	212971: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	783424: "ededededededededededeeeeeeeeeeeeeeeeeeee",
+	133168: "abcdeabcdeabcdeabcdeedcbaedcbaedcbaedcba",
+	648037: "dddddcccccbbbbbaaaaadddddeeeeeaaaaaeeeee",
+	872413: "cccccccccccccccccccccccccccccccccccccccc",
+	639863: "abcdedcbabcdedcbabcdabcdeedcbabcdeeeeeee",
+	363580: "abcdedcbabcdedcbabcdabcdedcbabcdeeedcbab",
+	985335: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+	168030: "aaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaa", // tu bola dopisana 21 v papieri
+	235850: "dcdcdcdcdcdcdcdcdcdcbcbcbcbcbcbcbcbcbcbb", // predposledne mozno x 34slide
+	798399: "edcbabcdedcbabcdedcbabcdedcbabcdedcbabcx",
+	731579: "bbcccdddddeeeeeaaaaabbbbbbbbbbcccccddddd",
+	760018: "aaaaabbbbbcccccdddddcccccdddddeeeeeccccc",
+	636975: "cccccbbbbbaaaaadddddeeeeedddddcccccbbbbb",
+	658013: "aaaaabbbbbbbbbbcccccdededddccdccccddcccc",
+	631788: "aaaaaaaaaaaaaaaaaaaacccccccccccccccccccc",
+	990337: "ababababababababababcbcbcbcbcbcbcbcbcbcb",
+	236273: "cbadecccccbbbbbaaaaaeeeeedddddcccccbbbbb",
+	300532: "ababababababababababdededededededededede",
+	988443: "dededededecbcbbaaaaacccccbbbbbaaaaaeeeee",
+	123800: "bbbbbbbbbbbbbbbbbbbbcccccccccccccccccccc",
+	624245: "abcdeedcbaabcdeedcbadededededededededede",
+	913602: "dddddddddddddddddddddddddddddddddddddddd",
+	188319: "aaaaabbbbbaaaaabbbbbaaaaabbbbbaaaaaccccc",
+}
+
+// test 4 (5 marec)
+var expectedAnswer_712 = map[int]string{
+	507113: "dddddddddddddddddddddddddddddddddddddddd",
+	227633: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+	152342: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	870991: "dddddddddddddddddddddddddddddddddddddddd",
+	590787: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+	646042: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	984996: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	404065: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	567742: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	385676: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	774776: "aaaaaaaabbbbbbbbccccccccddddddddeeeeeeee",
+	375942: "cccccccccccccccccccccccccccccccccccccccc",
+	433835: "aaaabbbbaaaabbbbaaaabbbbaaaabbbbaaaabbbb",
+	411098: "edcbaedcbaedcbaedcbaedcbaedcbaedcbaedcba",
+	526606: "aaaabbbbccccddddeeeeaaaabbbbccccddddeeee",
+	257457: "eeeeeddddccccbbbbaaaeeeeddddccccbbbbaaaa",
+	783456: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	801650: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	753491: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+	110198: "abababababababababababababababababababab",
+	705932: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	537282: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	484470: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	422417: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	761336: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	392411: "abababcbcbcdcdcdedededededcdcdcbcbcbabab",
+	212971: "aabbccddeeddccbbaaaaabcdeedcbaabcdeecbac",
+	783424: "cccccccccccccccccccccccccccccccccccccccc",
+	133168: "dddddddddddddddddddddddddddddddddddddddd",
+	648037: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	872413: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	639863: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	363580: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	985335: "aaaaabbbbbcccccdddddaaaaabbbbbcccccddddd",
+	168030: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	235850: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	798399: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	731579: "dddddddddddddddddddddddddddddddddddddddd",
+	760018: "cccccccccccccccccccccccccccccccccccccccc",
+	636975: "cccccccccccccccccccccccccccccccccccccccc",
+	658013: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+	631788: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+	990337: "aaaaaaaabbbbbbbbccccccccddddddddeeeeeeee",
+	236273: "cccccccccccccccccccccccccccccccccccccccc",
+	300532: "aaaaaaaaaabbbbbbbbbbccccccccccdddddddddd",
+	988443: "aaaaaaaaeeeeeeeeccccccccbbbbbbbbdddddddd",
+	123800: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	624245: "aaaaaaaabbbbbbbbccccccccbbbbbbbbaaaaaaaa",
+	913602: "abcdeabcdeabcdeabcdeabcdeabcdeabcdeabcde",
+	188319: "eeeeeeeeddddddddccccccccbbbbbbbbaaaaaaaa",
+}
+
 func setupTestDB() (*gorm.DB, error) {
 	testDBPath := "../internal/database/scan-eval-db.db"
 	db, err := gorm.Open(sqlite.Open(testDBPath), &gorm.Config{})
@@ -280,7 +295,14 @@ func setupTestDB() (*gorm.DB, error) {
 	return db, nil
 }
 
+func getTestFilePath(relativePath string) string {
+    basePath, _ := os.Getwd() 
+    return filepath.Join(basePath, "../assets/tmp", relativePath) 
+}
+
 func TestAnswerRecognition(t *testing.T) {
+	pdfPath := getTestFilePath("scan-pdfs/Scan_20022025125923.PDF")
+	fmt.Printf(pdfPath) 
 	errorLogger := logging.GetErrorLogger()
 	db, err := setupTestDB()
 	if err != nil {
@@ -288,13 +310,21 @@ func TestAnswerRecognition(t *testing.T) {
 		t.Fatalf("Nepodarilo sa pripojiť k databáze: %v", err)
 	}
 
+	exam, err := repository.GetExam(db, 1) // testID = 1
+	if err != nil {
+		t.Fatalf("Nepodarilo sa načítať skúšku: %v", err)
+	}
+	startTime := time.Now()
+	scanprocessing.ProcessPDF(pdfPath, exam, db, nil)
+	duration := time.Since(startTime)
+
 	totalQuestions := 0
 	totalCorrect := 0
 	totalMissing := 0
-	totalUnrecognized := 0 
+	totalUnrecognized := 0 // New counter for unrecognized answers
 
-	for studentID, expectedAnswers := range expectedAnswer_both_page {
-		student, err := repository.GetStudentByRegistrationNumber(db, uint(studentID), 1) // testID = 1
+	for studentID, expectedAnswers := range expectedAnswer_005 {
+		student, err := repository.GetStudentByRegistrationNumber(db, uint(studentID), 5)
 		if err != nil {
 			t.Errorf("Študent %d nebol nájdený: %v\n", studentID, err)
 			totalMissing += len(expectedAnswers)
@@ -302,7 +332,7 @@ func TestAnswerRecognition(t *testing.T) {
 		}
 		fmt.Printf("-----------------------\n")
 		recognizedAnswers := student.Answers
-		//ak nie je nic v DB
+		// Ak nie je nič v DB
 		if len(recognizedAnswers) == 0 {
 			t.Errorf("Študent %d: chýbajúce odpovede\n", studentID)
 			totalMissing += len(expectedAnswers)
@@ -323,27 +353,23 @@ func TestAnswerRecognition(t *testing.T) {
 
 			if recognizedAnswers[i] == expectedAnswers[i] {
 				correctCount++
-			} else if recognizedAnswers[i] == '0' { // Check for unrecognized answer
+			} else if recognizedAnswers[i] == '0' {
 				totalUnrecognized++
 				unrecognized++
-				missingCount++
-			}else {
-				unrecognized++
-				fmt.Printf("Študent %d: Otázka č. %d, očakávané %s, rozpoznané %s\n", studentID, i+1, string(expectedAnswers[i]), string(recognizedAnswers[i]))
 			}
-			
 		}
 
 		totalCorrect += correctCount
 		totalMissing += missingCount
-		fmt.Printf("Študent %d: správne %d/40, nesprávne %d, chýbajúce %d\n", studentID, correctCount, unrecognized, missingCount)
+		fmt.Printf("Študent %d: správne %d/40, chýbajúce %d, nezachytené %d\n", studentID, correctCount, missingCount, unrecognized)
 
 	}
 
 	successRate := float64(totalCorrect) / float64(totalQuestions) * 100
-	fmt.Printf("Celková úspešnosť OCR: %.2f%% (%d/%d správnych odpovedí, %d chýbajúcich, %d nezachytených)\n",
-		successRate, totalCorrect, totalQuestions, totalMissing, totalUnrecognized)
+	fmt.Printf("Celková úspešnosť OCR: %.2f%% (%d/%d správnych odpovedí, %d chýbajúcich, %d nezachytených)\n", successRate, totalCorrect, totalQuestions, totalMissing, totalUnrecognized)
+	fmt.Printf("Čas vyhodnotenia: %.2fs\n", duration.Seconds())
 }
+
 
 func TestStudentAnswersExistence(t *testing.T) {
 	errorLogger := logging.GetErrorLogger()
