@@ -63,6 +63,7 @@ func ProcessPage(doc *fitz.Document, n int, exam *models.Exam, db *gorm.DB, prog
 	}
 	errorLogger.Info("Aktualizované odpovede študenta", "studentID", student.ID, "answers", student.Answers)
 	fmt.Println("Spracovaných ", n+1,"/", totalPages )
-	progressChan <- fmt.Sprintf("Spracovaných %d / %d", n+1, totalPages)
-
+	if progressChan != nil {
+		progressChan <- fmt.Sprintf("Spracovaných %d / %d", n+1, totalPages)
+	}
 }
