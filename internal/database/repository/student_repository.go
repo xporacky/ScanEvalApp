@@ -145,7 +145,7 @@ func UpdateStudentAnswers(db *gorm.DB, studentId uint, examId uint, questionNumb
 	}
 	studentAnswers := []rune(student.Answers)
 	for i, answer := range answers {
-		studentAnswers[questionNumber-i] = answer
+		studentAnswers[(questionNumber-len(answers))+i+1] = answer
 	}
 	student.Answers = string(studentAnswers)
 	UpdateStudent(db, student)
