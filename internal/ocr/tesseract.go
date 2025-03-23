@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"regexp"
 	"path/filepath"
-	"os"
 )
 
 const PSM_SINGLE_LINE = "7"
@@ -16,28 +15,12 @@ const PSM_UNIFORM_BLOCK = "6"
 const PSM_DEFAULT = "3"
 
 
-//dynamicky generovane testy
-func getTempImagePath() string {
-	basePath, _ := os.Getwd() 
-	return filepath.Join(basePath, "assets/tmp/temp-image.png")
-}
 
-//ak neexistuje adresar tak ho vytvori
-func ensureTempDirExists() error {
-	tempDir := filepath.Dir(getTempImagePath())
-	if _, err := os.Stat(tempDir); os.IsNotExist(err) {
-		return os.MkdirAll(tempDir, os.ModePerm) 
-	}
-	return nil
-}
 
 func OcrImage(imagePath string, psm string) string {
 	errorLogger := logging.GetErrorLogger()
 
-	if err := ensureTempDirExists(); err != nil {
-		errorLogger.Error("Chyba pri vytváraní adresára pre dočasný obrázok", slog.String("error", err.Error()))
-		panic(err)
-	}
+	
 
 	imagePath, err := filepath.Abs(imagePath)
 	if err != nil {

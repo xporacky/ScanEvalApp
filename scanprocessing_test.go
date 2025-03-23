@@ -1,4 +1,4 @@
-package tests
+package scanprocessing_test
 
 import (
 	"ScanEvalApp/internal/database/repository"
@@ -179,7 +179,7 @@ var expectedAnswer_both_page = map[int]string{
 }
 
 // test 5 (5 marec)
-var expectedAnswer_005 = map[int]string{
+var expectedAnswer_130 = map[int]string{
 	507113: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 	227633: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 	152342: "cccccccccccccccccccccccccccccccccccccccc",
@@ -233,7 +233,7 @@ var expectedAnswer_005 = map[int]string{
 }
 
 // test 4 (5 marec)
-var expectedAnswer_712 = map[int]string{
+var expectedAnswer_190 = map[int]string{
 	507113: "dddddddddddddddddddddddddddddddddddddddd",
 	227633: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
 	152342: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -287,7 +287,7 @@ var expectedAnswer_712 = map[int]string{
 }
 
 func setupTestDB() (*gorm.DB, error) {
-	testDBPath := "../internal/database/scan-eval-db.db"
+	testDBPath := "./internal/database/scan-eval-test-db.db"
 	db, err := gorm.Open(sqlite.Open(testDBPath), &gorm.Config{})
 	if err != nil {
 		return nil, err
@@ -297,11 +297,11 @@ func setupTestDB() (*gorm.DB, error) {
 
 func getTestFilePath(relativePath string) string {
     basePath, _ := os.Getwd() 
-    return filepath.Join(basePath, "../assets/tmp", relativePath) 
+    return filepath.Join(basePath, "./assets/tmp", relativePath) 
 }
 
 func TestAnswerRecognition(t *testing.T) {
-	pdfPath := getTestFilePath("scan-pdfs/Scan_20022025125923.PDF")
+	pdfPath := getTestFilePath("scan-pdfs/SKM_C224e25032011130.pdf")
 	fmt.Printf(pdfPath) 
 	errorLogger := logging.GetErrorLogger()
 	db, err := setupTestDB()
@@ -321,10 +321,10 @@ func TestAnswerRecognition(t *testing.T) {
 	totalQuestions := 0
 	totalCorrect := 0
 	totalMissing := 0
-	totalUnrecognized := 0 // New counter for unrecognized answers
+	totalUnrecognized := 0 
 
-	for studentID, expectedAnswers := range expectedAnswer_005 {
-		student, err := repository.GetStudentByRegistrationNumber(db, uint(studentID), 5)
+	for studentID, expectedAnswers := range expectedAnswer_130 {
+		student, err := repository.GetStudentByRegistrationNumber(db, uint(studentID), 1)
 		if err != nil {
 			t.Errorf("Študent %d nebol nájdený: %v\n", studentID, err)
 			totalMissing += len(expectedAnswers)
@@ -332,7 +332,6 @@ func TestAnswerRecognition(t *testing.T) {
 		}
 		fmt.Printf("-----------------------\n")
 		recognizedAnswers := student.Answers
-		// Ak nie je nič v DB
 		if len(recognizedAnswers) == 0 {
 			t.Errorf("Študent %d: chýbajúce odpovede\n", studentID)
 			totalMissing += len(expectedAnswers)
