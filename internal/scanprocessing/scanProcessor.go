@@ -6,8 +6,9 @@ import (
 	"sync"
 
 	"ScanEvalApp/internal/logging"
-	"log/slog"
 	"fmt"
+	"log/slog"
+
 	"github.com/gen2brain/go-fitz"
 	"gorm.io/gorm"
 )
@@ -62,7 +63,7 @@ func ProcessPage(doc *fitz.Document, n int, exam *models.Exam, db *gorm.DB, prog
 		return
 	}
 	errorLogger.Info("Aktualizované odpovede študenta", "studentID", student.ID, "answers", student.Answers)
-	fmt.Println("Spracovaných ", n+1,"/", totalPages )
+	fmt.Println("Spracovaných ", n+1, "/", totalPages)
 	if progressChan != nil {
 		progressChan <- fmt.Sprintf("Spracovaných %d / %d", n+1, totalPages)
 	}

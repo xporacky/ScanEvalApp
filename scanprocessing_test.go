@@ -1,4 +1,4 @@
-package scanprocessing_test
+package main_test
 
 import (
 	"ScanEvalApp/internal/database/repository"
@@ -7,11 +7,11 @@ import (
 
 	"fmt"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
-	"path/filepath"
-	"os"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -70,9 +70,7 @@ var expectedResults = map[int]string{
 	33: "baacecbdxbcbdaaeecdabbbdacedabcbaecabcce",
 }
 
-
-
-var expectedAnswer_1_page = map[int]string{
+var expectedAnswer_923 = map[int]string{
 	392411: "bccdeeddccdddcxcxceddcxebxcceddbeababddc",
 	913602: "aaaaabbbbbcccccdddddbcbcdbcdbcbababxxxxx",
 	985335: "abdcxbcdcdbxxaedxdcbabccbcbcdecbabcccbbc",
@@ -122,60 +120,60 @@ var expectedAnswer_1_page = map[int]string{
 	123800: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 	385676: "bbbbbbbbbbbbbbbbbbbbbbbbbcccccbbbbbaaaaa",
 	761336: "abcdeabcdeabcdeabcdeabcdeabcdeabcdeabcde",
-	110198: "dabcdcccccdeexdabcdeabcdeabcdeedcbbabxed",	
+	110198: "dabcdcccccdeexdabcdeabcdeabcdeedcbbabxed",
 }
 
-var expectedAnswer_both_page = map[int]string{
-	507113: "babababababababababababababababababababx",	
-	227633: "xxxxccccccccccccccccxxxxxxxxxxxxxxxxxccc",	
-	152342: "cccccccccccccccccccccccccccccccccccccccc",	
-	870991: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",	
-	590787: "dddddddddddddddddddddddddddddddddddddddd",	
-	646042: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",	
-	984996: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",	
-	404065: "dddddddddddddddddddddddddddddddddddddddd",	
-	567742: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",	
-	385676: "abbcxabcdexxxxxabcdeabcdeabcdeabxxeabcde",	
-	774776: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",	
-	375942: "aaaxxxxbbbbbbbbbbbbbxxxxxxxbxxxxxxbxxbxx",	
-	433835: "dddddddddddddddddddddddddddddddddddddddd",	
-	411098: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",	
-	526606: "bbbbbbbbbbbbbbbbbbbbccccccccccccccbbbbbb",	
-	257457: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",	
-	783456: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",	
-	801650: "ebccbcexcdxecbdbbbcdaaaaaadcbccdaabccccc",	
-	753491: "cebdaababcaaaaabcccdecbcdabcdcbbbbbccddd",	
-	110198: "aaaaaccccceeeeedbdbdaabcdcbbcdbbbbbccccc",	
-	705932: "bbbbbbbbbbbbbbbbbbbbxxxxxxxxxxxxxxxxxxxx",	
-	537282: "abcdeeeeeedcbaeedcbaabcdedcbabcdeedcbabc",	
-	484470: "eeeeeeeeeeeeeeeeeeeeabcdeedcbaabcdeedcba",	
-	422417: "abcdeeedcbabcdedcbaxxbcxeeeeeeeeeeeeeeee",	
-	761336: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",	
-	392411: "xxxxxxxxxxxxxxxxxxxxdedeeeeeeeeeeeeeeeee",	
-	212971: "abcdeeeddedeeeexxeeexxxxxxxxxxxxxxxxxxxx",	
-	783424: "abcdeedcbabcdedcbabcbbbbbdccccxddddxaaaa",	
-	133168: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",	
-	648037: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",	
-	872413: "abcaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",	
-	639863: "abcddaaaaabbbbbdddddbabcdabcdeccaaabbbbb",	
-	363580: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",	
-	985335: "ceececdxcdcadddcddcbcebedcdeedcbabddcdee",	
-	168030: "eeeeecccccbbbbbxxxxxcccccbbbbbaaaaabcccc",	
-	235850: "abcdeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",	
-	798399: "aaaaabbbbbcccccdddddaaaaaeeeeedddddbbbbb",	
-	731579: "bbbbbbbaaabbababbbbbeeeeeeeeeedddddddddd",	
-	760018: "aaaaabbbbbcccccdddddbbbbbcccccdddddccccc",	
-	636975: "abbbcbbcbcbaaaaccdccaaaaabbbbbcdaaeabcbc",	
-	658013: "cccccccccccccccccccccccccccccccccccccccc",	
-	631788: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",	
-	990337: "abcdeabcdeabcdeabcdeabcdeabcdeabcdeabcde",	
-	236273: "abcdeabcdeabcdeabcdeabcdeabcdeabcdeabcde",	
-	300532: "abcdedcdedcbabcdedcbabcdedcbabcdedcbabcd",	
-	988443: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",	
-	123800: "aaaaabbbbbccccccccccaaaaacccccdddddbcdcb",	
-	624245: "aaaaabcdeababcdabcdeaabdcabcdcabcdcabbbb",	
-	913602: "abcdeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",	
-	188319: "bbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaa",	
+var expectedAnswer_623 = map[int]string{
+	507113: "babababababababababababababababababababx",
+	227633: "xxxxccccccccccccccccxxxxxxxxxxxxxxxxxccc",
+	152342: "cccccccccccccccccccccccccccccccccccccccc",
+	870991: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+	590787: "dddddddddddddddddddddddddddddddddddddddd",
+	646042: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+	984996: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+	404065: "dddddddddddddddddddddddddddddddddddddddd",
+	567742: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	385676: "abbcxabcdexxxxxabcdeabcdeabcdeabxxeabcde",
+	774776: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	375942: "aaaxxxxbbbbbbbbbbbbbxxxxxxxbxxxxxxbxxbxx",
+	433835: "dddddddddddddddddddddddddddddddddddddddd",
+	411098: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	526606: "bbbbbbbbbbbbbbbbbbbbccccccccccccccbbbbbb",
+	257457: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	783456: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+	801650: "ebccbcexcdxecbdbbbcdaaaaaadcbccdaabccccc",
+	753491: "cebdaababcaaaaabcccdecbcdabcdcbbbbbccddd",
+	110198: "aaaaaccccceeeeedbdbdaabcdcbbcdbbbbbccccc",
+	705932: "bbbbbbbbbbbbbbbbbbbbxxxxxxxxxxxxxxxxxxxx",
+	537282: "abcdeeeeeedcbaeedcbaabcdedcbabcdeedcbabc",
+	484470: "eeeeeeeeeeeeeeeeeeeeabcdeedcbaabcdeedcba",
+	422417: "abcdeeedcbabcdedcbaxxbcxeeeeeeeeeeeeeeee",
+	761336: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+	392411: "xxxxxxxxxxxxxxxxxxxxdedeeeeeeeeeeeeeeeee",
+	212971: "abcdeeeddedeeeexxeeexxxxxxxxxxxxxxxxxxxx",
+	783424: "abcdeedcbabcdedcbabcbbbbbdccccxddddxaaaa",
+	133168: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+	648037: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	872413: "abcaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	639863: "abcddaaaaabbbbbdddddbabcdabcdeccaaabbbbb",
+	363580: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	985335: "ceececdxcdcadddcddcbcebedcdeedcbabddcdee",
+	168030: "eeeeecccccbbbbbxxxxxcccccbbbbbaaaaabcccc",
+	235850: "abcdeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	798399: "aaaaabbbbbcccccdddddaaaaaeeeeedddddbbbbb",
+	731579: "bbbbbbbaaabbababbbbbeeeeeeeeeedddddddddd",
+	760018: "aaaaabbbbbcccccdddddbbbbbcccccdddddccccc",
+	636975: "abbbcbbcbcbaaaaccdccaaaaabbbbbcdaaeabcbc",
+	658013: "cccccccccccccccccccccccccccccccccccccccc",
+	631788: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+	990337: "abcdeabcdeabcdeabcdeabcdeabcdeabcdeabcde",
+	236273: "abcdeabcdeabcdeabcdeabcdeabcdeabcdeabcde",
+	300532: "abcdedcdedcbabcdedcbabcdedcbabcdedcbabcd",
+	988443: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+	123800: "aaaaabbbbbccccccccccaaaaacccccdddddbcdcb",
+	624245: "aaaaabcdeababcdabcdeaabdcabcdcabcdcabbbb",
+	913602: "abcdeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	188319: "bbbbbbbbbbbbbbbbbbbbaaaaaaaaaaaaaaaaaaaa",
 }
 
 // test 5 (5 marec)
@@ -296,13 +294,13 @@ func setupTestDB() (*gorm.DB, error) {
 }
 
 func getTestFilePath(relativePath string) string {
-    basePath, _ := os.Getwd() 
-    return filepath.Join(basePath, "./assets/tmp", relativePath) 
+	basePath, _ := os.Getwd()
+	return filepath.Join(basePath, "./assets/tmp", relativePath)
 }
 
 func TestAnswerRecognition(t *testing.T) {
-	pdfPath := getTestFilePath("scan-pdfs/SKM_C224e25032011130.pdf")
-	fmt.Printf(pdfPath) 
+	pdfPath := getTestFilePath("scan-pdfs/sken_zasadacka_190_400dpi.pdf")
+	fmt.Printf(pdfPath)
 	errorLogger := logging.GetErrorLogger()
 	db, err := setupTestDB()
 	if err != nil {
@@ -321,9 +319,9 @@ func TestAnswerRecognition(t *testing.T) {
 	totalQuestions := 0
 	totalCorrect := 0
 	totalMissing := 0
-	totalUnrecognized := 0 
+	totalUnrecognized := 0
 
-	for studentID, expectedAnswers := range expectedAnswer_130 {
+	for studentID, expectedAnswers := range expectedAnswer_190 {
 		student, err := repository.GetStudentByRegistrationNumber(db, uint(studentID), 1)
 		if err != nil {
 			t.Errorf("Študent %d nebol nájdený: %v\n", studentID, err)
@@ -368,7 +366,6 @@ func TestAnswerRecognition(t *testing.T) {
 	fmt.Printf("Celková úspešnosť OCR: %.2f%% (%d/%d správnych odpovedí, %d chýbajúcich, %d nezachytených)\n", successRate, totalCorrect, totalQuestions, totalMissing, totalUnrecognized)
 	fmt.Printf("Čas vyhodnotenia: %.2fs\n", duration.Seconds())
 }
-
 
 func TestStudentAnswersExistence(t *testing.T) {
 	errorLogger := logging.GetErrorLogger()
@@ -419,12 +416,10 @@ func TestMissingPages(t *testing.T) {
 
 		recognizedAnswers := student.Answers
 
-		
 		zeroCount := strings.Count(recognizedAnswers, "0")
 
-		
 		if zeroCount == 40 {
-			missingPages += 2 
+			missingPages += 2
 		}
 		if zeroCount == 20 {
 			missingPages++
@@ -433,5 +428,3 @@ func TestMissingPages(t *testing.T) {
 
 	fmt.Printf("Celkový počet chýbajúcich strán: %d\n", missingPages)
 }
-
-
