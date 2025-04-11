@@ -284,6 +284,59 @@ var expectedAnswer_190 = map[int]string{
 	188319: "eeeeeeeeddddddddccccccccbbbbbbbbaaaaaaaa",
 }
 
+var expectedAnswer_9april = map[int]string{
+	507113: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	227633: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+	152342: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+	870991: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	590787: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+	646042: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+	984996: "dddddddddddddddddddddddddddddddddddddddd",
+	404065: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	567742: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	385676: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	774776: "dddddddddddddddddddddddddddddddddddddddd",
+	375942: "dddddddddddddddddddddddddddddddddddddddd",
+	433835: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	411098: "cccccccccccccccccccccccccccccccccccccccc",
+	526606: "dddddddddddddddddddddddddddddddddddddddd",
+	257457: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	783456: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	801650: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+	753491: "cccccccccccccccccccccccccccccccccccccccc",
+	110198: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+	705932: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	537282: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	484470: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	422417: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	761336: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+	392411: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	212971: "aaaabbbbccccddddeeeeaaaabbbbccccddddeeee",
+	783424: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	133168: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+	648037: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	872413: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeedexe",
+	639863: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	363580: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	985335: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+	168030: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+	235850: "cccccccccccccccccccccccccccccccccccccccc",
+	798399: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+	731579: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+	760018: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+	636975: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+	658013: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	631788: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+	990337: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+	236273: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	300532: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+	988443: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	123800: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	624245: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	913602: "cccccccccccccccccccccccccccccccccccccccc",
+	188319: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+}
+
 func setupTestDB() (*gorm.DB, error) {
 	testDBPath := "./internal/database/scan-eval-test-db.db"
 	db, err := gorm.Open(sqlite.Open(testDBPath), &gorm.Config{})
@@ -321,7 +374,7 @@ func TestAnswerRecognition(t *testing.T) {
 	totalMissing := 0
 	totalUnrecognized := 0
 
-	for studentID, expectedAnswers := range expectedAnswer_190 {
+	for studentID, expectedAnswers := range expectedAnswer_9april {
 		student, err := repository.GetStudentByRegistrationNumber(db, uint(studentID), 1)
 		if err != nil {
 			t.Errorf("Študent %d nebol nájdený: %v\n", studentID, err)
