@@ -5,10 +5,10 @@ import (
 	"gioui.org/op"
 	"gioui.org/unit"
 	"gioui.org/widget"
-	"gioui.org/widget/material"
+	//"gioui.org/widget/material"
 	//"gioui.org/x/component"
 	"ScanEvalApp/internal/gui/themeUI"
-	"fmt"
+	//"fmt"
 	//"strings"
 	"gioui.org/op/paint"
 	"image/color"
@@ -20,7 +20,7 @@ import (
 type Modal struct {
 	Visible    	bool
 	CloseButton widget.Clickable
-	Answers 		string
+	Content     layout.Widget
 }
 
 func NewModal() *Modal {
@@ -47,31 +47,12 @@ func (m *Modal) layout(gtx layout.Context, theme *themeUI.Theme) layout.Dimensio
 			// Main content of the modal
 				return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						// Title
-						return layout.UniformInset(unit.Dp(10)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-							return material.Label(theme.Material(), unit.Sp(20), "Odpovede testu:").Layout(gtx)
-						})
-					}),
-					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						// Answers list in rows of 5
-						answers := []rune(m.Answers) // Convert string to rune slice
-						rows := []layout.FlexChild{}
-						for i := 0; i < len(answers); i += 10 {
-							row := []layout.FlexChild{}
-							for j := 0; j < 10 && i+j < len(answers); j++ {
-								index := i + j + 1
-								row = append(row, layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-									return layout.UniformInset(unit.Dp(5)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-										return material.Label(theme.Material(), unit.Sp(16), fmt.Sprintf("%2d:   %c", index, answers[i+j])).Layout(gtx)
-									})
-								}))
-							}
-							rows = append(rows, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-								return layout.Flex{Axis: layout.Horizontal}.Layout(gtx, row...)
-							}))
+						if m.Content != nil {
+							return m.Content(gtx) // vložený obsah
 						}
-						return layout.Flex{Axis: layout.Vertical}.Layout(gtx, rows...)
+						return layout.Dimensions{}
 					}),
+					
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 						// Close button
 						return layout.UniformInset(unit.Dp(10)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {

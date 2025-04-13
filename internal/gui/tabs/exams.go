@@ -21,6 +21,7 @@ import (
 
 var deleteButtons []widget.Clickable
 var showAnsButtons []widget.Clickable
+var showGenStatButtons []widget.Clickable
 var evaluateExamBtns []widget.Clickable
 var printExamBtns []widget.Clickable
 var modal widgets.Modal
@@ -42,13 +43,16 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 		return layout.Dimensions{}
 	}
 
-	columns := []string{"Názov", "Rok", "Počet otázok", "Počet študentov", "Dátum", "Ukázať odpovede", "Vymazať", "Vyhodnotiť", "Tlačiť"}
-	columnWidths := []float32{0.2, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1} // Pomery šírok
+	columns := []string{"Názov", "Rok", "Počet otázok", "Počet študentov", "Dátum", "Ukázať odpovede", "Štatistika", "Vymazať", "Vyhodnotiť", "Tlačiť"}
+	columnWidths := []float32{0.2, 0.05, 0.075,  0.1, 0.075, 0.1, 0.1, 0.1, 0.1, 0.1} // Pomery šírok
 	if len(deleteButtons) != len(exams) {
 		deleteButtons = make([]widget.Clickable, len(exams))
 	}
 	if len(showAnsButtons) != len(exams) {
 		showAnsButtons = make([]widget.Clickable, len(exams))
+	}
+	if len(showGenStatButtons) != len(exams) {
+		showGenStatButtons = make([]widget.Clickable, len(exams))
 	}
 	if len(evaluateExamBtns) != len(exams) {
 		evaluateExamBtns = make([]widget.Clickable, len(exams))
@@ -92,6 +96,9 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 									layout.Flexed(columnWidths[8], func(gtx layout.Context) layout.Dimensions {
 										return widgets.LabelBorder(gtx, th, headerSize, columns[8])
 									}),
+									layout.Flexed(columnWidths[9], func(gtx layout.Context) layout.Dimensions {
+										return widgets.LabelBorder(gtx, th, headerSize, columns[9])
+									}),
 								)
 							}
 							exam := exams[i-1]
@@ -102,8 +109,11 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 							if showAnsButtons[i-1].Clicked(gtx) {
 								showAnsExam(&exam)
 								modal.Visible = true
-								modal.Answers = exam.Questions
-
+								modal.Content = BuildAnswersContent(exam.Questions, th)
+							}
+							if showGenStatButtons[i-1].Clicked(gtx) {
+								modal.Visible = true
+								modal.Content = Statistics(gtx, th, &exam)
 							}
 							if evaluateExamBtns[i-1].Clicked(gtx) {
 								*selectedExamID = exam.ID // Nastavenie ID testu
@@ -144,18 +154,24 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 									return btn.Layout(gtx, th)
 								}),
 								layout.Flexed(columnWidths[6], func(gtx layout.Context) layout.Dimensions {
+									btn := widgets.Button(th.Theme, &showGenStatButtons[i-1], widgets.MenuIcon, widgets.IconPositionStart, "Štatistika")
+									btn.Background = themeUI.LightPurple
+									btn.Color = themeUI.White
+									return btn.Layout(gtx, th)
+								}),
+								layout.Flexed(columnWidths[7], func(gtx layout.Context) layout.Dimensions {
 									btn := widgets.Button(th.Theme, &deleteButtons[i-1], widgets.DeleteIcon, widgets.IconPositionStart, "Vymazať")
 									btn.Background = themeUI.Red
 									btn.Color = themeUI.White
 									return btn.Layout(gtx, th)
 								}),
-								layout.Flexed(columnWidths[7], func(gtx layout.Context) layout.Dimensions {
+								layout.Flexed(columnWidths[8], func(gtx layout.Context) layout.Dimensions {
 									btn := widgets.Button(th.Theme, &evaluateExamBtns[i-1], widgets.UploadIcon, widgets.IconPositionStart, "Vyhodnotiť")
 									btn.Background = themeUI.LightGreen
 									btn.Color = themeUI.White
 									return btn.Layout(gtx, th)
 								}),
-								layout.Flexed(columnWidths[8], func(gtx layout.Context) layout.Dimensions {
+								layout.Flexed(columnWidths[9], func(gtx layout.Context) layout.Dimensions {
 									btn := widgets.Button(th.Theme, &printExamBtns[i-1], widgets.SaveIcon, widgets.IconPositionStart, "Tlačiť")
 									btn.Background = themeUI.Gray
 									btn.Color = themeUI.White
@@ -207,3 +223,113 @@ func printExam(exam *models.Exam) {
 	logger := logging.GetLogger()
 	logger.Info("tlačenie testu s ID", slog.Uint64("ID", uint64(exam.ID)))
 }
+
+func BuildAnswersContent(answers string, theme *themeUI.Theme) layout.Widget {
+	return func(gtx layout.Context) layout.Dimensions {
+		return layout.Inset{Left: unit.Dp(10), Right: unit.Dp(10)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+					return layout.UniformInset(unit.Dp(10)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+						return material.Label(theme.Material(), unit.Sp(20), "Odpovede testu:").Layout(gtx)
+					})
+				}),
+				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+					chars := []rune(answers) 
+					rows := []layout.FlexChild{}
+					for i := 0; i < len(chars); i += 10 {
+						row := []layout.FlexChild{}
+						for j := 0; j < 10 && i+j < len(chars); j++ {
+							index := i + j + 1
+							row = append(row, layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+								return layout.UniformInset(unit.Dp(5)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+									return material.Label(theme.Material(), unit.Sp(16), fmt.Sprintf("%2d:   %c", index, chars[i+j])).Layout(gtx)
+								})
+							}))
+						}
+						rows = append(rows, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+							return layout.Flex{Axis: layout.Horizontal}.Layout(gtx, row...)
+						}))
+					}
+					return layout.Flex{Axis: layout.Vertical}.Layout(gtx, rows...)
+				}),
+			)
+		})
+	}
+}
+
+var statisticsOptions []string = []string{
+	"Maximum bodov",
+	"Minimum bodov",
+	"Priemer",
+	"Medián",
+	"Graf rozdelenia bodov celkovo",
+	"Graf rozdelenia za jednotlivé príklady",
+	"Úspešnosť absolútna aj relatívna",
+	"Úspešnosť absolútna aj relatívna pre jednotlivé príklady",
+	"Grafy k úspešnostiam (absolútnym aj relatívnym) pre jednotlivé príklady",
+	"Tabuľka poradia úspešnosti pre jednotlivé príklady",
+}
+
+var generateStatsButton widget.Clickable
+var checkboxes []widget.Bool
+func Statistics(gtx layout.Context, th *themeUI.Theme, exam *models.Exam) layout.Widget {
+	checkboxes = make([]widget.Bool, len(statisticsOptions))
+	return func(gtx layout.Context) layout.Dimensions {
+		if generateStatsButton.Clicked(gtx) {
+			fmt.Println("stlacil tlacidlo")
+			selectedStats :=collectSelectedStats()
+			generateStatistics(selectedStats, exam)
+		}
+		return layout.Inset{Left: unit.Dp(10), Right: unit.Dp(10)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			
+			return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+					return layout.UniformInset(unit.Dp(10)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+						return material.Label(th.Material(), unit.Sp(20), "Vyberte požadované štatistiky:").Layout(gtx)
+					})
+				}),
+				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+					var checkboxItems []layout.FlexChild
+					for i, option := range statisticsOptions {
+						checkboxItems = append(checkboxItems, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+							return material.CheckBox(th.Theme, &checkboxes[i], option).Layout(gtx)
+						}))
+					}
+					return layout.Flex{Axis: layout.Vertical}.Layout(gtx, checkboxItems...)
+				}),
+				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+					btn := widgets.Button(th.Theme, &generateStatsButton, widgets.SaveIcon, widgets.IconPositionStart, "Generovať štatistiky")
+					btn.Background = themeUI.LightGreen
+					btn.Color = themeUI.White
+					return btn.Layout(gtx, th)
+				}),
+			)
+		})
+	}
+}
+
+func collectSelectedStats() []string {
+	var selected []string
+	for i, checked := range checkboxes {
+		if checked.Value {
+			selected = append(selected, statisticsOptions[i])
+		}
+	}
+	return selected
+}
+
+// generateStatistics generuje štatistiky podľa vybraných možností
+func generateStatistics(selectedStats []string, exam *models.Exam) {
+	println("štatistiky pre test: ", exam.Title)
+	// Tento bod by mal byť nahradený logikou generovania štatistík podľa vybraných možností.
+	for _, stat := range selectedStats {
+		// Spracovanie vybranej štatistiky, napríklad:
+		// - Maximum bodov
+		// - Minimum bodov
+		// - Priemer
+		// atď.
+		// Tu môžeš pridať ďalšie spracovanie alebo volanie funkcií na generovanie konkrétnych štatistík.
+		println("Generovanie štatistiky:", stat)
+	}
+}
+
