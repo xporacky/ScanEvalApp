@@ -104,7 +104,7 @@ func MergePDFs(pdf1Path, pdf2Path, outputPath string) error {
 }
 
 // funkcia na paralelne generovanie pdf
-func ParallelGeneratePDFs(db *gorm.DB, templatePath, outputPDFPath string) error {
+func ParallelGeneratePDFs(db *gorm.DB, templatePath, outputPDFPath string) (error, string) {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
@@ -112,7 +112,7 @@ func ParallelGeneratePDFs(db *gorm.DB, templatePath, outputPDFPath string) error
 	var rooms []string
 	if err := db.Model(&models.Student{}).Distinct().Pluck("room", &rooms).Error; err != nil {
 		errorLogger.Error("Error fetching distinct rooms", slog.String("error", err.Error()))
-		return err
+		return err, ""
 	}
 
 	// synchronizacia prace s goroutines pomocou WaitGroup
@@ -139,7 +139,7 @@ func ParallelGeneratePDFs(db *gorm.DB, templatePath, outputPDFPath string) error
 		var students []models.Student
 		if err := db.Where("room = ?", room).Find(&students).Error; err != nil {
 			errorLogger.Error("Error fetching students", slog.String("error", err.Error()))
-			return err
+			return err, ""
 		}
 
 		// paralelne generovanie pdf pre studentov
@@ -250,18 +250,24 @@ func ParallelGeneratePDFs(db *gorm.DB, templatePath, outputPDFPath string) error
 	// presun hlavného PDF na finálnu cestu
 	if err := os.Rename(mainPDFPath, finalPDFPath); err != nil {
 		errorLogger.Error("error moving final PDF", slog.String("error", err.Error()))
-		return err
+		return err, ""
 	}
 
 	// zmeranie celkoveho casu behu programu
 	duration := time.Since(startTime)
 	logger.Debug("Celkový čas generovania PDF", "duration", duration)
 
-	logger.Info("Výsledné PDF úspešne uložené do", slog.String("output_PDF_path", finalPDFPath))
-	return nil
+	absFinalPDFPath, err := filepath.Abs(finalPDFPath)
+	if err != nil {
+		errorLogger.Error("Nepodarilo sa získať absolútnu cestu k výslednému PDF", slog.String("error", err.Error()))
+		return err, ""
+	}
+	logger.Info("Výsledné PDF úspešne uložené do", slog.String("output_PDF_path", absFinalPDFPath))
+
+	return nil, absFinalPDFPath
 }
 
-func PrintSheet(db *gorm.DB, registrationNumber int) error {
+func PrintSheet(db *gorm.DB, registrationNumber int) (error, string) {
 
 	// Inicializácia loggera
 	logger := logging.GetLogger()
@@ -271,7 +277,7 @@ func PrintSheet(db *gorm.DB, registrationNumber int) error {
 	student, err := FindStudentByRegistrationNumber(db, registrationNumber)
 	if err != nil {
 		errorLogger.Error("Error finding student", "registration_number", registrationNumber, slog.String("error", err.Error()))
-		return err // Ak študent neexistuje, vráti sa chyba
+		return err, "" // Ak študent neexistuje, vráti sa chyba
 	}
 
 	// Logovanie úspešného nájdenia študenta
@@ -281,7 +287,7 @@ func PrintSheet(db *gorm.DB, registrationNumber int) error {
 	latexTemplate, err := os.ReadFile(TemplatePath)
 	if err != nil {
 		errorLogger.Error("Error reading LaTeX template for student", "student_id", student.ID, slog.String("error", err.Error()))
-		return err
+		return err, ""
 	}
 	// Logovanie načítania LaTeX šablóny
 	logger.Info("LaTeX template loaded", "template_path", TemplatePath)
@@ -290,7 +296,7 @@ func PrintSheet(db *gorm.DB, registrationNumber int) error {
 	var exam models.Exam
 	if err := db.First(&exam, student.ExamID).Error; err != nil {
 		errorLogger.Error("Error fetching exam for student", "student_id", student.ID, slog.String("error", err.Error()))
-		return err
+		return err, ""
 	}
 	// Logovanie úspešného načítania pisomky
 	logger.Info("Exam fetched for student", "exam_id", exam.ID, "exam_title", exam.Title)
@@ -312,7 +318,7 @@ func PrintSheet(db *gorm.DB, registrationNumber int) error {
 	updatedLatex, err := ReplaceTemplatePlaceholders(latexTemplate, data)
 	if err != nil {
 		errorLogger.Error("Error replacing placeholders for student", "student_id", student.ID, slog.String("error", err.Error()))
-		return err
+		return err, ""
 	}
 	// Logovanie úspešného nahradenia placeholderov
 	logger.Info("Placeholders replaced successfully for student", "student_id", student.ID)
@@ -321,7 +327,7 @@ func PrintSheet(db *gorm.DB, registrationNumber int) error {
 	studentPDF, err := CompileLatexToPDF(updatedLatex)
 	if err != nil {
 		errorLogger.Error("Error generating PDF for student", "student_id", student.ID, slog.String("error", err.Error()))
-		return err
+		return err, ""
 	}
 	// Logovanie úspešnej kompilácie PDF
 	logger.Info("PDF generated for student", "student_id", student.ID)
@@ -330,10 +336,18 @@ func PrintSheet(db *gorm.DB, registrationNumber int) error {
 	studentPDFPath := filepath.Join(TemporaryPDFPath, fmt.Sprintf("student_%d.pdf", student.RegistrationNumber))
 	if err := os.WriteFile(studentPDFPath, studentPDF, FilePermission); err != nil {
 		errorLogger.Error("Error saving PDF for student", "student_id", student.ID, slog.String("error", err.Error()))
-		return err
+		return err, ""
 	}
+	absStudentPath, err := filepath.Abs(studentPDFPath)
 	// Logovanie úspešného uloženia PDF
-	logger.Info("PDF saved successfully for student", "student_id", student.ID, "pdf_path", studentPDFPath)
+	if err != nil {
+		errorLogger.Error("Chyba pri získavaní absolútnej cesty k PDF", "student_id", student.ID, slog.String("error", err.Error()))
+	} else {
+		logger.Info("PDF saved successfully for student",
+			"student_id", student.ID,
+			"pdf_path", absStudentPath,
+		)
+	}
 
-	return nil
+	return nil, absStudentPath
 }

@@ -35,7 +35,6 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 	errorLogger := logging.GetErrorLogger()
 	headerSize := unit.Sp(17)
 	insetWidth := unit.Dp(15)
-	
 
 	exams, err := repository.GetAllExams(db)
 	if err != nil {
@@ -112,9 +111,12 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 
 							}
 							if printExamBtns[i-1].Clicked(gtx) {
-								err := latex.ParallelGeneratePDFs(db, latex.TemplatePath, latex.OutputPDFPath)
+								err, path := latex.ParallelGeneratePDFs(db, latex.TemplatePath, latex.OutputPDFPath)
 								if err != nil {
-									errorLogger.Error("Chyba pri generovaní PDF", slog.String("error", err.Error()))
+									errorLogger.Error("Chyba pri generovaní PDF",
+										slog.String("error", err.Error()),
+										slog.String("path", path),
+									)
 								} else {
 									logger.Info("Úspešne vygenerované PDF pre skúšku", slog.String("examID", fmt.Sprintf("%d", exam.ID)))
 								}
@@ -198,9 +200,7 @@ func showAnsExam(exam *models.Exam) {
 	fmt.Println("ukazanie odpovedi pre test ", exam.ID, " odpovede: ", exam.Questions)
 	logger := logging.GetLogger()
 	logger.Info("Ukázanie opovedí testu s ID", slog.Uint64("ID", uint64(exam.ID)))
-	
 
-	
 }
 
 func printExam(exam *models.Exam) {
