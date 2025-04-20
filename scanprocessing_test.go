@@ -367,7 +367,9 @@ func TestAnswerRecognition(t *testing.T) {
 	}
 	for _, student := range students {
 		student.Answers = seed.GenerateAnswers(40)
-		repository.UpdateStudent(db, &student)
+		if err := repository.UpdateStudent(db, &student); err != nil {
+			t.Fatalf("Nepodarilo sa aktualizovať študenta (ID: %d): %v", student.ID, err)
+		}
 	}
 	exam, err := repository.GetExam(db, 1) // testID = 1
 	if err != nil {
