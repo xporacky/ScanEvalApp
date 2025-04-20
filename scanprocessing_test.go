@@ -2,6 +2,7 @@ package main_test
 
 import (
 	"ScanEvalApp/internal/database/repository"
+	"ScanEvalApp/internal/database/seed"
 	"ScanEvalApp/internal/logging"
 	"ScanEvalApp/internal/scanprocessing"
 
@@ -352,7 +353,7 @@ func getTestFilePath(relativePath string) string {
 }
 
 func TestAnswerRecognition(t *testing.T) {
-	pdfPath := getTestFilePath("scan-pdfs/sken_zasadacka_190_400dpi.pdf")
+	pdfPath := getTestFilePath("scan-pdfs/9_April/600.pdf")
 	fmt.Printf(pdfPath)
 	errorLogger := logging.GetErrorLogger()
 	db, err := setupTestDB()
@@ -360,7 +361,14 @@ func TestAnswerRecognition(t *testing.T) {
 		errorLogger.Error("Nepodarilo sa pripojiť k databáze", slog.Group("CRITICAL", slog.String("error", err.Error())))
 		t.Fatalf("Nepodarilo sa pripojiť k databáze: %v", err)
 	}
-
+	students, err := repository.GetAllStudents(db)
+	if err != nil {
+		return
+	}
+	for _, student := range students {
+		student.Answers = seed.GenerateAnswers(40)
+		repository.UpdateStudent(db, &student)
+	}
 	exam, err := repository.GetExam(db, 1) // testID = 1
 	if err != nil {
 		t.Fatalf("Nepodarilo sa načítať skúšku: %v", err)
