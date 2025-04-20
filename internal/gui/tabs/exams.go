@@ -4,6 +4,7 @@ import (
 	"ScanEvalApp/internal/database/models"
 	"ScanEvalApp/internal/database/repository"
 	"ScanEvalApp/internal/latex"
+	"ScanEvalApp/internal/statistics"
 
 	"ScanEvalApp/internal/gui/tabmanager"
 	"ScanEvalApp/internal/gui/themeUI"
@@ -278,7 +279,7 @@ func Statistics(gtx layout.Context, th *themeUI.Theme, exam *models.Exam) layout
 		if generateStatsButton.Clicked(gtx) {
 			fmt.Println("stlacil tlacidlo")
 			selectedStats :=collectSelectedStats()
-			generateStatistics(selectedStats, exam)
+			statistics.GenerateStatistics(selectedStats, exam)
 		}
 		return layout.Inset{Left: unit.Dp(10), Right: unit.Dp(10)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			
@@ -317,19 +318,3 @@ func collectSelectedStats() []string {
 	}
 	return selected
 }
-
-// generateStatistics generuje štatistiky podľa vybraných možností
-func generateStatistics(selectedStats []string, exam *models.Exam) {
-	println("štatistiky pre test: ", exam.Title)
-	// Tento bod by mal byť nahradený logikou generovania štatistík podľa vybraných možností.
-	for _, stat := range selectedStats {
-		// Spracovanie vybranej štatistiky, napríklad:
-		// - Maximum bodov
-		// - Minimum bodov
-		// - Priemer
-		// atď.
-		// Tu môžeš pridať ďalšie spracovanie alebo volanie funkcií na generovanie konkrétnych štatistík.
-		println("Generovanie štatistiky:", stat)
-	}
-}
-
