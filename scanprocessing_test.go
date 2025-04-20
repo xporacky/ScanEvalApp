@@ -363,7 +363,7 @@ func TestAnswerRecognition(t *testing.T) {
 	}
 	students, err := repository.GetAllStudents(db)
 	if err != nil {
-		return
+		t.Fatalf("Nepodarilo sa načítať študentov: %v", err)
 	}
 	for _, student := range students {
 		student.Answers = seed.GenerateAnswers(40)
