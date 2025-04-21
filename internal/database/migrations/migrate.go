@@ -16,7 +16,7 @@ func MigrateDB() (*gorm.DB, error) {
 
 	logger.Debug("Pripájam sa k databáze...")
 
-	db, err := gorm.Open(sqlite.Open("internal/database/scan-eval-db.db"), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open("database/scan-eval-db.db"), &gorm.Config{})
 	if err != nil {
 		errorLogger.Error("Chyba pri pripájaní k databáze", slog.Group("CRITICAL", slog.String("error", err.Error())))
 		return nil, err
