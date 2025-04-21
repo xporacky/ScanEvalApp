@@ -17,4 +17,5 @@ type Student struct {
 	Score              int
 	Answers            string
 	ExamID             uint `gorm:"not null"`
+	Pages              string
 }

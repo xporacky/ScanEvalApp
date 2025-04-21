@@ -353,7 +353,8 @@ func getTestFilePath(relativePath string) string {
 }
 
 func TestAnswerRecognition(t *testing.T) {
-	pdfPath := getTestFilePath("scan-pdfs/9_April/600.pdf")
+	var counter int = 0 // kvoli pocitaniu spracovanych odpovedi
+	pdfPath := getTestFilePath("scan-pdfs/sken_zasadacka_190_400dpi.pdf")
 	fmt.Printf(pdfPath)
 	errorLogger := logging.GetErrorLogger()
 	db, err := setupTestDB()
@@ -376,7 +377,7 @@ func TestAnswerRecognition(t *testing.T) {
 		t.Fatalf("Nepodarilo sa načítať skúšku: %v", err)
 	}
 	startTime := time.Now()
-	scanprocessing.ProcessPDF(pdfPath, exam, db, nil)
+	scanprocessing.ProcessPDF(pdfPath, exam, db, nil, &counter)
 	duration := time.Since(startTime)
 
 	totalQuestions := 0

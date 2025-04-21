@@ -3,6 +3,7 @@ package repository
 import (
 	"ScanEvalApp/internal/database/models"
 	"fmt"
+	"strconv"
 
 	"gorm.io/gorm"
 	//"fmt"
@@ -138,7 +139,7 @@ func GetStudentsQuery(db *gorm.DB, query string) ([]models.Student, error) {
 	return students, nil
 }
 
-func UpdateStudentAnswers(db *gorm.DB, studentId uint, examId uint, questionNumber int, answers []rune) error {
+func UpdateStudentAnswers(db *gorm.DB, studentId uint, examId uint, questionNumber int, answers []rune, pageNumber int) error {
 	student, err := GetStudentById(db, studentId, examId)
 	if err != nil {
 		return err
@@ -148,6 +149,21 @@ func UpdateStudentAnswers(db *gorm.DB, studentId uint, examId uint, questionNumb
 		studentAnswers[(questionNumber-len(answers))+i+1] = answer
 	}
 	student.Answers = string(studentAnswers)
+
+	pageNumberStr := strconv.Itoa(pageNumber)
+
+	if student.Pages == "" {
+		student.Pages = pageNumberStr
+	} else {
+		student.Pages += "-" + pageNumberStr
+	}
+
 	UpdateStudent(db, student)
 	return nil
+}
+
+func ClearStudentPagesForExam(db *gorm.DB, examId uint) error {
+	return db.Model(&models.Student{}).
+		Where("exam_id = ?", examId).
+		Update("pages", "").Error
 }

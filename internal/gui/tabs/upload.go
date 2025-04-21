@@ -21,16 +21,18 @@ import (
 
 	//"strings"
 	"time"
+
 	"gorm.io/gorm"
+
 	//"encoding/csv"
 	"os"
 )
 
 type UploadTab struct {
-	button   widget.Clickable
-	explorer *explorer.Explorer
-	filePath string
-	examID   uint
+	button       widget.Clickable
+	explorer     *explorer.Explorer
+	filePath     string
+	examID       uint
 	progressChan chan string
 	progressText string
 }
@@ -41,7 +43,7 @@ func (t *UploadTab) SetTestID(id uint) {
 
 func NewUploadTab(w *app.Window) *UploadTab {
 	tab := &UploadTab{
-		explorer: explorer.NewExplorer(w),
+		explorer:     explorer.NewExplorer(w),
 		progressChan: make(chan string, 100),
 	}
 	go func() {
@@ -96,7 +98,7 @@ func (t *UploadTab) Layout(gtx layout.Context, th *material.Theme, db *gorm.DB, 
 				return material.Label(th, unit.Sp(16), text).Layout(gtx)
 			}),
 
-			layout.Rigid(func(gtx layout.Context) layout.Dimensions {				
+			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 				return material.Label(th, unit.Sp(16), t.progressText).Layout(gtx)
 			}),
 		)
@@ -134,6 +136,7 @@ func (t *UploadTab) HandleEvent(evt interface{}) { // Zmena na interface{}
 }
 
 func scanProcess(t *UploadTab, db *gorm.DB) {
+	var counter int = 0
 	if t.examID == 0 && t.filePath == "" {
 		fmt.Println("nevybrane povinne subory")
 		return
@@ -144,6 +147,6 @@ func scanProcess(t *UploadTab, db *gorm.DB) {
 		return
 	}
 	t.progressChan <- "Spracovanie PDF sa začalo..."
-	scanprocessing.ProcessPDF(t.filePath, exam, db, t.progressChan)
+	scanprocessing.ProcessPDF(t.filePath, exam, db, t.progressChan, &counter)
 	t.progressChan <- "Spracovanie Dokončene"
 }
