@@ -110,6 +110,10 @@ func ProcessPage(doc *fitz.Document, pageNumber int, exam *models.Exam, db *gorm
 
 	errorLogger.Info("Našiel sa študent v databáze", "studentID", student.ID, "name", student.Name)
 	questionNumber, answers := EvaluateAnswers(&mat, exam.QuestionCount)
+	if questionNumber == -1 {
+		errorLogger.Error("Chyba pri rozpoznávaní čísiel otázok", "PDF strana", pageNumber)
+		return
+	}
 	mutexUpdate.Lock()
 	err = repository.UpdateStudentAnswers(db, student.ID, exam.ID, questionNumber, answers, pageNumber+1)
 	mutexUpdate.Unlock()

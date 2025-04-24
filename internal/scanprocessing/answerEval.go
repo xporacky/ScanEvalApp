@@ -30,7 +30,6 @@ import (
 //   - []rune: A slice containing the student's selected answers as runes (e.g., 'A', 'B', 'C', etc.).
 func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int) (int, []rune) {
 	logger := logging.GetLogger()
-	errorLogger := logging.GetErrorLogger()
 	var studentAnswers []rune
 	croppedMat := CropMatAnswersOnly(mat)
 	questionNumber := 0
@@ -51,8 +50,6 @@ func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int) (int, []rune) {
 	*mat = croppedMat
 	// if we didnt find question number in whole page
 	if questionNumber == -1 {
-		//TODO nejaky fail safe
-		errorLogger.Error("Neboli nájdené žiadne čísla otázok", "error", "No question number found")
 		return -1, nil
 	}
 	return questionNumber - 1, studentAnswers
@@ -98,13 +95,11 @@ func FindRectangle(mat *gocv.Mat, minAreaSize float64, maxAreaSize float64) imag
 	for i := 0; i < contours.Size(); i++ {
 		c := contours.At(i)
 		approx := gocv.ApproxPolyDP(c, 0.01*gocv.ArcLength(c, true), true)
-		//fmt.Println(gocv.ContourArea(approx), approx.Size())
 		if approx.Size() >= 4 && gocv.ContourArea(approx) > minAreaSize {
 			if maxAreaSize != -1 && gocv.ContourArea(approx) > maxAreaSize {
 				continue
 			}
 			rect := gocv.BoundingRect(approx)
-			//DrawRectangle(mat, rect)
 			return rect
 		}
 	}
@@ -129,7 +124,6 @@ func GetQuestionNumber(mat *gocv.Mat, i int) int {
 	rect := image.Rectangle{Min: image.Point{PADDING, PADDING + (i * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE)}, Max: image.Point{(mat.Cols() / (NUMBER_OF_CHOICES + 1)) - PADDING, ((i + 1) * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE) - PADDING}}
 	questionMat := mat.Region(rect)
 	defer questionMat.Close()
-	//ShowMat(questionMat)
 	SaveMat(TEMP_IMAGE_PATH, questionMat)
 	questionNum, err := ocr.ExtractQuestionNumber(TEMP_IMAGE_PATH)
 	files.DeleteFile(TEMP_IMAGE_PATH)
