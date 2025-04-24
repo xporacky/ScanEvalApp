@@ -3,11 +3,13 @@ package latex
 import (
 	"ScanEvalApp/internal/database/models"
 	"ScanEvalApp/internal/logging"
+
 	"fmt"
 	"log/slog"
 	"os/exec"
 	"path/filepath"
 	"strconv"
+
 	"strings"
 	"unicode"
 
@@ -33,9 +35,11 @@ func removeDiacritics(input string) string {
 
 // FindStudentByRegistrationNumber nájde študenta v DB podľa RegistrationNumber
 func FindStudentByRegistrationNumber(db *gorm.DB, registrationNumber int) (*models.Student, error) {
+	errorLogger := logging.GetErrorLogger()
 	var student models.Student
 	if err := db.Where("registration_number = ?", registrationNumber).First(&student).Error; err != nil {
-		return nil, fmt.Errorf("student not found with RegistrationNumber %d: %w", registrationNumber, err)
+		errorLogger.Error("Student not found with ", slog.Uint64("registration_number", uint64(registrationNumber)), slog.String("error", err.Error()))
+		return nil, err
 	}
 	return &student, nil
 }

@@ -17,7 +17,6 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
-	"log"
 	"log/slog"
 	"os"
 	"strconv"
@@ -162,6 +161,7 @@ func (t *UploadCsv) CreateExam(gtx layout.Context, th *themeUI.Theme, db *gorm.D
 						btn.Background = themeUI.LightGreen
 						btn.Color = themeUI.Black
 						if submitButton.Clicked(gtx) {
+							logger.Info("Vybraný súbor", slog.String("Path", t.filePath))
 							logger.Info("Kliknutie na tlačidlo Odoslať")
 							submitForm(db, t, tm)
 						}
@@ -176,9 +176,11 @@ func (t *UploadCsv) CreateExam(gtx layout.Context, th *themeUI.Theme, db *gorm.D
 
 // Funkcia na otvorenie dialógového okna na výber súboru
 func (t *UploadCsv) openFileDialog(db *gorm.DB) {
+	errorLogger := logging.GetErrorLogger()
+
 	file, err := t.explorer.ChooseFile()
 	if err != nil {
-		log.Println("Chyba pri výbere súboru:", err)
+		errorLogger.Error("Chyba pri výbere súboru:", slog.String("error", err.Error()))
 		return
 	}
 	if file != nil {
@@ -186,11 +188,11 @@ func (t *UploadCsv) openFileDialog(db *gorm.DB) {
 		if f, ok := file.(*os.File); ok {
 			t.filePath = f.Name()
 		} else {
-			log.Println("file nie je typu *os.File")
+			errorLogger.Error("File nie je typu *os.File")
 		}
 		b, err := io.ReadAll(file)
 		if err != nil {
-			log.Println("Chyba pri čítaní súboru:", err)
+			errorLogger.Error("Chyba pri čítaní súboru:", slog.String("error", err.Error()))
 			return
 		}
 		t.selectedFile = string(b)
@@ -275,6 +277,13 @@ func submitForm(db *gorm.DB, t *UploadCsv, tm *tabmanager.TabManager) {
 		return
 	}
 
+	reader := csv.NewReader(strings.NewReader(t.selectedFile))
+	rows, err := reader.ReadAll()
+	if err != nil {
+		errorLogger.Error("Chyba pri čítaní CSV súboru", slog.String("error", err.Error()))
+		return
+	}
+	
 	var answers []string
 	for _, qf := range questionForms {
 		answers = append(answers, qf.selectedOption.Value)
@@ -302,33 +311,24 @@ func submitForm(db *gorm.DB, t *UploadCsv, tm *tabmanager.TabManager) {
 		slog.String("cas", cas),
 		slog.Int("pocetOtazok", pocetOtazok),
 		slog.String("odpovede", answersStr))
-	// Premenná pre uchovávanie zaškrtnutých možností
 
-	fmt.Println(t.selectedFile)
-
-	reader := csv.NewReader(strings.NewReader(t.selectedFile))
-	rows, err := reader.ReadAll()
-	if err != nil {
-		fmt.Println("error1: %s", err)
-		return
-	}
-
-	fmt.Println("studenti v csv: %s", rows)
+	logger.Info("Načítané riadky zo CSV", slog.Int("pocet_riadkov", len(rows)))
+	//fmt.Println("studenti v csv: %s", rows)
 
 	for i, row := range rows {
 		fmt.Println("som dnu for")
 		if i == 0 {
-			fmt.Println("hlavicka")
+			logger.Debug("Hlavička CSV preskočená")
 			continue // Preskočiť hlavičku CSV
 		}
 		birthDate, err := time.Parse("2006-01-02", row[2])
 		if err != nil {
-			fmt.Println("error2: %s", err)
+			errorLogger.Error("Chyba pri parsovaní dátumu narodenia", slog.String("error", err.Error()))
 			return
 		}
 		registrationNumber, err := strconv.Atoi(row[3])
 		if err != nil {
-			fmt.Println("error2: %s", err)
+			errorLogger.Error("Chyba pri parsovaní registračného čísla", slog.String("error", err.Error()))
 			return
 		}
 
@@ -341,10 +341,10 @@ func submitForm(db *gorm.DB, t *UploadCsv, tm *tabmanager.TabManager) {
 			ExamID:             exam.ID, //TODO:preroobilt!!!!!!!!!!!!!!!!!!!!!
 		}
 		if err := repository.CreateStudent(db, &student); err != nil {
-			fmt.Println("error3: ", err)
+			errorLogger.Error("Chyba pri ukladaní študenta", slog.String("error", err.Error()))
 			return
 		} else {
-			fmt.Println("student pridany: %s", student)
+			logger.Info("Študent pridaný", "registration number", student.RegistrationNumber, slog.String("name", student.Name), slog.String("surname", student.Surname))
 		}
 	}
 

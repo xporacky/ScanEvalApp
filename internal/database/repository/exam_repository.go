@@ -13,7 +13,7 @@ func CreateExam(db *gorm.DB, exam *models.Exam) error {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
-	logger.Debug("Vytváranie testu", slog.String("test", exam.Title), slog.String("year", exam.SchoolYear))
+	logger.Debug("Vytváranie testu", slog.String("test", exam.Title), slog.String("cas", exam.SchoolYear))
 	result := db.Create(exam)
 	if result.Error != nil {
 		errorLogger.Error("Chyba pri vytváraní testu", slog.Group("CRITICAL", slog.String("error", result.Error.Error())))
