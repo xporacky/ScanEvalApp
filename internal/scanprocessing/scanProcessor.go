@@ -94,7 +94,7 @@ func ProcessPage(doc *fitz.Document, pageNumber int, exam *models.Exam, db *gorm
 	img, err := doc.Image(pageNumber)
 	if err != nil {
 		errorLogger.Error("Chyba pri extrahovaní obrázka z PDF stránky", slog.Int("page", pageNumber), slog.String("error", err.Error()))
-		panic(err)
+		return
 	}
 	mat := ImageToMat(img)
 	defer mat.Close()
