@@ -109,6 +109,8 @@ func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensi
 
 					student := students[i-1]
 					if printButtons[i-1].Clicked(gtx) {
+						// iba na testovanie, ci pocita dobre score
+						fmt.Println("Student: ", student.RegistrationNumber, "Odpovede: ", student.Answers, ", score: ", student.Score)
 						//printSheet(student.RegistrationNumber)
 						path, err := latex.PrintSheet(db, student.RegistrationNumber)
 						if err != nil {

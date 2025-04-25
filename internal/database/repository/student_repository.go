@@ -79,7 +79,7 @@ func UpdateStudent(db *gorm.DB, student *models.Student) error {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
-	logger.Debug("Aktualizácia študenta", "registration number", student.RegistrationNumber, slog.String("name", student.Name), slog.String("surname", student.Surname))
+	logger.Debug("Aktualizácia študenta", "registration number", student.RegistrationNumber, slog.String("name", student.Name), slog.String("surname", student.Surname), "score", student.Score)
 	result := db.Save(student)
 	if result.Error != nil {
 		errorLogger.Error("Chyba pri aktualizácii študenta", slog.Group("CRITICAL", slog.String("error", result.Error.Error())))
@@ -144,6 +144,11 @@ func UpdateStudentAnswers(db *gorm.DB, studentId uint, examId uint, questionNumb
 	if err != nil {
 		return err
 	}
+	exam, err := GetExam(db, examId)
+	if err != nil {
+		return err
+	}
+	correctAnswers := []rune(exam.Questions)
 	studentAnswers := []rune(student.Answers)
 	for i, answer := range answers {
 		studentAnswers[(questionNumber-len(answers))+i+1] = answer
@@ -157,6 +162,17 @@ func UpdateStudentAnswers(db *gorm.DB, studentId uint, examId uint, questionNumb
 	} else {
 		student.Pages += "-" + pageNumberStr
 	}
+
+	score := 0    
+    for i := 0; i < len(correctAnswers); i++ {
+        studentChar := unicode.ToLower(studentAnswers[i])
+        correctChar := unicode.ToLower(correctAnswers[i])
+        
+        if studentChar == correctChar {
+            score++
+        }
+    }
+    student.Score = score
 
 	UpdateStudent(db, student)
 	return nil
