@@ -110,9 +110,9 @@ func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensi
 					student := students[i-1]
 					if printButtons[i-1].Clicked(gtx) {
 						//printSheet(student.RegistrationNumber)
-						err, path := latex.PrintSheet(db, student.RegistrationNumber)
+						path, err := latex.PrintSheet(db, student.RegistrationNumber)
 						if err != nil {
-							errorLogger.Error("Chyba pri tlači hárku pre študenta", "student_id", student.ID, slog.Uint64("registration_number", uint64(student.RegistrationNumber)),slog.String("path", path), slog.String("error", err.Error()))
+							errorLogger.Error("Chyba pri tlači hárku pre študenta", "student_id", student.ID, slog.Uint64("registration_number", uint64(student.RegistrationNumber)), slog.String("path", path), slog.String("error", err.Error()))
 						} else {
 							logger.Info("Úspešne vytlačený hárok pre študenta", slog.Uint64("registration_number", uint64(student.RegistrationNumber)))
 						}

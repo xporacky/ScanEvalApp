@@ -17,46 +17,48 @@ import (
 	"gorm.io/gorm"
 )
 
-// removeDiacritics odstráni diakritiku a nahradí medzery znakom _
+// removeDiacritics removes diacritics from the input string and replaces spaces with underscores.
+// It normalizes the string to NFD form, removes diacritical marks, and replaces spaces with underscores.
 func removeDiacritics(input string) string {
-	// Normalizuje text do NFD formy (rozklad na základný znak + diakritické znamienko)
 	t := norm.NFD.String(input)
-	// Odstráni všetky neascii znaky (diakritiku)
 	t = strings.Map(func(r rune) rune {
 		if unicode.IsMark(r) {
 			return -1
 		}
 		return r
 	}, t)
-	// Nahradí medzery podtržníkom
+	// Replace spaces with underscores
 	t = strings.ReplaceAll(t, " ", "_")
 	return t
 }
 
-// FindStudentByRegistrationNumber nájde študenta v DB podľa RegistrationNumber
+// FindStudentByRegistrationNumber finds a student in the database by their registration number.
+// It returns a pointer to the student if found, or an error if not found.
 func FindStudentByRegistrationNumber(db *gorm.DB, registrationNumber int) (*models.Student, error) {
 	errorLogger := logging.GetErrorLogger()
 	var student models.Student
+	// Query the database for the student with the specified registration number
 	if err := db.Where("registration_number = ?", registrationNumber).First(&student).Error; err != nil {
+		// Log an error if the student is not found
 		errorLogger.Error("Student not found with ", slog.Uint64("registration_number", uint64(registrationNumber)), slog.String("error", err.Error()))
 		return nil, err
 	}
 	return &student, nil
 }
 
+// SlicePdfForStudent slices a PDF file based on the pages specified in the students record in DB.
+// It uses the pdftk tool to extract specific pages from the input PDF and saves the result to an output PDF.
 func SlicePdfForStudent(db *gorm.DB, registrationNumber int) error {
-	// Inicializácia loggera
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
-	// Najprv nájdi študenta podľa RegistrationNumber
 	student, err := FindStudentByRegistrationNumber(db, registrationNumber)
 	if err != nil {
 		errorLogger.Error("Error finding student", "registration_number", registrationNumber, slog.String("error", err.Error()))
 		return err
 	}
 
-	// rozparsuj stlpec pages cez delimiter -
+	// Parse the pages string from the student record and split it into individual pages
 	pagesStr := student.Pages
 
 	if pagesStr == "" {
@@ -64,12 +66,12 @@ func SlicePdfForStudent(db *gorm.DB, registrationNumber int) error {
 		return nil // TODO osetrit lebo v GUI sa zasa ked sa nevrati error vypise ze to bolo uspesne slicnutie
 	}
 
+	// Split the pages string by the delimiter "-" and convert to integer values
 	pageParts := strings.Split(pagesStr, "-")
-
 	var pages []int
 	for _, part := range pageParts {
 		if part == "" {
-			continue // pre istotu preskočíme prázdne
+			continue // skipping empty parts
 		}
 		pageNum, err := strconv.Atoi(part)
 		if err != nil {
@@ -83,9 +85,9 @@ func SlicePdfForStudent(db *gorm.DB, registrationNumber int) error {
 
 	// TODO - zmenit staticku cestu, treba vybrat dynamicky z priecinka
 	inputPDF := "/home/timo/ScanEvalApp/assets/tmp/scan-pdfs/sken_zasadacka_190_400dpi.pdf"
-	outputPDF := filepath.Join(OutputPDFPath, fmt.Sprintf("student_%d_vyplnene.pdf", registrationNumber))
+	outputPDF := filepath.Join(OUTPUT_PDF_PATH, fmt.Sprintf("student_%d_vyplnene.pdf", registrationNumber))
 
-	// Vytvor string zo strán: napr. "1 3 5"
+	// Convert the list of pages into arguments for pdftk
 	var pageArgs []string
 	for _, p := range pages {
 		pageArgs = append(pageArgs, strconv.Itoa(p))
@@ -95,7 +97,7 @@ func SlicePdfForStudent(db *gorm.DB, registrationNumber int) error {
 	cmdArgs := append([]string{inputPDF, "cat"}, pageArgs...)
 	cmdArgs = append(cmdArgs, "output", outputPDF)
 
-	// Spusti pdftk s rozdelenými argumentmi
+	// Prepare the command-line arguments for pdftk
 	cmd := exec.Command("pdftk", cmdArgs...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {

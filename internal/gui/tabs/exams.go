@@ -111,7 +111,7 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 
 							}
 							if printExamBtns[i-1].Clicked(gtx) {
-								err, path := latex.ParallelGeneratePDFs(db, latex.TemplatePath, latex.OutputPDFPath)
+								path, err := latex.ParallelGeneratePDFs(db, latex.TEMPLATE_PATH, latex.OUTPUT_PDF_PATH)
 								if err != nil {
 									errorLogger.Error("Chyba pri generovaní PDF",
 										slog.String("error", err.Error()),
