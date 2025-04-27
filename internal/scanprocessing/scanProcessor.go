@@ -42,7 +42,7 @@ func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan ch
 	errorLogger := logging.GetErrorLogger()
 
 	// Vyčistenie všetkých stránok študentov pre daný test
-	err := repository.ClearStudentPagesForExam(db, exam.ID)
+	err := repository.ClearStudentForExam(db, exam.ID)
 	if err != nil {
 		errorLogger.Error("Nepodarilo sa vyčistiť stránky študentov", slog.String("examID", fmt.Sprint(exam.ID)), slog.String("error", err.Error()))
 		return

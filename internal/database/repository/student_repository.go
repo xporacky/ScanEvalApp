@@ -163,23 +163,29 @@ func UpdateStudentAnswers(db *gorm.DB, studentId uint, examId uint, questionNumb
 		student.Pages += "-" + pageNumberStr
 	}
 
-	score := 0    
-    for i := 0; i < len(correctAnswers); i++ {
-        studentChar := unicode.ToLower(studentAnswers[i])
-        correctChar := unicode.ToLower(correctAnswers[i])
-        
-        if studentChar == correctChar {
-            score++
-        }
-    }
-    student.Score = score
+	startIndex := (questionNumber - len(answers)) + 1
+	endIndex := questionNumber
+
+	score := 0
+	for i := startIndex; i <= endIndex; i++ {
+		studentChar := unicode.ToLower(studentAnswers[i])
+		correctChar := unicode.ToLower(correctAnswers[i])
+
+		if studentChar == correctChar {
+			score++
+		}
+	}
+	student.Score += score
 
 	UpdateStudent(db, student)
 	return nil
 }
 
-func ClearStudentPagesForExam(db *gorm.DB, examId uint) error {
+func ClearStudentForExam(db *gorm.DB, examId uint) error {
 	return db.Model(&models.Student{}).
 		Where("exam_id = ?", examId).
-		Update("pages", "").Error
+		Updates(map[string]interface{}{
+			"pages": "",
+			"score": 0,
+		}).Error
 }
