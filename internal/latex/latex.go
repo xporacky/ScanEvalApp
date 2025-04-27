@@ -132,13 +132,13 @@ func MergePDFs(pdf1Path, pdf2Path, outputPath string) error {
 // and generates a LaTeX based PDF for each student by replacing template placeholders with student data.
 // The generated PDFs are merged into a single PDF, which is saved to the specified output path.
 // Returns an error and the path of the final merged PDF.
-func ParallelGeneratePDFs(db *gorm.DB, templatePath, outputPDFPath string) (string, error) {
+func ParallelGeneratePDFs(db *gorm.DB, examID uint, templatePath, outputPDFPath string) (string, error) {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
 	var rooms []string
 	// Fetch unique room names from the database
-	if err := db.Model(&models.Student{}).Distinct().Pluck("room", &rooms).Error; err != nil {
+	if err := db.Model(&models.Student{}).Where("exam_id = ?", examID).Distinct().Pluck("room", &rooms).Error; err != nil {
 		errorLogger.Error("Error fetching distinct rooms", slog.String("error", err.Error()))
 		return "", err
 	}
@@ -154,6 +154,10 @@ func ParallelGeneratePDFs(db *gorm.DB, templatePath, outputPDFPath string) (stri
 
 	// nacitanie testu
 	var exam models.Exam
+	if err := db.First(&exam, examID).Error; err != nil {
+		errorLogger.Error("Error fetching exam details", "exam_id", examID, slog.String("error", err.Error()))
+		return "", err
+	}
 
 	logger.Debug("Starting parallel PDF generation")
 
@@ -166,11 +170,10 @@ func ParallelGeneratePDFs(db *gorm.DB, templatePath, outputPDFPath string) (stri
 
 		// Fetch all students in the current room
 		var students []models.Student
-		if err := db.Where("room = ?", room).Find(&students).Error; err != nil {
+		if err := db.Where("room = ? AND exam_id = ?", room, examID).Find(&students).Error; err != nil {
 			errorLogger.Error("Error fetching students", slog.String("error", err.Error()))
 			return "", err
 		}
-
 		// Generate PDFs concurrently for each student
 		for _, student := range students {
 			wg.Add(1)
@@ -186,11 +189,11 @@ func ParallelGeneratePDFs(db *gorm.DB, templatePath, outputPDFPath string) (stri
 					return
 				}
 
-				// Load the exam for the student
-				if err := db.First(&exam, student.ExamID).Error; err != nil {
-					errorLogger.Error("Error fetching exam for student", "student_id", student.ID, slog.String("error", err.Error()))
-					return
-				}
+				// // Load the exam for the student
+				// if err := db.First(&exam, student.ExamID).Error; err != nil {
+				// 	errorLogger.Error("Error fetching exam for student", "student_id", student.ID, slog.String("error", err.Error()))
+				// 	return
+				// }
 
 				// Prepare the data to replace placeholders in the LaTeX template
 				data := TemplateData{

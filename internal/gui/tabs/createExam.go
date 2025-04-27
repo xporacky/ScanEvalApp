@@ -8,20 +8,19 @@ povolit iba jednu moznost pri danej otazke
 osetrit vstupy
 */
 import (
+	"ScanEvalApp/internal/csvhelper"
 	"ScanEvalApp/internal/database/models"
 	"ScanEvalApp/internal/database/repository"
 	"ScanEvalApp/internal/gui/tabmanager"
 	"ScanEvalApp/internal/gui/themeUI"
 	"ScanEvalApp/internal/gui/widgets"
 	"ScanEvalApp/internal/logging"
-	"encoding/csv"
 	"fmt"
 	"io"
 	"log/slog"
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	"gioui.org/app"
 	"gioui.org/layout"
@@ -269,7 +268,7 @@ func submitForm(db *gorm.DB, t *UploadCsv, tm *tabmanager.TabManager) {
 
 	// Načítame údaje zo všetkých inputov
 	nazov := nameInput.Text()
-	miestnost := roomInput.Text()
+	// miestnost := roomInput.Text()
 	cas := timeInput.Text()
 	pocetOtazok, err := strconv.Atoi(questionsInput.Text())
 	if err != nil {
@@ -277,13 +276,6 @@ func submitForm(db *gorm.DB, t *UploadCsv, tm *tabmanager.TabManager) {
 		return
 	}
 
-	reader := csv.NewReader(strings.NewReader(t.selectedFile))
-	rows, err := reader.ReadAll()
-	if err != nil {
-		errorLogger.Error("Chyba pri čítaní CSV súboru", slog.String("error", err.Error()))
-		return
-	}
-	
 	var answers []string
 	for _, qf := range questionForms {
 		answers = append(answers, qf.selectedOption.Value)
@@ -304,49 +296,17 @@ func submitForm(db *gorm.DB, t *UploadCsv, tm *tabmanager.TabManager) {
 		errorLogger.Error("Chyba pri ukladaní testu", slog.Group("CRITICAL", slog.String("error", err.Error())))
 		return
 	}
-	// Vytvoríme si výsledný výpis
-	logger.Info("Formulár odoslaný",
-		slog.String("nazov", nazov),
-		slog.String("miestnost", miestnost),
-		slog.String("cas", cas),
-		slog.Int("pocetOtazok", pocetOtazok),
-		slog.String("odpovede", answersStr))
 
-	logger.Info("Načítané riadky zo CSV", slog.Int("pocet_riadkov", len(rows)))
-	//fmt.Println("studenti v csv: %s", rows)
-
-	for i, row := range rows {
-		fmt.Println("som dnu for")
-		if i == 0 {
-			logger.Debug("Hlavička CSV preskočená")
-			continue // Preskočiť hlavičku CSV
-		}
-		birthDate, err := time.Parse("2006-01-02", row[2])
-		if err != nil {
-			errorLogger.Error("Chyba pri parsovaní dátumu narodenia", slog.String("error", err.Error()))
-			return
-		}
-		registrationNumber, err := strconv.Atoi(row[3])
-		if err != nil {
-			errorLogger.Error("Chyba pri parsovaní registračného čísla", slog.String("error", err.Error()))
-			return
-		}
-
-		student := models.Student{
-			Name:               row[0],
-			Surname:            row[1],
-			BirthDate:          birthDate,
-			RegistrationNumber: registrationNumber,
-			Room:               row[4],
-			ExamID:             exam.ID, //TODO:preroobilt!!!!!!!!!!!!!!!!!!!!!
-		}
-		if err := repository.CreateStudent(db, &student); err != nil {
-			errorLogger.Error("Chyba pri ukladaní študenta", slog.String("error", err.Error()))
-			return
-		} else {
-			logger.Info("Študent pridaný", "registration number", student.RegistrationNumber, slog.String("name", student.Name), slog.String("surname", student.Surname))
-		}
+	err = csvhelper.ImportStudentsFromCSV(db, t.selectedFile, exam.ID)
+	if err != nil {
+		errorLogger.Error("Chyba pri importe študentov z CSV", slog.Group("CRITICAL", slog.String("error", err.Error())))
+		return
 	}
+
+	logger.Info("Test bol úspešne vytvorený",
+		slog.String("examTitle", exam.Title),
+		slog.String("examID", strconv.Itoa(int(exam.ID))),
+		slog.Int("questionCount", exam.QuestionCount))
 
 	// Resetovanie vstupov
 	nameInput.SetText("")

@@ -1,6 +1,7 @@
 package tabs
 
 import (
+	"ScanEvalApp/internal/csvhelper"
 	"ScanEvalApp/internal/database/models"
 	"ScanEvalApp/internal/database/repository"
 	"ScanEvalApp/internal/latex"
@@ -25,6 +26,7 @@ var showAnsButtons []widget.Clickable
 var showGenStatButtons []widget.Clickable
 var evaluateExamBtns []widget.Clickable
 var printExamBtns []widget.Clickable
+var exportCSV []widget.Clickable
 var modal widgets.Modal
 
 // scrollovanie
@@ -44,8 +46,8 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 		return layout.Dimensions{}
 	}
 
-	columns := []string{"Názov", "Rok", "Počet otázok", "Počet študentov", "Dátum", "Ukázať odpovede", "Štatistika", "Vymazať", "Vyhodnotiť", "Tlačiť"}
-	columnWidths := []float32{0.2, 0.05, 0.075,  0.1, 0.075, 0.1, 0.1, 0.1, 0.1, 0.1} // Pomery šírok
+	columns := []string{"Názov", "Rok", "Počet otázok", "Počet študentov", "Dátum", "Ukázať odpovede", "Štatistika", "Vymazať", "Vyhodnotiť", "Tlačiť", "CSV"}
+	columnWidths := []float32{0.180, 0.06, 0.08, 0.1, 0.075, 0.1, 0.1, 0.1, 0.1, 0.1, 0.05} // Pomery šírok
 	if len(deleteButtons) != len(exams) {
 		deleteButtons = make([]widget.Clickable, len(exams))
 	}
@@ -60,6 +62,9 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 	}
 	if len(printExamBtns) != len(exams) {
 		printExamBtns = make([]widget.Clickable, len(exams))
+	}
+	if len(exportCSV) != len(exams) {
+		exportCSV = make([]widget.Clickable, len(exams))
 	}
 	return layout.Stack{}.Layout(gtx,
 		// Hlavný obsah aplikácie
@@ -100,6 +105,9 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 									layout.Flexed(columnWidths[9], func(gtx layout.Context) layout.Dimensions {
 										return widgets.LabelBorder(gtx, th, headerSize, columns[9])
 									}),
+									layout.Flexed(columnWidths[10], func(gtx layout.Context) layout.Dimensions {
+										return widgets.LabelBorder(gtx, th, headerSize, columns[10])
+									}),
 								)
 							}
 							exam := exams[i-1]
@@ -108,7 +116,6 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 								exams = removeExamFromList(exams, i-1) // Remove exam from the list for UI update
 							}
 							if showAnsButtons[i-1].Clicked(gtx) {
-								showAnsExam(&exam)
 								modal.Visible = true
 								modal.Content = BuildAnswersContent(exam.Questions, th)
 							}
@@ -122,7 +129,7 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 
 							}
 							if printExamBtns[i-1].Clicked(gtx) {
-								path, err := latex.ParallelGeneratePDFs(db, latex.TEMPLATE_PATH, latex.OUTPUT_PDF_PATH)
+								path, err := latex.ParallelGeneratePDFs(db, exam.ID, latex.TEMPLATE_PATH, latex.OUTPUT_PDF_PATH)
 								if err != nil {
 									errorLogger.Error("Chyba pri generovaní PDF",
 										slog.String("error", err.Error()),
@@ -132,6 +139,16 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 									logger.Info("Úspešne vygenerované PDF pre skúšku", slog.String("examID", fmt.Sprintf("%d", exam.ID)))
 								}
 							}
+							if exportCSV[i-1].Clicked(gtx) {
+								err := csvhelper.ExportStudentsToCSV(db, exam)
+								if err != nil {
+									errorLogger.Error("Chyba pri exportovani CSV",
+										slog.String("error", err.Error()))
+								} else {
+									logger.Info("Úspešne vyexportovane CSV pre skúšku", slog.String("examID", fmt.Sprintf("%d", exam.ID)))
+								}
+							}
+
 							return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
 								layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
 									return widgets.Body1Border(gtx, th, exam.Title)
@@ -156,7 +173,7 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 								}),
 								layout.Flexed(columnWidths[6], func(gtx layout.Context) layout.Dimensions {
 									btn := widgets.Button(th.Theme, &showGenStatButtons[i-1], widgets.MenuIcon, widgets.IconPositionStart, "Štatistika")
-									btn.Background = themeUI.LightPurple
+									btn.Background = themeUI.LightGreen
 									btn.Color = themeUI.White
 									return btn.Layout(gtx, th)
 								}),
@@ -168,12 +185,18 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 								}),
 								layout.Flexed(columnWidths[8], func(gtx layout.Context) layout.Dimensions {
 									btn := widgets.Button(th.Theme, &evaluateExamBtns[i-1], widgets.UploadIcon, widgets.IconPositionStart, "Vyhodnotiť")
-									btn.Background = themeUI.LightGreen
+									btn.Background = themeUI.LightPurple
 									btn.Color = themeUI.White
 									return btn.Layout(gtx, th)
 								}),
 								layout.Flexed(columnWidths[9], func(gtx layout.Context) layout.Dimensions {
 									btn := widgets.Button(th.Theme, &printExamBtns[i-1], widgets.SaveIcon, widgets.IconPositionStart, "Tlačiť")
+									btn.Background = themeUI.Green
+									btn.Color = themeUI.White
+									return btn.Layout(gtx, th)
+								}),
+								layout.Flexed(columnWidths[10], func(gtx layout.Context) layout.Dimensions {
+									btn := widgets.Button(th.Theme, &exportCSV[i-1], widgets.FileFolderIcon, widgets.IconPositionStart, "csv")
 									btn.Background = themeUI.Gray
 									btn.Color = themeUI.White
 									return btn.Layout(gtx, th)
@@ -213,18 +236,6 @@ func removeExamFromList(exams []models.Exam, index int) []models.Exam {
 
 }
 
-func showAnsExam(exam *models.Exam) {
-	fmt.Println("ukazanie odpovedi pre test ", exam.ID, " odpovede: ", exam.Questions)
-	logger := logging.GetLogger()
-	logger.Info("Ukázanie opovedí testu s ID", slog.Uint64("ID", uint64(exam.ID)))
-
-}
-
-func printExam(exam *models.Exam) {
-	logger := logging.GetLogger()
-	logger.Info("tlačenie testu s ID", slog.Uint64("ID", uint64(exam.ID)))
-}
-
 func BuildAnswersContent(answers string, theme *themeUI.Theme) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		return layout.Inset{Left: unit.Dp(10), Right: unit.Dp(10)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
@@ -235,7 +246,7 @@ func BuildAnswersContent(answers string, theme *themeUI.Theme) layout.Widget {
 					})
 				}),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					chars := []rune(answers) 
+					chars := []rune(answers)
 					rows := []layout.FlexChild{}
 					for i := 0; i < len(chars); i += 10 {
 						row := []layout.FlexChild{}
@@ -273,16 +284,16 @@ var statisticsOptions []string = []string{
 
 var generateStatsButton widget.Clickable
 var checkboxes []widget.Bool
+
 func Statistics(gtx layout.Context, th *themeUI.Theme, exam *models.Exam) layout.Widget {
 	checkboxes = make([]widget.Bool, len(statisticsOptions))
 	return func(gtx layout.Context) layout.Dimensions {
 		if generateStatsButton.Clicked(gtx) {
-			fmt.Println("stlacil tlacidlo")
-			selectedStats :=collectSelectedStats()
+			selectedStats := collectSelectedStats()
 			statistics.GenerateStatistics(selectedStats, exam)
 		}
 		return layout.Inset{Left: unit.Dp(10), Right: unit.Dp(10)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-			
+
 			return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					return layout.UniformInset(unit.Dp(10)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
