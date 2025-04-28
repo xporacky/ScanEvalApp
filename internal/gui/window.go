@@ -64,7 +64,7 @@ func RunWindow(db *gorm.DB) error {
 						if selectedTestID != 0 {
 							uploadTab.SetTestID(selectedTestID) // Nastavenie ID testu v UploadTab
 						}
-						return uploadTab.Layout(gtx, th.Material(), db, w) // Použitie inicializovaného UploadTab
+						return uploadTab.Layout(gtx, th, db, w) // Použitie inicializovaného UploadTab
 						//return tabs.Upload(gtx, th,w)
 					default:
 						return layout.Dimensions{}

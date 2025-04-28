@@ -21,6 +21,7 @@ type Modal struct {
 	Visible    	bool
 	CloseButton widget.Clickable
 	Content     layout.Widget
+	SetCloseBtnEnable bool
 }
 
 func NewModal() *Modal {
@@ -58,12 +59,18 @@ func (m *Modal) layout(gtx layout.Context, theme *themeUI.Theme) layout.Dimensio
 						return layout.UniformInset(unit.Dp(10)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 							//btn := widgets.Button(theme.Material(), &m.CloseButton, "Zavrieť")
 							btn := Button(theme.Theme, &m.CloseButton, CloseIcon, IconPositionStart, "Zavrieť")
-							btn.Background = themeUI.Gray
-							btn.Color = themeUI.White
-							
-							if m.CloseButton.Clicked(gtx) {
-								m.Visible = false // Close the modal
+							if(m.SetCloseBtnEnable){
+								btn.Background = themeUI.Gray
+								btn.Color = themeUI.White
+							}else{
+								btn.Background = themeUI.LightGray
+								btn.Color = themeUI.White
 							}
+							
+							if(m.SetCloseBtnEnable){
+								if (m.CloseButton.Clicked(gtx)) {
+									m.Visible = false // Close the modal
+								}}
 							return btn.Layout(gtx, theme)
 						})
 					}),

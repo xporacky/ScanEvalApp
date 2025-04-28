@@ -18,6 +18,8 @@ import (
 	//"ScanEvalApp/internal/database/models"
 	"ScanEvalApp/internal/database/repository"
 	"ScanEvalApp/internal/scanprocessing"
+	"ScanEvalApp/internal/gui/widgets"
+	"ScanEvalApp/internal/gui/themeUI"
 
 	//"strings"
 	"time"
@@ -35,6 +37,7 @@ type UploadTab struct {
 	examID       uint
 	progressChan chan string
 	progressText string
+	uploadModal *widgets.Modal
 }
 
 func (t *UploadTab) SetTestID(id uint) {
@@ -45,6 +48,7 @@ func NewUploadTab(w *app.Window) *UploadTab {
 	tab := &UploadTab{
 		explorer:     explorer.NewExplorer(w),
 		progressChan: make(chan string, 100),
+		uploadModal:        widgets.NewModal(),
 	}
 	go func() {
 		for {
@@ -61,10 +65,10 @@ func NewUploadTab(w *app.Window) *UploadTab {
 	return tab
 }
 
-func (t *UploadTab) Layout(gtx layout.Context, th *material.Theme, db *gorm.DB, w *app.Window) layout.Dimensions {
+func (t *UploadTab) Layout(gtx layout.Context, th *themeUI.Theme, db *gorm.DB, w *app.Window) layout.Dimensions {
 	// Spracovanie kliknutí na tlačidlo
 	if t.button.Clicked(gtx) {
-		go t.openFileDialog(db)
+		go t.openFileDialog(db, th)
 	}
 	select {
 	case msg := <-t.progressChan:
@@ -73,40 +77,48 @@ func (t *UploadTab) Layout(gtx layout.Context, th *material.Theme, db *gorm.DB, 
 	default:
 	}
 
-	// Vykreslenie layoutu
-	return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		return layout.Flex{
-			Axis:    layout.Vertical,
-			Spacing: layout.SpaceEvenly,
-		}.Layout(gtx,
-			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return material.Button(th, &t.button, "Vybrať súbor").Layout(gtx)
-			}),
-			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				text := "Žiadny súbor nebol vybraný"
-				if t.filePath != "" {
-					text = fmt.Sprintf("Vybraný súbor: %s", t.filePath)
-
-				}
-				return material.Label(th, unit.Sp(16), text).Layout(gtx)
-			}),
-			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				text := "Žiadny test nebol vybraný"
-				if t.examID != 0 {
-					text = fmt.Sprintf("Vybraný test ID: %d", t.examID)
-				}
-				return material.Label(th, unit.Sp(16), text).Layout(gtx)
-			}),
-
-			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return material.Label(th, unit.Sp(16), t.progressText).Layout(gtx)
-			}),
-		)
-	})
+	// Celý obsah obalíme do layout.Stack
+	return layout.Stack{}.Layout(gtx,
+		// Najskôr vykreslíme hlavnú obrazovku
+		layout.Expanded(func(gtx layout.Context) layout.Dimensions {
+			return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+				return layout.Flex{
+					Axis:    layout.Vertical,
+					Spacing: layout.SpaceEvenly,
+				}.Layout(gtx,
+					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return material.Button(th.Theme, &t.button, "Vybrať súbor").Layout(gtx)
+					}),
+					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+						text := "Žiadny súbor nebol vybraný"
+						if t.filePath != "" {
+							text = fmt.Sprintf("Vybraný súbor: %s", t.filePath)
+						}
+						return material.Label(th.Theme, unit.Sp(16), text).Layout(gtx)
+					}),
+					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+						text := "Žiadny test nebol vybraný"
+						if t.examID != 0 {
+							text = fmt.Sprintf("Vybraný test ID: %d", t.examID)
+						}
+						return material.Label(th.Theme, unit.Sp(16), text).Layout(gtx)
+					}),
+					
+				)
+			})
+		}),
+		// Potom modal navrch (ak je viditeľný)
+		layout.Expanded(func(gtx layout.Context) layout.Dimensions {
+			if t.uploadModal.Visible {
+				return t.uploadModal.Layout(gtx, th)
+			}
+			return layout.Dimensions{}
+		}),
+	)
 }
 
 // Funkcia na otvorenie dialógového okna na výber súboru
-func (t *UploadTab) openFileDialog(db *gorm.DB) {
+func (t *UploadTab) openFileDialog(db *gorm.DB, th *themeUI.Theme) {
 	file, err := t.explorer.ChooseFile()
 	if err != nil {
 		log.Println("Chyba pri výbere súboru:", err)
@@ -122,11 +134,28 @@ func (t *UploadTab) openFileDialog(db *gorm.DB) {
 		} else {
 			log.Println("file nie je typu *os.File")
 		}
-
+		t.uploadModal.Visible = true
+		t.uploadModal.Content = t.BuildProgressContent(th)
+		t.uploadModal.SetCloseBtnEnable = false
 		scanProcess(t, db)
 	}
 }
-
+func (t *UploadTab) BuildProgressContent(th *themeUI.Theme) layout.Widget {
+	return func(gtx layout.Context) layout.Dimensions {
+		return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			return layout.Inset{Left: unit.Dp(10), Right: unit.Dp(10)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+				return layout.Flex{Axis: layout.Vertical, Spacing: layout.SpaceEvenly}.Layout(gtx,
+					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return material.Label(th.Theme, unit.Sp(25), "Spracovanie PDF:").Layout(gtx)
+					}),
+					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return material.Label(th.Theme, unit.Sp(20), t.progressText).Layout(gtx)
+					}),
+				)
+			})
+		})
+	}
+}
 // Spracovanie eventov (pre Explorer)
 func (t *UploadTab) HandleEvent(evt interface{}) { // Zmena na interface{}
 	switch e := evt.(type) {
@@ -149,4 +178,5 @@ func scanProcess(t *UploadTab, db *gorm.DB) {
 	t.progressChan <- "Spracovanie PDF sa začalo..."
 	scanprocessing.ProcessPDF(t.filePath, exam, db, t.progressChan, &counter)
 	t.progressChan <- "Spracovanie Dokončene"
+	t.uploadModal.SetCloseBtnEnable = true
 }

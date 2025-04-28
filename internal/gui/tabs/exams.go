@@ -19,6 +19,8 @@ import (
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"gorm.io/gorm"
+
+
 )
 
 var deleteButtons []widget.Clickable
@@ -117,10 +119,12 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 							}
 							if showAnsButtons[i-1].Clicked(gtx) {
 								modal.Visible = true
+								modal.SetCloseBtnEnable= true
 								modal.Content = BuildAnswersContent(exam.Questions, th)
 							}
 							if showGenStatButtons[i-1].Clicked(gtx) {
 								modal.Visible = true
+								modal.SetCloseBtnEnable = true
 								modal.Content = Statistics(gtx, th, &exam)
 							}
 							if evaluateExamBtns[i-1].Clicked(gtx) {
@@ -129,15 +133,26 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 
 							}
 							if printExamBtns[i-1].Clicked(gtx) {
-								path, err := latex.ParallelGeneratePDFs(db, exam.ID, latex.TEMPLATE_PATH, latex.OUTPUT_PDF_PATH)
-								if err != nil {
-									errorLogger.Error("Chyba pri generovaní PDF",
-										slog.String("error", err.Error()),
-										slog.String("path", path),
-									)
-								} else {
-									logger.Info("Úspešne vygenerované PDF pre skúšku", slog.String("examID", fmt.Sprintf("%d", exam.ID)))
-								}
+								modal.Visible = true
+								modal.SetCloseBtnEnable = false
+								isGenerating := true
+								generatedPath := ""
+								modal.Content = widgets.ContentGenerating(th, &isGenerating, &generatedPath)
+								go func() {
+									path, err := latex.ParallelGeneratePDFs(db, exam.ID, latex.TEMPLATE_PATH, latex.OUTPUT_PDF_PATH)
+									
+									if err != nil {
+										errorLogger.Error("Chyba pri generovaní PDF",
+											slog.String("error", err.Error()),
+											slog.String("path", path),
+										)
+									} else {
+										generatedPath = path
+										isGenerating = false
+										modal.SetCloseBtnEnable= true
+										logger.Info("Úspešne vygenerované PDF pre skúšku", slog.String("examID", fmt.Sprintf("%d", exam.ID)))
+									}
+								}()
 							}
 							if exportCSV[i-1].Clicked(gtx) {
 								err := csvhelper.ExportStudentsToCSV(db, exam)
@@ -329,3 +344,10 @@ func collectSelectedStats() []string {
 	}
 	return selected
 }
+
+
+
+
+
+
+
