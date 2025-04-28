@@ -91,7 +91,7 @@ func DeleteStudent(db *gorm.DB, student *models.Student) error {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 	logger.Debug("Mazanie študenta", "registration number", student.RegistrationNumber, slog.String("name", student.Name), slog.String("surname", student.Surname))
-	result := db.Delete(student)
+	result := db.Unscoped().Delete(student)
 	if result.Error != nil {
 		errorLogger.Error("Chyba pri mazaní študenta", slog.Group("CRITICAL", slog.String("error", result.Error.Error())))
 	}
