@@ -178,7 +178,7 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 									return widgets.Body1Border(gtx, th, fmt.Sprintf("%d", len(exam.Students)))
 								}),
 								layout.Flexed(columnWidths[4], func(gtx layout.Context) layout.Dimensions {
-									return widgets.Body1Border(gtx, th, "datum")
+									return widgets.Body1Border(gtx, th, exam.Date.Format("02.01.2006 15:04"))
 								}),
 								layout.Flexed(columnWidths[5], func(gtx layout.Context) layout.Dimensions {
 									btn := widgets.Button(th.Theme, &showAnsButtons[i-1], widgets.SearchIcon, widgets.IconPositionStart, "Zobraziť")

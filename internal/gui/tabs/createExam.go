@@ -21,6 +21,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"regexp"
+	"time"
 
 	"gioui.org/app"
 	"gioui.org/layout"
@@ -33,8 +35,8 @@ import (
 
 var (
 	nameInput      widget.Editor
-	roomInput      widget.Editor
-	timeInput      widget.Editor
+	schoolYear      widget.Editor
+	datetimeInput      widget.Editor
 	questionsInput widget.Editor
 	submitButton   widget.Clickable
 	createButton   widget.Clickable
@@ -94,13 +96,13 @@ func (t *UploadCsv) CreateExam(gtx layout.Context, th *themeUI.Theme, db *gorm.D
 					}),
 					layout.Flexed(columnWidths[1], func(gtx layout.Context) layout.Dimensions {
 						return layout.UniformInset(insetwidth).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-							editor := widgets.NewEditorField(th.Theme, &roomInput, "Miestnosť")
+							editor := widgets.NewEditorField(th.Theme, &schoolYear, "Šk. rok (YYYY/YY)")
 							return editor.Layout(gtx, th)
 						})
 					}),
 					layout.Flexed(columnWidths[2], func(gtx layout.Context) layout.Dimensions {
 						return layout.UniformInset(insetwidth).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-							editor := widgets.NewEditorField(th.Theme, &timeInput, "Čas")
+							editor := widgets.NewEditorField(th.Theme, &datetimeInput, "Dátum a Čas (dd.MM.yyyy HH:mm)")
 							return editor.Layout(gtx, th)
 						})
 					}),
@@ -261,15 +263,37 @@ func renderOptions(gtx layout.Context, th *themeUI.Theme, questionIndex int, qf 
 
 	return children
 }
+func isValidSchoolYear(schoolYear string) bool {
+	re := regexp.MustCompile(`^\d{4}/\d{2}$`) 
+	return re.MatchString(schoolYear)
+}
+
+func parseDateTime(dateTime string) (time.Time, bool) {
+	parsedTime, err := time.Parse("02.01.2006 15:04", dateTime) 
+	if err != nil {
+		return time.Time{}, false 
+	}
+	return parsedTime, true 
+}
 
 func submitForm(db *gorm.DB, t *UploadCsv, tm *tabmanager.TabManager) {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
-	// Načítame údaje zo všetkých inputov
 	nazov := nameInput.Text()
-	// miestnost := roomInput.Text()
-	cas := timeInput.Text()
+	skrok := schoolYear.Text()
+	if !isValidSchoolYear(skrok) {
+		// Použijeme logger na logovanie chyby
+		errorLogger.Error("Neplatný školský rok", slog.Group("INFO", slog.String("sk.rok", skrok)))
+		return
+	}
+	datumacas := datetimeInput.Text()
+	parsedDateTime, valid := parseDateTime(datumacas)
+	if !valid {
+		// Logovanie chyby s detailmi
+		errorLogger.Error("Neplatný dátum a čas", slog.Group("INFO", slog.String("datumacas", datumacas)))
+		return
+	}
 	pocetOtazok, err := strconv.Atoi(questionsInput.Text())
 	if err != nil {
 		errorLogger.Error("Chyba pri parsovaní počtu otázok", slog.Group("CRITICAL", slog.String("error", err.Error())))
@@ -285,8 +309,8 @@ func submitForm(db *gorm.DB, t *UploadCsv, tm *tabmanager.TabManager) {
 	// Vytvorenie testu
 	exam := models.Exam{
 		Title:      nazov,
-		SchoolYear: cas,
-		//		Room:       miestnost,
+		SchoolYear: skrok,
+		Date:  		parsedDateTime,
 		QuestionCount: pocetOtazok,
 		Questions:     answersStr,
 	}
@@ -310,8 +334,8 @@ func submitForm(db *gorm.DB, t *UploadCsv, tm *tabmanager.TabManager) {
 
 	// Resetovanie vstupov
 	nameInput.SetText("")
-	roomInput.SetText("")
-	timeInput.SetText("")
+	schoolYear.SetText("")
+	datetimeInput.SetText("")
 	questionsInput.SetText("")
 	t.selectedFile = ""
 	t.filePath = ""
