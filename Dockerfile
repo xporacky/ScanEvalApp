@@ -32,7 +32,8 @@ WORKDIR /go/src/app
 COPY go.mod go.sum ./
 RUN go mod download
 
-COPY . .
+COPY ./internal/ ./internal/
+COPY ./main.go ./main.go
 
 # Example build command - modify according to your project
 RUN go build -o /app/main .
