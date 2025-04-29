@@ -342,7 +342,7 @@ func Statistics(gtx layout.Context, th *themeUI.Theme, exam *models.Exam) layout
 					var checkboxItems []layout.FlexChild
 					for i, option := range statisticsOptions {
 						checkboxItems = append(checkboxItems, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-							return material.CheckBox(th.Theme, &checkboxes[i], option).Layout(gtx)
+							return widgets.Checkbox(gtx, th, &checkboxes[i], option, unit.Sp(15))
 						}))
 					}
 					return layout.Flex{Axis: layout.Vertical}.Layout(gtx, checkboxItems...)
