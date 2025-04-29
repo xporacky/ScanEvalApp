@@ -314,9 +314,22 @@ func Statistics(gtx layout.Context, th *themeUI.Theme, exam *models.Exam) layout
 	checkboxes = make([]widget.Bool, len(statisticsOptions))
 	return func(gtx layout.Context) layout.Dimensions {
 		if generateStatsButton.Clicked(gtx) {
-			selectedStats := collectSelectedStats()
-			statistics.GenerateStatistics(selectedStats, exam)
-		}
+			modal.Visible = true
+			modal.SetCloseBtnEnable = false
+			isGenerating := true
+			generatedPath := ""
+			modal.Content = widgets.ContentGenerating(th, &isGenerating, &generatedPath)
+			go func() {
+				selectedStats := collectSelectedStats()
+				statistics.GenerateStatistics(selectedStats, exam)
+				path := "pridaj path kde je ulozeny statistika"
+				
+				generatedPath = path
+				isGenerating = false
+				modal.SetCloseBtnEnable= true
+				}()
+			}
+		
 		return layout.Inset{Left: unit.Dp(10), Right: unit.Dp(10)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 
 			return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
