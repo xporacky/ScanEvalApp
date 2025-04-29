@@ -64,7 +64,7 @@ func ImportStudentsFromCSV(db *gorm.DB, csvContent string, examID uint) error {
 	return nil
 }
 
-func ExportStudentsToCSV(db *gorm.DB, exam models.Exam) error {
+func ExportStudentsToCSV(db *gorm.DB, exam models.Exam) (string, error) {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
@@ -72,17 +72,17 @@ func ExportStudentsToCSV(db *gorm.DB, exam models.Exam) error {
 	err := db.Where("exam_id = ?", exam.ID).Find(&students).Error
 	if err != nil {
 		errorLogger.Error("Chyba pri načítaní študentov", slog.String("error", err.Error()))
-		return err
+		return "" ,err
 	}
 
 	safeTitle := strings.ReplaceAll(exam.Title, " ", "_")
 
-	fileName := fmt.Sprintf("%s/%s_ID%d.csv", EXPORT_DIR, safeTitle, exam.ID)
+	fileName := fmt.Sprintf("%s%s_ID%d.csv", EXPORT_DIR, safeTitle, exam.ID)
 
 	file, err := os.Create(fileName)
 	if err != nil {
 		errorLogger.Error("Chyba pri vytváraní CSV súboru", slog.String("fileName", fileName), slog.String("error", err.Error()))
-		return err
+		return "", err
 	}
 	defer file.Close()
 
@@ -96,7 +96,7 @@ func ExportStudentsToCSV(db *gorm.DB, exam models.Exam) error {
 
 	if err != nil {
 		errorLogger.Error("Chyba pri zápise hlavičky CSV", slog.String("error", err.Error()))
-		return err
+		return "", err
 	}
 
 	for _, student := range students {
@@ -111,11 +111,11 @@ func ExportStudentsToCSV(db *gorm.DB, exam models.Exam) error {
 
 		if err != nil {
 			errorLogger.Error("Chyba pri zápise záznamu študenta do CSV", slog.String("studentName", student.Name), slog.String("error", err.Error()))
-			return err
+			return "", err
 		}
 	}
 
 	logger.Info("Export študentov do CSV úspešný", slog.String("fileName", fileName), slog.Int("studentCount", len(students)))
 
-	return nil
+	return fileName, nil
 }

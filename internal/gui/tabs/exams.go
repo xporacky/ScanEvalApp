@@ -155,13 +155,23 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 								}()
 							}
 							if exportCSV[i-1].Clicked(gtx) {
-								err := csvhelper.ExportStudentsToCSV(db, exam)
-								if err != nil {
-									errorLogger.Error("Chyba pri exportovani CSV",
-										slog.String("error", err.Error()))
-								} else {
-									logger.Info("Úspešne vyexportovane CSV pre skúšku", slog.String("examID", fmt.Sprintf("%d", exam.ID)))
-								}
+								modal.Visible = true
+								modal.SetCloseBtnEnable = false
+								isGenerating := true
+								generatedPath := ""
+								modal.Content = widgets.ContentGenerating(th, &isGenerating, &generatedPath)
+								go func() {
+									path, err := csvhelper.ExportStudentsToCSV(db, exam)
+									
+									if err != nil {
+										errorLogger.Error("Chyba pri exportovani CSV", slog.String("error", err.Error()))
+									} else {
+										generatedPath = path
+										isGenerating = false
+										modal.SetCloseBtnEnable= true
+										logger.Info("Úspešne vyexportovane CSV pre skúšku", slog.String("examID", fmt.Sprintf("%d", exam.ID)))
+									}
+								}()
 							}
 
 							return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
