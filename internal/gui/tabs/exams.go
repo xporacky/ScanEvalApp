@@ -5,7 +5,6 @@ import (
 	"ScanEvalApp/internal/database/models"
 	"ScanEvalApp/internal/database/repository"
 	"ScanEvalApp/internal/latex"
-	"ScanEvalApp/internal/statistics"
 
 	"ScanEvalApp/internal/gui/tabmanager"
 	"ScanEvalApp/internal/gui/themeUI"
@@ -19,8 +18,6 @@ import (
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"gorm.io/gorm"
-
-
 )
 
 var deleteButtons []widget.Clickable
@@ -119,7 +116,7 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 							}
 							if showAnsButtons[i-1].Clicked(gtx) {
 								modal.Visible = true
-								modal.SetCloseBtnEnable= true
+								modal.SetCloseBtnEnable = true
 								modal.Content = BuildAnswersContent(exam.Questions, th)
 							}
 							if showGenStatButtons[i-1].Clicked(gtx) {
@@ -140,7 +137,7 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 								modal.Content = widgets.ContentGenerating(th, &isGenerating, &generatedPath)
 								go func() {
 									path, err := latex.ParallelGeneratePDFs(db, exam.ID, latex.TEMPLATE_PATH, latex.OUTPUT_PDF_PATH)
-									
+
 									if err != nil {
 										errorLogger.Error("Chyba pri generovaní PDF",
 											slog.String("error", err.Error()),
@@ -149,7 +146,7 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 									} else {
 										generatedPath = path
 										isGenerating = false
-										modal.SetCloseBtnEnable= true
+										modal.SetCloseBtnEnable = true
 										logger.Info("Úspešne vygenerované PDF pre skúšku", slog.String("examID", fmt.Sprintf("%d", exam.ID)))
 									}
 								}()
@@ -162,13 +159,13 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 								modal.Content = widgets.ContentGenerating(th, &isGenerating, &generatedPath)
 								go func() {
 									path, err := csvhelper.ExportStudentsToCSV(db, exam)
-									
+
 									if err != nil {
 										errorLogger.Error("Chyba pri exportovani CSV", slog.String("error", err.Error()))
 									} else {
 										generatedPath = path
 										isGenerating = false
-										modal.SetCloseBtnEnable= true
+										modal.SetCloseBtnEnable = true
 										logger.Info("Úspešne vyexportovane CSV pre skúšku", slog.String("examID", fmt.Sprintf("%d", exam.ID)))
 									}
 								}()
@@ -313,9 +310,9 @@ func Statistics(gtx layout.Context, th *themeUI.Theme, exam *models.Exam) layout
 
 	checkboxes = make([]widget.Bool, len(statisticsOptions))
 	// Nastaviť všetky checkboxy na zaškrtnuté
-    for i := range checkboxes {
-        checkboxes[i] = widget.Bool{Value: true}
-    }
+	for i := range checkboxes {
+		checkboxes[i] = widget.Bool{Value: true}
+	}
 	return func(gtx layout.Context) layout.Dimensions {
 		if generateStatsButton.Clicked(gtx) {
 			modal.Visible = true
@@ -325,7 +322,7 @@ func Statistics(gtx layout.Context, th *themeUI.Theme, exam *models.Exam) layout
 			modal.Content = widgets.ContentGenerating(th, &isGenerating, &generatedPath)
 			go func() {
 				selectedStats := collectSelectedStats()
-				path, err := statistics.GenerateStatistics(selectedStats, exam)
+				path, err := latex.GenerateStatistics(selectedStats, exam)
 				if err != nil {
 					errorLogger.Error("Chyba pri generovaní štatistík", slog.String("error", err.Error()))
 					isGenerating = false
@@ -335,8 +332,8 @@ func Statistics(gtx layout.Context, th *themeUI.Theme, exam *models.Exam) layout
 				generatedPath = path
 				isGenerating = false
 				modal.SetCloseBtnEnable = true
-				}()
-			}
+			}()
+		}
 		return layout.Inset{Left: unit.Dp(10), Right: unit.Dp(10)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 
 			return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
@@ -374,10 +371,3 @@ func collectSelectedStats() []string {
 	}
 	return selected
 }
-
-
-
-
-
-
-
