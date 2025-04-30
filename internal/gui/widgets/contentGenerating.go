@@ -18,6 +18,8 @@ func ContentGenerating(th *themeUI.Theme, isGenerating *bool, generatedPath *str
 					var text string
 					if *isGenerating {
 						text = "Generujem..."
+					} else if *generatedPath == "" {
+						text = "Chyba pri generovaní (TIP: skontroluj logy a oprav chybu)"
 					} else {
 						text = "Úspešne vygenerované:\n" + *generatedPath
 					}

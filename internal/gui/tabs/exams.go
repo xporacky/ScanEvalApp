@@ -303,15 +303,19 @@ var statisticsOptions []string = []string{
 	"Graf rozdelenia za jednotlivé príklady",
 	"Úspešnosť absolútna aj relatívna",
 	"Úspešnosť absolútna aj relatívna pre jednotlivé príklady",
-	"Grafy k úspešnostiam (absolútnym aj relatívnym) pre jednotlivé príklady",
-	"Tabuľka poradia úspešnosti pre jednotlivé príklady",
 }
 
 var generateStatsButton widget.Clickable
 var checkboxes []widget.Bool
 
 func Statistics(gtx layout.Context, th *themeUI.Theme, exam *models.Exam) layout.Widget {
+	errorLogger := logging.GetErrorLogger()
+
 	checkboxes = make([]widget.Bool, len(statisticsOptions))
+	// Nastaviť všetky checkboxy na zaškrtnuté
+    for i := range checkboxes {
+        checkboxes[i] = widget.Bool{Value: true}
+    }
 	return func(gtx layout.Context) layout.Dimensions {
 		if generateStatsButton.Clicked(gtx) {
 			modal.Visible = true
@@ -321,15 +325,18 @@ func Statistics(gtx layout.Context, th *themeUI.Theme, exam *models.Exam) layout
 			modal.Content = widgets.ContentGenerating(th, &isGenerating, &generatedPath)
 			go func() {
 				selectedStats := collectSelectedStats()
-				statistics.GenerateStatistics(selectedStats, exam)
-				path := "pridaj path kde je ulozeny statistika"
-				
+				path, err := statistics.GenerateStatistics(selectedStats, exam)
+				if err != nil {
+					errorLogger.Error("Chyba pri generovaní štatistík", slog.String("error", err.Error()))
+					isGenerating = false
+					modal.SetCloseBtnEnable = true
+					return
+				}
 				generatedPath = path
 				isGenerating = false
-				modal.SetCloseBtnEnable= true
+				modal.SetCloseBtnEnable = true
 				}()
 			}
-		
 		return layout.Inset{Left: unit.Dp(10), Right: unit.Dp(10)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 
 			return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
