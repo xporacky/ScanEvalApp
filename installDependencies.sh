@@ -6,14 +6,14 @@ if grep -iq 'fedora' /etc/os-release; then
   sudo dnf update -y
   sudo dnf install -y texlive-scheme-medium xxd wget gcc g++ unzip sqlite3 tesseract tesseract-langpack-slk 
   sudo dnf install -y build-essential cmake git pkg-config libgtk-3-dev libavcodec-dev libavformat-dev libswscale-dev libv4l-dev libxvidcore-dev libx264-dev libjpeg-dev libpng-dev libtiff-dev gfortran openexr libatlas-base-dev python3-dev python3-numpy libtbbmalloc2 libtbb-dev
-  sudo dnf install -y mesa-libEGL-devel libxkbcommon-devel wayland-devel vulkan-headers vulkan-loader-devel libxkbcommon-x11-devel pdftk libx11-xcb-dev poppler-utils
+  sudo dnf install -y mesa-libEGL-devel libxkbcommon-devel wayland-devel vulkan-headers vulkan-loader-devel libxkbcommon-x11-devel pdftk 
   echo 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib64/' >> ~/.bashrc
   source ~/.bashrc
 else
   sudo apt update
   sudo apt install -y texlive-latex-extra texlive-pictures xxd wget gcc g++ unzip sqlite3 tesseract-ocr tesseract-ocr-slk 
   sudo apt install -y build-essential cmake git pkg-config libgtk-3-dev libavcodec-dev libavformat-dev libswscale-dev libv4l-dev libxvidcore-dev libx264-dev libjpeg-dev libpng-dev libtiff-dev gfortran openexr libatlas-base-dev python3-dev python3-numpy libtbbmalloc2 libtbb-dev
-  sudo apt install -y libegl1-mesa-dev libxkbcommon-dev libwayland-dev libvulkan-dev libxkbcommon-x11-dev pdftk
+  sudo apt install -y libegl1-mesa-dev libxkbcommon-dev libwayland-dev libvulkan-dev libxkbcommon-x11-dev pdftk libx11-xcb-dev poppler-utils
 #
 fi
 
