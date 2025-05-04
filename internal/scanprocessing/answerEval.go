@@ -4,13 +4,14 @@ import (
 	"ScanEvalApp/internal/files"
 	"ScanEvalApp/internal/ocr"
 	"image"
-
+	"fmt"
 	"ScanEvalApp/internal/logging"
 	"log/slog"
 
 	"gocv.io/x/gocv"
 )
-
+var MEAN_INTENSITY_X_LOWEST float64
+var MEAN_INTENSITY_X_HIGHEST float64
 // EvaluateAnswers processes a scanned answer sheet image and extracts the student's answers.
 //
 // It takes a pointer to a gocv.Mat representing the scanned sheet and the total number of questions expected.

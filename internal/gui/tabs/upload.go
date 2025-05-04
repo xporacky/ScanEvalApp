@@ -20,8 +20,8 @@ import (
 	"ScanEvalApp/internal/scanprocessing"
 	"ScanEvalApp/internal/gui/widgets"
 	"ScanEvalApp/internal/gui/themeUI"
+	"ScanEvalApp/internal/files"
 
-	//"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -37,44 +37,56 @@ type UploadTab struct {
 	examID       uint
 	progressChan chan string
 	progressText string
+	dropdown     Dropdown
 	uploadModal *widgets.Modal
 }
 
-func (t *UploadTab) SetTestID(id uint) {
-	t.examID = id
+type Dropdown struct {
+	open      bool
+	button    widget.Clickable
+	options   []string
+	selected  widget.Enum
+	lastValue string 
+	
 }
 
 func NewUploadTab(w *app.Window) *UploadTab {
 	tab := &UploadTab{
 		explorer:     explorer.NewExplorer(w),
 		progressChan: make(chan string, 100),
+		dropdown:     NewDropdown(),
 		uploadModal:        widgets.NewModal(),
 	}
 	go func() {
 		for {
-			time.Sleep(1 * time.Second) // Čaká 1 sekundu
+			time.Sleep(1 * time.Second)
 			select {
 			case msg := <-tab.progressChan:
 				tab.progressText = msg
-				w.Invalidate() // Prekreslí GUI
+				w.Invalidate() 
 			default:
-				w.Invalidate() // Aj keď nie je správa, GUI sa aktualizuje
+				w.Invalidate() 
 			}
 		}
 	}()
 	return tab
 }
 
+
+func (t *UploadTab) SetTestID(id uint) {
+	t.examID = id
+}
+
+
 func (t *UploadTab) Layout(gtx layout.Context, th *themeUI.Theme, db *gorm.DB, w *app.Window) layout.Dimensions {
 	// Spracovanie kliknutí na tlačidlo
 	if t.button.Clicked(gtx) {
 		go t.openFileDialog(db, th)
 	}
-	select {
-	case msg := <-t.progressChan:
-		t.progressText = msg
-		w.Invalidate()
-	default:
+
+	
+	if t.dropdown.button.Clicked(gtx) {
+		t.dropdown.open = !t.dropdown.open
 	}
 
 	// Celý obsah obalíme do layout.Stack
@@ -103,6 +115,9 @@ func (t *UploadTab) Layout(gtx layout.Context, th *themeUI.Theme, db *gorm.DB, w
 						}
 						return material.Label(th.Theme, unit.Sp(16), text).Layout(gtx)
 					}),
+          			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+				    	return t.dropdown.Layout(gtx, th.Theme)
+			    	}),
 					
 				)
 			})
@@ -125,9 +140,9 @@ func (t *UploadTab) openFileDialog(db *gorm.DB, th *themeUI.Theme) {
 		return
 	}
 	if file != nil {
-		defer file.Close() // Nezabudni zatvoriť súbor
+		defer file.Close() 
 
-		// Pretypovanie na *os.File
+		
 		if f, ok := file.(*os.File); ok {
 			t.filePath = f.Name()
 			fmt.Println("Cesta k súboru:", t.filePath)
@@ -140,6 +155,7 @@ func (t *UploadTab) openFileDialog(db *gorm.DB, th *themeUI.Theme) {
 		scanProcess(t, db)
 	}
 }
+
 func (t *UploadTab) BuildProgressContent(th *themeUI.Theme) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
@@ -179,4 +195,55 @@ func scanProcess(t *UploadTab, db *gorm.DB) {
 	scanprocessing.ProcessPDF(t.filePath, exam, db, t.progressChan, &counter)
 	t.progressChan <- "Spracovanie Dokončene"
 	t.uploadModal.SetCloseBtnEnable = true
+}
+
+
+func NewDropdown() Dropdown {
+	options, err := files.GetFilesFromConfigs()
+	if err != nil {
+		log.Println("Error reading config files:", err)
+	}
+
+	dropdown := Dropdown{
+		options:  options,
+		selected: widget.Enum{}, 
+	}
+
+	if len(options) > 0 {
+		dropdown.selected.Value = options[0]
+		if err := scanprocessing.LoadConfig(options[0]); err != nil {
+			log.Println("Chyba pri načítaní predvoleného konfigu:", err)
+		}
+
+	}
+
+	return dropdown
+}
+
+
+
+
+func (d *Dropdown) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions {
+	// Ak sa zmenil výber, načítaj konfiguráciu
+	if d.selected.Value != d.lastValue {
+		d.lastValue = d.selected.Value
+		err := scanprocessing.LoadConfig(d.selected.Value)
+		if err != nil {
+			fmt.Println("Chyba pri načítaní konfiguračného súboru:", err)
+		}
+	}
+
+	children := make([]layout.FlexChild, len(d.options))
+	for i, opt := range d.options {
+		option := opt
+		children[i] = layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			radio := material.RadioButton(th, &d.selected, option, option)
+			return radio.Layout(gtx)
+		})
+	}
+
+	return layout.Flex{
+		Axis:    layout.Vertical,
+		Spacing: layout.SpaceEvenly,
+	}.Layout(gtx, children...)
 }

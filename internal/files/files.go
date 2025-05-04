@@ -4,6 +4,7 @@ import (
 	"ScanEvalApp/internal/logging"
 	"log/slog"
 	"os"
+	"strings"
 )
 
 // OpenFile reads and loads the contents of a file from the specified path.
@@ -87,4 +88,22 @@ func DeleteFile(filePath string) error {
 		logger.Info("Súbor úspešne vymazaný", slog.String("file_path", filePath))
 	}
 	return nil
+}
+
+
+func GetFilesFromConfigs() ([]string, error) {
+	files, err := os.ReadDir("./configs")
+	if err != nil {
+		return nil, err
+	}
+
+	var fileNames []string
+	for _, file := range files {
+		if !file.IsDir() {
+			name := file.Name()
+			name = strings.TrimSuffix(name, ".json")
+			fileNames = append(fileNames, name)
+		}
+	}
+	return fileNames, nil
 }

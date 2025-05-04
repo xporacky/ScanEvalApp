@@ -7,13 +7,16 @@ import (
 	"ScanEvalApp/internal/ocr"
 	"fmt"
 	"image"
-
+	"os"
+	"encoding/json"
 	"ScanEvalApp/internal/logging"
 	"log/slog"
 
 	"gocv.io/x/gocv"
 	"gorm.io/gorm"
 )
+
+
 
 // FindContours detects external contours in the provided image using edge detection and morphological operations.
 //
@@ -195,4 +198,31 @@ func GetStudent(mat *gocv.Mat, db *gorm.DB, examID uint) (*models.Student, error
 	}
 	logger.Info("Registracne cislo bolo najdene z hlavicky", slog.Int("registrationNumber", registrationNumber))
 	return repository.GetStudentByRegistrationNumber(db, uint(registrationNumber), examID)
+}
+
+
+func LoadConfig(configFile string) error {
+	configPath := CONFIGS_DIR + configFile + ".json"
+	file, err := os.Open(configPath)
+	if err != nil {
+		return fmt.Errorf("Chyba pri otváraní konfiguračného súboru: %w", err)
+	}
+	defer file.Close()
+
+	var config struct {
+		MeanIntensityXLowest float64 `json:"mean_intensity_x_lowest"`
+		MeanIntensityXHighest float64 `json:"mean_intensity_x_highest"`
+	}
+
+	decoder := json.NewDecoder(file)
+	if err := decoder.Decode(&config); err != nil {
+		return fmt.Errorf("Chyba pri dekódovaní konfiguračného súboru: %w", err)
+	}
+
+	
+	MEAN_INTENSITY_X_LOWEST = config.MeanIntensityXLowest
+	MEAN_INTENSITY_X_HIGHEST = config.MeanIntensityXHighest
+
+
+	return nil
 }
