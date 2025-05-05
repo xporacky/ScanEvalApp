@@ -2,6 +2,7 @@ package latex
 
 import (
 	"ScanEvalApp/internal/database/models"
+	"ScanEvalApp/internal/database/repository"
 	"ScanEvalApp/internal/logging"
 
 	"log/slog"
@@ -41,5 +42,4 @@ func FindStudentByRegistrationNumber(db *gorm.DB, registrationNumber int) (*mode
 	}
 	return &student, nil
 }
-
 

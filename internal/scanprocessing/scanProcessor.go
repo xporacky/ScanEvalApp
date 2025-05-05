@@ -10,6 +10,9 @@ import (
 	"ScanEvalApp/internal/logging"
 	"fmt"
 	"log/slog"
+	"os"
+	"path/filepath"
+	"io"
 
 	"github.com/gen2brain/go-fitz"
 	"gorm.io/gorm"
@@ -60,6 +63,16 @@ func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan ch
 
 	failedPages := &FailedPages{
 		data: make(map[uint][]int),
+	}
+	
+	fileName := fmt.Sprintf("scan_%s_%d.pdf", exam.Title, exam.ID)
+	if err := os.MkdirAll("./assets/tmp/temp/scans", 0755); err != nil {
+		errorLogger.Error("Nepodarilo sa vytvoriť cieľový adresár:", slog.String("error", err.Error()))
+	}
+	destPath := filepath.Join("./assets/tmp/temp/scans", fileName)  //TODO: prerob cestu do const
+	err = copyFile(scanPath, destPath)
+	if err != nil {
+		errorLogger.Error("Chyba pri kopírovaní súboru:", slog.String("error", err.Error()))
 	}
 
 	doc, err := fitz.New(scanPath)
@@ -187,4 +200,28 @@ func ProcessPage(doc *fitz.Document, pageNumber int, exam *models.Exam, db *gorm
 		}
 	}
 
+}
+
+func copyFile(src, dst string) error {
+	sourceFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer sourceFile.Close()
+
+	destinationFile, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer destinationFile.Close()
+	_, err = io.Copy(destinationFile, sourceFile)
+	if err != nil {
+		return err
+	}
+	err = destinationFile.Sync()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
