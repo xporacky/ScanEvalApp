@@ -74,7 +74,7 @@ func (t *SettingTab) Layout(gtx layout.Context, th *themeUI.Theme, w *app.Window
 							return material.Label(th.Theme, unit.Sp(18), "Miesto ukladania súborov:").Layout(gtx)
 						})
 					}),
-					layout.Flexed(0.3, func(gtx layout.Context) layout.Dimensions {
+					layout.Flexed(0.1, func(gtx layout.Context) layout.Dimensions {
 						text := "Žiadny priečinok nebol vybraný"
 						if t.selectedPath != "" {
 							text = t.selectedPath
@@ -88,6 +88,7 @@ func (t *SettingTab) Layout(gtx layout.Context, th *themeUI.Theme, w *app.Window
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 						return layout.Inset{
 							Top: unit.Dp(2),
+							Right: unit.Dp(700),
 						}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 							btn := widgets.Button(th.Theme, &t.selectFolderBtn, widgets.FileFolderIcon, widgets.IconPositionStart, "Vybrať priečinok")
 							btn.Background = themeUI.LightGreen
