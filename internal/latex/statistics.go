@@ -104,7 +104,7 @@ func GenerateStatistics(selectedStats []string, exam *models.Exam) (string, erro
 	// Save PDF to file
 	dirPath, err := config.LoadLastPath()
 	if err != nil {
-		errorLogger.Error("Chyba nacitania configu", slog.String("error", err.Error()))
+		errorLogger.Error("Chyba načítania configu", slog.String("error", err.Error()))
 		return "", err
 	}
 	outputPath := filepath.Join(dirPath, fmt.Sprintf("stats_%s.pdf", exam.Title))
