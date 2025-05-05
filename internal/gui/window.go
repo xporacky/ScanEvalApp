@@ -27,10 +27,11 @@ func RunWindow(db *gorm.DB) error {
 	)
 
 	var ops op.Ops
-	tm := tabmanager.NewTabManager(4) // Vytvor TabManager
-	tabNames := []string{"Písomky", "Študenti", "Vytvorenie Písomky", "Vyhodnotenie testu"}
+	tm := tabmanager.NewTabManager(5) // Vytvor TabManager
+	tabNames := []string{"Písomky", "Študenti", "Vytvorenie Písomky", "Vyhodnotenie testu", "Nastavenia"}
 
 	uploadTab := tabs.NewUploadTab(w)
+	settingTab := tabs.NewSettingTab(w)
 	uploadCsv := tabs.NewUploadCsv(w)
 	var selectedTestID uint
 
@@ -66,6 +67,8 @@ func RunWindow(db *gorm.DB) error {
 						}
 						return uploadTab.Layout(gtx, th, db, w) // Použitie inicializovaného UploadTab
 						//return tabs.Upload(gtx, th,w)
+					case 4:
+						return settingTab.Layout(gtx, th, w)
 					default:
 						return layout.Dimensions{}
 					}
