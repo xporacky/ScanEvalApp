@@ -8,7 +8,7 @@ import (
 )
 
 type AppConfig struct {
-	LastPath string `json:"last_path"`
+	LastPath string `json:"dir_path"`
 }
 
 func getConfigFilePath() string {

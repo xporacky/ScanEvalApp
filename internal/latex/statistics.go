@@ -4,11 +4,13 @@ import (
 	"ScanEvalApp/internal/common"
 	"ScanEvalApp/internal/database/models"
 	"ScanEvalApp/internal/logging"
+	"ScanEvalApp/internal/config"
 	"fmt"
 	"log/slog"
 	"os"
 	"sort"
 	"strings"
+	"path/filepath"
 )
 
 // GenerateStatistics generates statistics based on selected options
@@ -100,9 +102,13 @@ func GenerateStatistics(selectedStats []string, exam *models.Exam) (string, erro
 	}
 
 	// Save PDF to file
-	outputPath := fmt.Sprintf("%sstats_%d.pdf", common.GLOBAL_EXPORT_DIR, exam.ID)
-
-	if err := os.WriteFile(outputPath, pdfBytes, common.FILE_PERMISSION); err != nil {
+	dirPath, err := config.LoadLastPath()
+	if err != nil {
+		errorLogger.Error("Chyba nacitania configu", slog.String("error", err.Error()))
+		return "", err
+	}
+	outputPath := filepath.Join(dirPath, fmt.Sprintf("stats_%s.pdf", exam.Title))
+	if err := os.WriteFile(outputPath, pdfBytes, FILE_PERMISSION); err != nil {
 		errorLogger.Error("Chyba pri ukladaní PDF", slog.String("path", outputPath), slog.String("error", err.Error()))
 		return "", err
 	}
