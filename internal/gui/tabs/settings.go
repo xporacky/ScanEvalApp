@@ -88,7 +88,6 @@ func (t *SettingTab) Layout(gtx layout.Context, th *themeUI.Theme, w *app.Window
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 						return layout.Inset{
 							Top: unit.Dp(2),
-							Right: unit.Dp(8),
 						}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 							btn := widgets.Button(th.Theme, &t.selectFolderBtn, widgets.FileFolderIcon, widgets.IconPositionStart, "Vybrať priečinok")
 							btn.Background = themeUI.LightGreen
