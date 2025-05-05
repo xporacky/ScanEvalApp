@@ -41,3 +41,5 @@ func FindStudentByRegistrationNumber(db *gorm.DB, registrationNumber int) (*mode
 	}
 	return &student, nil
 }
+
+

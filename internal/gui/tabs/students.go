@@ -141,14 +141,26 @@ func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensi
 							}
 							if downloadButtons[i-1].Clicked(gtx) {
 								fmt.Printf("stiahnuť vyplneny harok")
-								// sem si zavolam funkciu, ktora pre studenta slicne z pdf dane subory a to ulozi ako pdf do tmp s nazvom studentovho id
-								err := pdf.SlicePdfForStudent(db, student.RegistrationNumber)
-								if err != nil {
-									errorLogger.Error("Chyba pri slicingu PDF pre študenta", "registration_number", student.RegistrationNumber, "error", err.Error())
-								} else {
-									logger.Info("Úspešne slicitované PDF pre študenta", "registration_number", student.RegistrationNumber)
-								}
+								studentModal.Visible = true
+								studentModal.SetCloseBtnEnable = false
+								isGenerating := true
+								generatedPath := ""
+								studentModal.Content = widgets.ContentGenerating(th, &isGenerating, &generatedPath)
+
+								go func() {
+									// sem si zavolam funkciu, ktora pre studenta slicne z pdf dane subory a to ulozi ako pdf do tmp s nazvom studentovho id
+									path, err := latex.SlicePdfForStudent(db, student.RegistrationNumber)
+									if err != nil {
+										errorLogger.Error("Chyba pri slicingu PDF pre študenta", "registration_number", student.RegistrationNumber, "error", err.Error())
+									} else {
+										generatedPath = path
+										isGenerating = false
+										studentModal.SetCloseBtnEnable = true
+										logger.Info("Úspešne slicitované PDF pre študenta", "registration_number", student.RegistrationNumber)
+									}
+								}()
 							}
+								
 
 							return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
 								layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {

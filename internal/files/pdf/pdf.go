@@ -16,14 +16,14 @@ import (
 
 // SlicePdfForStudent slices a PDF file based on the pages specified in the students record in DB.
 // It uses the pdftk tool to extract specific pages from the input PDF and saves the result to an output PDF.
-func SlicePdfForStudent(db *gorm.DB, registrationNumber int) error {
+func SlicePdfForStudent(db *gorm.DB, registrationNumber int) (string, error) {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
-	student, err := latex.FindStudentByRegistrationNumber(db, registrationNumber)
+	student, err := FindStudentByRegistrationNumber(db, registrationNumber)
 	if err != nil {
 		errorLogger.Error("Error finding student", "registration_number", registrationNumber, slog.String("error", err.Error()))
-		return err
+		return "", err
 	}
 
 	// Parse the pages string from the student record and split it into individual pages
@@ -31,7 +31,7 @@ func SlicePdfForStudent(db *gorm.DB, registrationNumber int) error {
 
 	if pagesStr == "" {
 		logger.Info("Študent nemá žiadne stránky v DB", "registration_number", registrationNumber)
-		return nil // TODO osetrit lebo v GUI sa zasa ked sa nevrati error vypise ze to bolo uspesne slicnutie
+		return "", nil // TODO osetrit lebo v GUI sa zasa ked sa nevrati error vypise ze to bolo uspesne slicnutie
 	}
 
 	// Split the pages string by the delimiter "-" and convert to integer values
@@ -44,7 +44,7 @@ func SlicePdfForStudent(db *gorm.DB, registrationNumber int) error {
 		pageNum, err := strconv.Atoi(part)
 		if err != nil {
 			errorLogger.Error("Invalid page number in Pages", slog.String("value", part), slog.String("error", err.Error()))
-			return err
+			return "", err
 		}
 		pages = append(pages, pageNum)
 	}
@@ -53,7 +53,7 @@ func SlicePdfForStudent(db *gorm.DB, registrationNumber int) error {
 
 	// TODO - zmenit staticku cestu, treba vybrat dynamicky z priecinka
 	inputPDF := "/home/timo/ScanEvalApp/assets/tmp/scan-pdfs/sken_zasadacka_190_400dpi.pdf"
-	outputPDF := filepath.Join(common.GLOBAL_EXPORT_DIR, fmt.Sprintf("student_%d_vyplnene.pdf", registrationNumber))
+	outputPDF := filepath.Join(OUTPUT_PDF_PATH, fmt.Sprintf("student_%d_vyplnene.pdf", registrationNumber))
 
 	// Convert the list of pages into arguments for pdftk
 	var pageArgs []string
@@ -70,11 +70,11 @@ func SlicePdfForStudent(db *gorm.DB, registrationNumber int) error {
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		errorLogger.Error("Chyba pri spúšťaní pdftk", "error", err.Error(), "output", string(output))
-		return err
+		return "", err
 	}
 
 	logger.Info("PDF slicing pomocou pdftk hotový", "output_path", outputPDF)
-	return nil
+	return outputPDF, nil
 }
 
 // ExportFailedPagesToPDF extracts a subset of pages (marked as failed) from the input PDF
