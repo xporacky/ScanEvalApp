@@ -2,15 +2,15 @@ package latex
 
 import (
 	"ScanEvalApp/internal/common"
+	"ScanEvalApp/internal/config"
 	"ScanEvalApp/internal/database/models"
 	"ScanEvalApp/internal/logging"
-	"ScanEvalApp/internal/config"
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
-	"path/filepath"
 )
 
 // GenerateStatistics generates statistics based on selected options
@@ -107,7 +107,15 @@ func GenerateStatistics(selectedStats []string, exam *models.Exam) (string, erro
 		errorLogger.Error("Chyba načítania configu", slog.String("error", err.Error()))
 		return "", err
 	}
-	outputPath := filepath.Join(dirPath, fmt.Sprintf("stats_%s.pdf", exam.Title))
+
+	// Prepočítaj relatívnu cestu na absolútnu
+	absDirPath, err := filepath.Abs(dirPath)
+	if err != nil {
+		errorLogger.Error("Chyba pri konverzii cesty", slog.String("error", err.Error()))
+		return "", err
+	}
+
+	outputPath := filepath.Join(absDirPath, fmt.Sprintf("stats_%s.pdf", exam.Title))
 	if err := os.WriteFile(outputPath, pdfBytes, common.FILE_PERMISSION); err != nil {
 		errorLogger.Error("Chyba pri ukladaní PDF", slog.String("path", outputPath), slog.String("error", err.Error()))
 		return "", err
