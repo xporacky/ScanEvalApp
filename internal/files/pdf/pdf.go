@@ -56,7 +56,7 @@ func SlicePdfForStudent(db *gorm.DB, registrationNumber int) (string, error) {
 	// TODO - zmenit staticku cestu, treba vybrat dynamicky z priecinka
 	//inputPDF := "/home/timo/ScanEvalApp/assets/tmp/scan-pdfs/sken_zasadacka_190_400dpi.pdf"
 
-	inputPDF := filepath.Join("./assets/tmp/temp/scans", fileName)
+	inputPDF := filepath.Join(common.GLOBAL_TEMP_SCAN, fileName)
 
 	outputPDF := filepath.Join(common.GLOBAL_EXPORT_DIR, fmt.Sprintf("student_%d_vyplnene.pdf", registrationNumber))
 
