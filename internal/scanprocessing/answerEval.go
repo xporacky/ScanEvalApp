@@ -7,7 +7,6 @@ import (
 	"ScanEvalApp/internal/ocr"
 	"image"
 	// "fmt"
-	"ScanEvalApp/internal/logging"
 	"log/slog"
 
 	"gocv.io/x/gocv"

@@ -149,7 +149,7 @@ func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensi
 
 								go func() {
 									// sem si zavolam funkciu, ktora pre studenta slicne z pdf dane subory a to ulozi ako pdf do tmp s nazvom studentovho id
-									path, err := latex.SlicePdfForStudent(db, &student)
+									path, err := pdf.SlicePdfForStudent(db, student.RegistrationNumber)
 									if err != nil {
 										errorLogger.Error("Chyba pri slicingu PDF pre študenta", "registration_number", student.RegistrationNumber, "error", err.Error())
 									} else {

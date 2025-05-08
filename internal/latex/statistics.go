@@ -108,7 +108,7 @@ func GenerateStatistics(selectedStats []string, exam *models.Exam) (string, erro
 		return "", err
 	}
 	outputPath := filepath.Join(dirPath, fmt.Sprintf("stats_%s.pdf", exam.Title))
-	if err := os.WriteFile(outputPath, pdfBytes, FILE_PERMISSION); err != nil {
+	if err := os.WriteFile(outputPath, pdfBytes, common.FILE_PERMISSION); err != nil {
 		errorLogger.Error("Chyba pri ukladaní PDF", slog.String("path", outputPath), slog.String("error", err.Error()))
 		return "", err
 	}

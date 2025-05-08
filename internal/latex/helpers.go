@@ -2,7 +2,6 @@ package latex
 
 import (
 	"ScanEvalApp/internal/database/models"
-	"ScanEvalApp/internal/database/repository"
 	"ScanEvalApp/internal/logging"
 
 	"log/slog"

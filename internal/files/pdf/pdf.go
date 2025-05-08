@@ -3,6 +3,7 @@ package pdf
 import (
 	"ScanEvalApp/internal/common"
 	"ScanEvalApp/internal/latex"
+	"ScanEvalApp/internal/database/repository"
 	"ScanEvalApp/internal/logging"
 	"fmt"
 	"log/slog"
@@ -20,7 +21,7 @@ func SlicePdfForStudent(db *gorm.DB, registrationNumber int) (string, error) {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
-	student, err := FindStudentByRegistrationNumber(db, registrationNumber)
+	student, err := latex.FindStudentByRegistrationNumber(db, registrationNumber)
 	if err != nil {
 		errorLogger.Error("Error finding student", "registration_number", registrationNumber, slog.String("error", err.Error()))
 		return "", err
@@ -50,10 +51,14 @@ func SlicePdfForStudent(db *gorm.DB, registrationNumber int) (string, error) {
 	}
 
 	logger.Info("Parsed pages", "registration_number", registrationNumber, "pages", pages)
-
+	exam, _:= repository.GetExam(db, student.ExamID)
+	fileName := fmt.Sprintf("scan_%s_%d.pdf", exam.Title, exam.ID)
 	// TODO - zmenit staticku cestu, treba vybrat dynamicky z priecinka
-	inputPDF := "/home/timo/ScanEvalApp/assets/tmp/scan-pdfs/sken_zasadacka_190_400dpi.pdf"
-	outputPDF := filepath.Join(OUTPUT_PDF_PATH, fmt.Sprintf("student_%d_vyplnene.pdf", registrationNumber))
+	//inputPDF := "/home/timo/ScanEvalApp/assets/tmp/scan-pdfs/sken_zasadacka_190_400dpi.pdf"
+
+	inputPDF := filepath.Join("./assets/tmp/temp/scans", fileName)
+
+	outputPDF := filepath.Join(common.GLOBAL_EXPORT_DIR, fmt.Sprintf("student_%d_vyplnene.pdf", registrationNumber))
 
 	// Convert the list of pages into arguments for pdftk
 	var pageArgs []string
