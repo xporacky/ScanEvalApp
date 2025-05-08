@@ -8,9 +8,9 @@ povolit iba jednu moznost pri danej otazke
 osetrit vstupy
 */
 import (
-	"ScanEvalApp/internal/csvhelper"
 	"ScanEvalApp/internal/database/models"
 	"ScanEvalApp/internal/database/repository"
+	"ScanEvalApp/internal/files/csv"
 	"ScanEvalApp/internal/gui/tabmanager"
 	"ScanEvalApp/internal/gui/themeUI"
 	"ScanEvalApp/internal/gui/widgets"
@@ -19,9 +19,9 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
-	"regexp"
 	"time"
 
 	"gioui.org/app"
@@ -35,8 +35,8 @@ import (
 
 var (
 	nameInput      widget.Editor
-	schoolYear      widget.Editor
-	datetimeInput      widget.Editor
+	schoolYear     widget.Editor
+	datetimeInput  widget.Editor
 	questionsInput widget.Editor
 	submitButton   widget.Clickable
 	createButton   widget.Clickable
@@ -264,16 +264,16 @@ func renderOptions(gtx layout.Context, th *themeUI.Theme, questionIndex int, qf 
 	return children
 }
 func isValidSchoolYear(schoolYear string) bool {
-	re := regexp.MustCompile(`^\d{4}/\d{2}$`) 
+	re := regexp.MustCompile(`^\d{4}/\d{2}$`)
 	return re.MatchString(schoolYear)
 }
 
 func parseDateTime(dateTime string) (time.Time, bool) {
-	parsedTime, err := time.Parse("02.01.2006 15:04", dateTime) 
+	parsedTime, err := time.Parse("02.01.2006 15:04", dateTime)
 	if err != nil {
-		return time.Time{}, false 
+		return time.Time{}, false
 	}
-	return parsedTime, true 
+	return parsedTime, true
 }
 
 func submitForm(db *gorm.DB, t *UploadCsv, tm *tabmanager.TabManager) {
@@ -308,9 +308,9 @@ func submitForm(db *gorm.DB, t *UploadCsv, tm *tabmanager.TabManager) {
 
 	// Vytvorenie testu
 	exam := models.Exam{
-		Title:      nazov,
-		SchoolYear: skrok,
-		Date:  		parsedDateTime,
+		Title:         nazov,
+		SchoolYear:    skrok,
+		Date:          parsedDateTime,
 		QuestionCount: pocetOtazok,
 		Questions:     answersStr,
 	}
@@ -321,7 +321,7 @@ func submitForm(db *gorm.DB, t *UploadCsv, tm *tabmanager.TabManager) {
 		return
 	}
 
-	err = csvhelper.ImportStudentsFromCSV(db, t.selectedFile, exam.ID)
+	err = csv.ImportStudentsFromCSV(db, t.selectedFile, exam.ID)
 	if err != nil {
 		errorLogger.Error("Chyba pri importe študentov z CSV", slog.Group("CRITICAL", slog.String("error", err.Error())))
 		return

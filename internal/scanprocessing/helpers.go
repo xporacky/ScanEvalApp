@@ -5,18 +5,25 @@ import (
 	"ScanEvalApp/internal/database/repository"
 	"ScanEvalApp/internal/files"
 	"ScanEvalApp/internal/ocr"
+	"encoding/json"
 	"fmt"
 	"image"
 	"os"
-	"encoding/json"
+	"os/exec"
+	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
+	"unicode"
+
 	"ScanEvalApp/internal/logging"
 	"log/slog"
 
 	"gocv.io/x/gocv"
+	"golang.org/x/text/transform"
+	"golang.org/x/text/unicode/norm"
 	"gorm.io/gorm"
 )
-
-
 
 // FindContours detects external contours in the provided image using edge detection and morphological operations.
 //
@@ -200,7 +207,6 @@ func GetStudent(mat *gocv.Mat, db *gorm.DB, examID uint) (*models.Student, error
 	return repository.GetStudentByRegistrationNumber(db, uint(registrationNumber), examID)
 }
 
-
 func LoadConfig(configFile string) error {
 	configPath := CONFIGS_DIR + configFile + ".json"
 	file, err := os.Open(configPath)
@@ -210,7 +216,7 @@ func LoadConfig(configFile string) error {
 	defer file.Close()
 
 	var config struct {
-		MeanIntensityXLowest float64 `json:"mean_intensity_x_lowest"`
+		MeanIntensityXLowest  float64 `json:"mean_intensity_x_lowest"`
 		MeanIntensityXHighest float64 `json:"mean_intensity_x_highest"`
 	}
 
@@ -219,10 +225,70 @@ func LoadConfig(configFile string) error {
 		return fmt.Errorf("Chyba pri dekódovaní konfiguračného súboru: %w", err)
 	}
 
-	
 	MEAN_INTENSITY_X_LOWEST = config.MeanIntensityXLowest
 	MEAN_INTENSITY_X_HIGHEST = config.MeanIntensityXHighest
-
-
 	return nil
+}
+
+func ExportFailedPagesToPDF(examTitle string, examID uint, pages []int, inputPDF string, outputPath string) error {
+	logger := logging.GetLogger()
+	errorLogger := logging.GetErrorLogger()
+
+	if len(pages) == 0 {
+		return nil
+	}
+
+	var pageArgs []string
+	for _, p := range pages {
+		pageArgs = append(pageArgs, strconv.Itoa(p+1))
+	}
+
+	cmdArgs := append([]string{inputPDF, "cat"}, pageArgs...)
+	outputPDF := filepath.Join(outputPath, fmt.Sprintf("%s%d_failed_pages.pdf", examTitle, examID))
+	cmdArgs = append(cmdArgs, "output", outputPDF)
+
+	cmd := exec.Command("pdftk", cmdArgs...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		errorLogger.Error("Chyba pri spájaní chybných stránok", "error", err.Error(), "output", string(output))
+		return err
+	}
+
+	logger.Info("Chybné strany uložené do PDF", "output", outputPDF)
+	return nil
+}
+
+// removeDiacritics removes accents like é -> e, ň -> n, etc.
+func RemoveDiacritics(s string) string {
+	t := transform.Chain(norm.NFD, transform.RemoveFunc(isDiacritic), norm.NFC)
+	result, _, _ := transform.String(t, s)
+	return result
+}
+
+// checks for diacritic
+func isDiacritic(r rune) bool {
+	return unicode.Is(unicode.Mn, r)
+}
+
+// sanitizeFilename converts string to safe ASCII-only filename
+func SanitizeFilename(name string) string {
+	// Remove diacritics
+	name = RemoveDiacritics(name)
+
+	// Replace spaces and dashes with underscores
+	name = strings.ReplaceAll(name, " ", "_")
+	name = strings.ReplaceAll(name, "-", "_")
+
+	// Remove all non-alphanumeric, non-underscore characters
+	reg := regexp.MustCompile(`[^a-zA-Z0-9_]+`)
+	name = reg.ReplaceAllString(name, "")
+
+	return name
+}
+
+// Adds a failed page into failedPagesMap with the use of locks
+func AddFailedPage(failedPages *FailedPages, examID uint, pageNumber int) {
+	failedPages.mu.Lock()
+	defer failedPages.mu.Unlock()
+	failedPages.data[examID] = append(failedPages.data[examID], pageNumber)
 }

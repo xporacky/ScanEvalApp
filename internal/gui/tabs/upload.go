@@ -2,6 +2,7 @@ package tabs
 
 import (
 	"fmt"
+	"strings"
 
 	"gioui.org/app"
 
@@ -16,11 +17,12 @@ import (
 	"log"
 	//"path/filepath"
 	//"ScanEvalApp/internal/database/models"
+	"ScanEvalApp/internal/common"
 	"ScanEvalApp/internal/database/repository"
-	"ScanEvalApp/internal/scanprocessing"
-	"ScanEvalApp/internal/gui/widgets"
-	"ScanEvalApp/internal/gui/themeUI"
 	"ScanEvalApp/internal/files"
+	"ScanEvalApp/internal/gui/themeUI"
+	"ScanEvalApp/internal/gui/widgets"
+	"ScanEvalApp/internal/scanprocessing"
 
 	"time"
 
@@ -38,7 +40,7 @@ type UploadTab struct {
 	progressChan chan string
 	progressText string
 	dropdown     Dropdown
-	uploadModal *widgets.Modal
+	uploadModal  *widgets.Modal
 }
 
 type Dropdown struct {
@@ -46,8 +48,7 @@ type Dropdown struct {
 	button    widget.Clickable
 	options   []string
 	selected  widget.Enum
-	lastValue string 
-	
+	lastValue string
 }
 
 func NewUploadTab(w *app.Window) *UploadTab {
@@ -55,7 +56,7 @@ func NewUploadTab(w *app.Window) *UploadTab {
 		explorer:     explorer.NewExplorer(w),
 		progressChan: make(chan string, 100),
 		dropdown:     NewDropdown(),
-		uploadModal:        widgets.NewModal(),
+		uploadModal:  widgets.NewModal(),
 	}
 	go func() {
 		for {
@@ -63,20 +64,18 @@ func NewUploadTab(w *app.Window) *UploadTab {
 			select {
 			case msg := <-tab.progressChan:
 				tab.progressText = msg
-				w.Invalidate() 
+				w.Invalidate()
 			default:
-				w.Invalidate() 
+				w.Invalidate()
 			}
 		}
 	}()
 	return tab
 }
 
-
 func (t *UploadTab) SetTestID(id uint) {
 	t.examID = id
 }
-
 
 func (t *UploadTab) Layout(gtx layout.Context, th *themeUI.Theme, db *gorm.DB, w *app.Window) layout.Dimensions {
 	// Spracovanie kliknutí na tlačidlo
@@ -84,7 +83,6 @@ func (t *UploadTab) Layout(gtx layout.Context, th *themeUI.Theme, db *gorm.DB, w
 		go t.openFileDialog(db, th)
 	}
 
-	
 	if t.dropdown.button.Clicked(gtx) {
 		t.dropdown.open = !t.dropdown.open
 	}
@@ -115,10 +113,9 @@ func (t *UploadTab) Layout(gtx layout.Context, th *themeUI.Theme, db *gorm.DB, w
 						}
 						return material.Label(th.Theme, unit.Sp(16), text).Layout(gtx)
 					}),
-          			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				    	return t.dropdown.Layout(gtx, th.Theme)
-			    	}),
-					
+					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return t.dropdown.Layout(gtx, th.Theme)
+					}),
 				)
 			})
 		}),
@@ -140,9 +137,8 @@ func (t *UploadTab) openFileDialog(db *gorm.DB, th *themeUI.Theme) {
 		return
 	}
 	if file != nil {
-		defer file.Close() 
+		defer file.Close()
 
-		
 		if f, ok := file.(*os.File); ok {
 			t.filePath = f.Name()
 			fmt.Println("Cesta k súboru:", t.filePath)
@@ -172,6 +168,7 @@ func (t *UploadTab) BuildProgressContent(th *themeUI.Theme) layout.Widget {
 		})
 	}
 }
+
 // Spracovanie eventov (pre Explorer)
 func (t *UploadTab) HandleEvent(evt interface{}) { // Zmena na interface{}
 	switch e := evt.(type) {
@@ -183,20 +180,37 @@ func (t *UploadTab) HandleEvent(evt interface{}) { // Zmena na interface{}
 func scanProcess(t *UploadTab, db *gorm.DB) {
 	var counter int = 0
 	if t.examID == 0 && t.filePath == "" {
-		fmt.Println("nevybrane povinne subory")
+		fmt.Println("nevybrané povinné súbory")
 		return
 	}
 
 	exam, err := repository.GetExam(db, t.examID)
 	if err != nil {
+		t.progressChan <- "Chyba pri načítaní testu."
 		return
 	}
+
+	hadFailures := false
 	t.progressChan <- "Spracovanie PDF sa začalo..."
-	scanprocessing.ProcessPDF(t.filePath, exam, db, t.progressChan, &counter)
-	t.progressChan <- "Spracovanie Dokončene"
+	scanprocessing.ProcessPDF(t.filePath, exam, db, t.progressChan, &counter, &hadFailures)
+
+	safeTitle := strings.ReplaceAll(exam.Title, " ", "_")
+	safeTitle = repository.RemoveDiacritics(safeTitle)
+
+	if hadFailures {
+		t.progressChan <- fmt.Sprintf("Niektoré strany sa nepodarilo spracovať\nPDF bolo uložené do: %s%s_%d_failed_pages.pdf", common.GLOBAL_EXPORT_DIR, safeTitle, t.examID)
+	} else {
+		t.progressChan <- "Spracovanie dokončené."
+	}
+
+	_, err = repository.GetExam(db, t.examID)
+	if err != nil {
+		t.progressChan <- "Chyba pri získavaní údajov po spracovaní."
+		return
+	}
+
 	t.uploadModal.SetCloseBtnEnable = true
 }
-
 
 func NewDropdown() Dropdown {
 	options, err := files.GetFilesFromConfigs()
@@ -206,7 +220,7 @@ func NewDropdown() Dropdown {
 
 	dropdown := Dropdown{
 		options:  options,
-		selected: widget.Enum{}, 
+		selected: widget.Enum{},
 	}
 
 	if len(options) > 0 {
@@ -219,9 +233,6 @@ func NewDropdown() Dropdown {
 
 	return dropdown
 }
-
-
-
 
 func (d *Dropdown) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions {
 	// Ak sa zmenil výber, načítaj konfiguráciu

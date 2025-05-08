@@ -1,6 +1,7 @@
 package files
 
 import (
+	"ScanEvalApp/internal/common"
 	"ScanEvalApp/internal/logging"
 	"log/slog"
 	"os"
@@ -51,7 +52,7 @@ func SaveFile(filePath string, data []byte) error {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
-	err := os.WriteFile(filePath, data, 0644)
+	err := os.WriteFile(filePath, data, common.FILE_PERMISSION)
 	if err != nil {
 		errorLogger.Error("Chyba pri ukladaní súboru", slog.Group("CRITICAL", slog.String("error", err.Error())), slog.String("file_path", filePath))
 		return err

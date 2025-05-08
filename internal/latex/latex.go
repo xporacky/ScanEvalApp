@@ -12,6 +12,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"ScanEvalApp/internal/common"
 	"ScanEvalApp/internal/database/models"
 	"ScanEvalApp/internal/files"
 	"ScanEvalApp/internal/logging"
@@ -27,7 +28,7 @@ func CompileLatexToPDF(latexContent []byte) ([]byte, error) {
 	errorLogger := logging.GetErrorLogger()
 
 	// Create a temporary file to store the LaTeX content
-	texFile, err := os.CreateTemp(TEMPORARY_PDF_PATH, "*.tex")
+	texFile, err := os.CreateTemp(common.TEMPORARY_PDF_PATH, "*.tex")
 	if err != nil {
 		errorLogger.Error("Failed to create temporary LaTeX file", slog.Group("CRITICAL", slog.String("error", err.Error())))
 		return nil, err
@@ -54,7 +55,7 @@ func CompileLatexToPDF(latexContent []byte) ([]byte, error) {
 
 	logger.Info("LaTeX file created", slog.String("file_path", texFile.Name()))
 
-	outputDir, err := os.MkdirTemp(TEMPORARY_PDF_PATH, "latex_output")
+	outputDir, err := os.MkdirTemp(common.TEMPORARY_PDF_PATH, "latex_output")
 	if err != nil {
 		errorLogger.Error("Failed to create temporary output directory", slog.Group("CRITICAL", slog.String("error", err.Error())))
 		return nil, err
@@ -221,8 +222,8 @@ func ParallelGeneratePDFs(db *gorm.DB, examID uint, templatePath, outputPDFPath 
 				}
 
 				// Save the generated PDF for the student
-				studentPDFPath := filepath.Join(TEMPORARY_PDF_PATH, fmt.Sprintf("student_%d.pdf", student.ID))
-				if err := os.WriteFile(studentPDFPath, studentPDF, FILE_PERMISSION); err != nil {
+				studentPDFPath := filepath.Join(common.TEMPORARY_PDF_PATH, fmt.Sprintf("student_%d.pdf", student.ID))
+				if err := os.WriteFile(studentPDFPath, studentPDF, common.FILE_PERMISSION); err != nil {
 					errorLogger.Error("Error saving PDF for student", "student_id", student.ID, slog.String("error", err.Error()))
 					return
 				}
@@ -238,7 +239,7 @@ func ParallelGeneratePDFs(db *gorm.DB, examID uint, templatePath, outputPDFPath 
 					logger.Info("Set initial main PDF for student", "student_id", student.ID)
 				} else {
 					// Merge the new student PDF with the existing main PDF
-					mergedPDFPath := filepath.Join(TEMPORARY_PDF_PATH, "merged.pdf")
+					mergedPDFPath := filepath.Join(common.TEMPORARY_PDF_PATH, "merged.pdf")
 					if err := MergePDFs(mainPDFPath, studentPDFPath, mergedPDFPath); err != nil {
 						errorLogger.Error("Error merging PDF for student", "student_id", student.ID, slog.String("error", err.Error()))
 						return
@@ -318,13 +319,13 @@ func PrintSheet(db *gorm.DB, registrationNumber int) (string, error) {
 	logger.Info("Student found", "student_id", student.ID, "registration_number", student.RegistrationNumber)
 
 	// Load the latex template
-	latexTemplate, err := os.ReadFile(TEMPLATE_PATH)
+	latexTemplate, err := os.ReadFile(common.TEMPLATE_PATH)
 	if err != nil {
 		errorLogger.Error("Error reading LaTeX template for student", "student_id", student.ID, slog.String("error", err.Error()))
 		return "", err
 	}
 
-	logger.Info("LaTeX template loaded", "template_path", TEMPLATE_PATH)
+	logger.Info("LaTeX template loaded", "template_path", common.TEMPLATE_PATH)
 
 	// Load the exam for student from the database
 	var exam models.Exam
@@ -364,8 +365,8 @@ func PrintSheet(db *gorm.DB, registrationNumber int) (string, error) {
 	logger.Info("PDF generated for student", "student_id", student.ID)
 
 	// Save the student's compiled PDF
-	studentPDFPath := filepath.Join(TEMPORARY_PDF_PATH, fmt.Sprintf("student_%d.pdf", student.RegistrationNumber))
-	if err := os.WriteFile(studentPDFPath, studentPDF, FILE_PERMISSION); err != nil {
+	studentPDFPath := filepath.Join(common.TEMPORARY_PDF_PATH, fmt.Sprintf("student_%d.pdf", student.RegistrationNumber))
+	if err := os.WriteFile(studentPDFPath, studentPDF, common.FILE_PERMISSION); err != nil {
 		errorLogger.Error("Error saving PDF for student", "student_id", student.ID, slog.String("error", err.Error()))
 		return "", err
 	}

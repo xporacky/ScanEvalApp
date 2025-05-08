@@ -1,6 +1,7 @@
 package latex
 
 import (
+	"ScanEvalApp/internal/common"
 	"ScanEvalApp/internal/database/models"
 	"ScanEvalApp/internal/logging"
 	"fmt"
@@ -99,8 +100,9 @@ func GenerateStatistics(selectedStats []string, exam *models.Exam) (string, erro
 	}
 
 	// Save PDF to file
-	outputPath := fmt.Sprintf("./stats_%d.pdf", exam.ID)
-	if err := os.WriteFile(outputPath, pdfBytes, FILE_PERMISSION); err != nil {
+	outputPath := fmt.Sprintf("%sstats_%d.pdf", common.GLOBAL_EXPORT_DIR, exam.ID)
+
+	if err := os.WriteFile(outputPath, pdfBytes, common.FILE_PERMISSION); err != nil {
 		errorLogger.Error("Chyba pri ukladaní PDF", slog.String("path", outputPath), slog.String("error", err.Error()))
 		return "", err
 	}

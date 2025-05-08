@@ -1,9 +1,10 @@
 package tabs
 
 import (
-	"ScanEvalApp/internal/csvhelper"
+	"ScanEvalApp/internal/common"
 	"ScanEvalApp/internal/database/models"
 	"ScanEvalApp/internal/database/repository"
+	"ScanEvalApp/internal/files/csv"
 	"ScanEvalApp/internal/latex"
 
 	"ScanEvalApp/internal/gui/tabmanager"
@@ -136,7 +137,7 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 								generatedPath := ""
 								modal.Content = widgets.ContentGenerating(th, &isGenerating, &generatedPath)
 								go func() {
-									path, err := latex.ParallelGeneratePDFs(db, exam.ID, latex.TEMPLATE_PATH, latex.OUTPUT_PDF_PATH)
+									path, err := latex.ParallelGeneratePDFs(db, exam.ID, common.TEMPLATE_PATH, common.GLOBAL_EXPORT_DIR)
 
 									if err != nil {
 										errorLogger.Error("Chyba pri generovaní PDF",
@@ -158,7 +159,7 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 								generatedPath := ""
 								modal.Content = widgets.ContentGenerating(th, &isGenerating, &generatedPath)
 								go func() {
-									path, err := csvhelper.ExportStudentsToCSV(db, exam)
+									path, err := csv.ExportStudentsToCSV(db, exam)
 
 									if err != nil {
 										errorLogger.Error("Chyba pri exportovani CSV", slog.String("error", err.Error()))

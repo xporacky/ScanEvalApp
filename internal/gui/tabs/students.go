@@ -2,6 +2,7 @@ package tabs
 
 import (
 	"ScanEvalApp/internal/database/repository"
+	"ScanEvalApp/internal/files/pdf"
 	"fmt"
 
 	"gioui.org/layout"
@@ -17,9 +18,9 @@ import (
 	"ScanEvalApp/internal/logging"
 	"log/slog"
 
-	"gioui.org/unit"
-
 	"ScanEvalApp/internal/latex"
+
+	"gioui.org/unit"
 )
 
 var printButtons []widget.Clickable
@@ -124,7 +125,7 @@ func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensi
 								go func() {
 									path, err := latex.PrintSheet(db, student.RegistrationNumber)
 									if err != nil {
-										errorLogger.Error("Chyba pri tlači hárku pre študenta", 
+										errorLogger.Error("Chyba pri tlači hárku pre študenta",
 											"student_id", student.ID,
 											slog.Uint64("registration_number", uint64(student.RegistrationNumber)),
 											slog.String("path", path),
@@ -133,7 +134,7 @@ func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensi
 										generatedPath = path
 										isGenerating = false
 										studentModal.SetCloseBtnEnable = true
-										logger.Info("Úspešne vytlačený hárok pre študenta", 
+										logger.Info("Úspešne vytlačený hárok pre študenta",
 											slog.Uint64("registration_number", uint64(student.RegistrationNumber)))
 									}
 								}()
@@ -141,7 +142,7 @@ func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensi
 							if downloadButtons[i-1].Clicked(gtx) {
 								fmt.Printf("stiahnuť vyplneny harok")
 								// sem si zavolam funkciu, ktora pre studenta slicne z pdf dane subory a to ulozi ako pdf do tmp s nazvom studentovho id
-								err := latex.SlicePdfForStudent(db, student.RegistrationNumber)
+								err := pdf.SlicePdfForStudent(db, student.RegistrationNumber)
 								if err != nil {
 									errorLogger.Error("Chyba pri slicingu PDF pre študenta", "registration_number", student.RegistrationNumber, "error", err.Error())
 								} else {
@@ -184,7 +185,6 @@ func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensi
 						})
 					})
 				}),
-				
 			)
 		}),
 		// Modal - vykreslí sa NAVRCHU, ak je viditeľný

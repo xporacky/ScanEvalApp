@@ -1,4 +1,4 @@
-package csvhelper
+package csv
 
 import (
 	"encoding/csv"
@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"ScanEvalApp/internal/common"
 	"ScanEvalApp/internal/database/models"
 	"ScanEvalApp/internal/database/repository"
 	"ScanEvalApp/internal/logging"
@@ -16,8 +17,8 @@ import (
 	"gorm.io/gorm"
 )
 
-const EXPORT_DIR = "./assets/tmp/"
-
+// ImportStudentsFromCSV parses student records from the given CSV content
+// and stores them in the database.
 func ImportStudentsFromCSV(db *gorm.DB, csvContent string, examID uint) error {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
@@ -64,6 +65,8 @@ func ImportStudentsFromCSV(db *gorm.DB, csvContent string, examID uint) error {
 	return nil
 }
 
+// ExportStudentsToCSV exports all students associated with the given exam
+// into a CSV file.
 func ExportStudentsToCSV(db *gorm.DB, exam models.Exam) (string, error) {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
@@ -72,12 +75,12 @@ func ExportStudentsToCSV(db *gorm.DB, exam models.Exam) (string, error) {
 	err := db.Where("exam_id = ?", exam.ID).Find(&students).Error
 	if err != nil {
 		errorLogger.Error("Chyba pri načítaní študentov", slog.String("error", err.Error()))
-		return "" ,err
+		return "", err
 	}
 
 	safeTitle := strings.ReplaceAll(exam.Title, " ", "_")
 
-	fileName := fmt.Sprintf("%s%s_ID%d.csv", EXPORT_DIR, safeTitle, exam.ID)
+	fileName := fmt.Sprintf("%s%s_ID%d.csv", common.GLOBAL_EXPORT_DIR, safeTitle, exam.ID)
 
 	file, err := os.Create(fileName)
 	if err != nil {

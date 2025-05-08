@@ -1,17 +1,19 @@
 package scanprocessing
 
 import (
+	"ScanEvalApp/internal/common"
 	"ScanEvalApp/internal/files"
+	"ScanEvalApp/internal/logging"
 	"ScanEvalApp/internal/ocr"
 	"image"
-	"fmt"
-	"ScanEvalApp/internal/logging"
 	"log/slog"
 
 	"gocv.io/x/gocv"
 )
+
 var MEAN_INTENSITY_X_LOWEST float64
 var MEAN_INTENSITY_X_HIGHEST float64
+
 // EvaluateAnswers processes a scanned answer sheet image and extracts the student's answers.
 //
 // It takes a pointer to a gocv.Mat representing the scanned sheet and the total number of questions expected.
@@ -33,11 +35,11 @@ func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int) (int, []rune) {
 	logger := logging.GetLogger()
 	var studentAnswers []rune
 	croppedMat := CropMatAnswersOnly(mat)
-	questionNumber := 0
+	questionNumber := common.QUESTION_NUMBER_NOT_FOUND
 	for i := 0; i < NUMBER_OF_QUESTIONS_PER_PAGE; i++ {
 		studentAnswers = append(studentAnswers, GetAnswer(&croppedMat, i))
 		// if we dont have question number yet try to find it
-		if questionNumber == 0 {
+		if questionNumber == common.QUESTION_NUMBER_NOT_FOUND {
 			questionNumber = GetQuestionNumber(&croppedMat, i)
 			continue
 		}
@@ -50,8 +52,8 @@ func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int) (int, []rune) {
 	}
 	*mat = croppedMat
 	// if we didnt find question number in whole page
-	if questionNumber == -1 {
-		return -1, nil
+	if questionNumber == common.QUESTION_NUMBER_NOT_FOUND {
+		return common.QUESTION_NUMBER_NOT_FOUND, nil
 	}
 	return questionNumber - 1, studentAnswers
 }
@@ -130,7 +132,11 @@ func GetQuestionNumber(mat *gocv.Mat, i int) int {
 	files.DeleteFile(TEMP_IMAGE_PATH)
 
 	if err != nil {
-		errorLogger.Error("Chyba pri extrakcii čísla otázky", slog.Int("questionIndex", i), slog.String("error", err.Error()))
+		errorLogger.Error("Chyba pri extrakcii čísla otázky",
+			slog.Int("questionIndex", i),
+			slog.String("error", err.Error()),
+			slog.Int("questionNum", questionNum),
+		)
 	}
 
 	return questionNum
