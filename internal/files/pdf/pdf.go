@@ -3,8 +3,8 @@ package pdf
 import (
 	"ScanEvalApp/internal/common"
 	"ScanEvalApp/internal/config"
-	"ScanEvalApp/internal/latex"
 	"ScanEvalApp/internal/database/repository"
+	"ScanEvalApp/internal/latex"
 	"ScanEvalApp/internal/logging"
 	"fmt"
 	"log/slog"
@@ -57,10 +57,9 @@ func SlicePdfForStudent(db *gorm.DB, registrationNumber int) (string, error) {
 		errorLogger.Error("Error retrieving exam", "exam_id", student.ExamID, slog.String("error", err.Error()))
 		return "", err
 	}
-	fileName := fmt.Sprintf("scan_%s_%d.pdf", exam.Title, exam.ID)
-	// TODO - zmenit staticku cestu, treba vybrat dynamicky z priecinka
-	//inputPDF := "/home/timo/ScanEvalApp/assets/tmp/scan-pdfs/sken_zasadacka_190_400dpi.pdf"
 
+	safeTitle := common.SanitizeFilename(exam.Title)
+	fileName := fmt.Sprintf("scan_%s_%d.pdf", safeTitle, exam.ID)
 	inputPDF := filepath.Join(common.GLOBAL_TEMP_SCAN, fileName)
 
 	dirPath, err := config.LoadLastPath()

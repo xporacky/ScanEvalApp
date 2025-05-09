@@ -1,18 +1,19 @@
 package csv
 
 import (
-	"encoding/csv"
-	"fmt"
-	"log/slog"
-	"os"
-	"strconv"
-	"strings"
-	"time"
-	"path/filepath"
+	"ScanEvalApp/internal/common"
 	"ScanEvalApp/internal/config"
 	"ScanEvalApp/internal/database/models"
 	"ScanEvalApp/internal/database/repository"
 	"ScanEvalApp/internal/logging"
+	"encoding/csv"
+	"fmt"
+	"log/slog"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -88,8 +89,8 @@ func ExportStudentsToCSV(db *gorm.DB, exam models.Exam) (string, error) {
 		errorLogger.Error("Chyba pri konverzii cesty", slog.String("error", err.Error()))
 		return "", err
 	}
-	
-	safeTitle := strings.ReplaceAll(exam.Title, " ", "_")
+
+	safeTitle := common.SanitizeFilename(exam.Title)
 
 	fileName := filepath.Join(absDirPath, fmt.Sprintf("%s_ID%d.csv", safeTitle, exam.ID))
 

@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sync"
 	"time"
-	"io"
 
 	"gorm.io/gorm"
 
@@ -291,8 +291,9 @@ func ParallelGeneratePDFs(db *gorm.DB, examID uint, templatePath, outputPDFPath 
 		errorLogger.Error("Chyba pri konverzii cesty", slog.String("error", err.Error()))
 		return "", err
 	}
-	finalPDFPath := filepath.Join(absDirPath, removeDiacritics(exam.Title)+fmt.Sprintf("%d", exam.ID)+".pdf")
 
+	safeTitle := common.SanitizeFilename(exam.Title)
+	finalPDFPath := filepath.Join(absDirPath, fmt.Sprintf("%s%d.pdf", safeTitle, exam.ID))
 
 	srcFile, err := os.Open(mainPDFPath)
 	if err != nil {

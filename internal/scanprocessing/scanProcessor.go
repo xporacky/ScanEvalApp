@@ -9,10 +9,10 @@ import (
 
 	"ScanEvalApp/internal/logging"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
-	"io"
 
 	"github.com/gen2brain/go-fitz"
 	"gorm.io/gorm"
@@ -64,8 +64,9 @@ func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan ch
 	failedPages := &FailedPages{
 		data: make(map[uint][]int),
 	}
-	
-	fileName := fmt.Sprintf("scan_%s_%d.pdf", exam.Title, exam.ID)
+
+	safeTitle := common.SanitizeFilename(exam.Title)
+	fileName := fmt.Sprintf("scan_%s_%d.pdf", safeTitle, exam.ID)
 	if err := os.MkdirAll(common.GLOBAL_TEMP_SCAN, 0755); err != nil {
 		errorLogger.Error("Nepodarilo sa vytvoriť cieľový adresár:", slog.String("error", err.Error()))
 		return
@@ -94,7 +95,7 @@ func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan ch
 	}
 
 	for examID, pages := range failedPages.data {
-		safeTitle := SanitizeFilename(exam.Title)
+		safeTitle := common.SanitizeFilename(exam.Title)
 		err := pdf.ExportFailedPagesToPDF(safeTitle, examID, pages, scanPath)
 		if err != nil {
 			errorLogger.Error("Nepodarilo sa exportovat PDF s chybnymi stranami", slog.String("examID", fmt.Sprint(exam.ID)), slog.String("error", err.Error()))
