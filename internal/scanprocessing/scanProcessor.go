@@ -68,6 +68,7 @@ func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan ch
 	fileName := fmt.Sprintf("scan_%s_%d.pdf", exam.Title, exam.ID)
 	if err := os.MkdirAll(common.GLOBAL_TEMP_SCAN, 0755); err != nil {
 		errorLogger.Error("Nepodarilo sa vytvoriť cieľový adresár:", slog.String("error", err.Error()))
+		return
 	}
 	destPath := filepath.Join(common.GLOBAL_TEMP_SCAN, fileName)
 	err = copyFile(scanPath, destPath)
