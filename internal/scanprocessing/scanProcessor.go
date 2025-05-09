@@ -74,6 +74,7 @@ func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan ch
 	err = copyFile(scanPath, destPath)
 	if err != nil {
 		errorLogger.Error("Chyba pri kopírovaní súboru:", slog.String("error", err.Error()))
+		return
 	}
 
 	doc, err := fitz.New(scanPath)
