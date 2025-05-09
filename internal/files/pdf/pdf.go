@@ -114,7 +114,19 @@ func ExportFailedPagesToPDF(examTitle string, examID uint, pages []int, inputPDF
 	}
 
 	cmdArgs := append([]string{inputPDF, "cat"}, pageArgs...)
-	outputPDF := filepath.Join(common.GLOBAL_EXPORT_DIR, fmt.Sprintf("%s%d_failed_pages.pdf", examTitle, examID))
+	dirPath, err := config.LoadLastPath()
+	if err != nil {
+		errorLogger.Error("Chyba načítania configu", slog.String("error", err.Error()))
+		return "", err
+	}
+
+	absDirPath, err := filepath.Abs(dirPath)
+	if err != nil {
+		errorLogger.Error("Chyba pri konverzii cesty", slog.String("error", err.Error()))
+		return "", err
+	}
+
+	outputPDF := filepath.Join(absDirPath, fmt.Sprintf("%s%d_failed_pages.pdf", examTitle, examID))
 	cmdArgs = append(cmdArgs, "output", outputPDF)
 
 	cmd := exec.Command("pdftk", cmdArgs...)
