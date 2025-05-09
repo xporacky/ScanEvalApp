@@ -2,6 +2,7 @@ package pdf
 
 import (
 	"ScanEvalApp/internal/common"
+	"ScanEvalApp/internal/config"
 	"ScanEvalApp/internal/latex"
 	"ScanEvalApp/internal/database/repository"
 	"ScanEvalApp/internal/logging"
@@ -58,7 +59,19 @@ func SlicePdfForStudent(db *gorm.DB, registrationNumber int) (string, error) {
 
 	inputPDF := filepath.Join(common.GLOBAL_TEMP_SCAN, fileName)
 
-	outputPDF := filepath.Join(common.GLOBAL_EXPORT_DIR, fmt.Sprintf("student_%d_vyplnene.pdf", registrationNumber))
+	dirPath, err := config.LoadLastPath()
+	if err != nil {
+		errorLogger.Error("Chyba načítania configu", slog.String("error", err.Error()))
+		return "", err
+	}
+
+	// Prepočítaj relatívnu cestu na absolútnu
+	absDirPath, err := filepath.Abs(dirPath)
+	if err != nil {
+		errorLogger.Error("Chyba pri konverzii cesty", slog.String("error", err.Error()))
+		return "", err
+	}
+	outputPDF := filepath.Join(absDirPath, fmt.Sprintf("student_%d_vyplnene.pdf", registrationNumber))
 
 	// Convert the list of pages into arguments for pdftk
 	var pageArgs []string
