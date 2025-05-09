@@ -314,10 +314,7 @@ func ParallelGeneratePDFs(db *gorm.DB, examID uint, templatePath) (string, error
 		return "", err
 	}
 
-	// Zavrieme súbory pred odstránením
-	srcFile.Close()
-	dstFile.Close()
-
+	// Files will be closed automatically via defer statements
 	if err := os.Remove(mainPDFPath); err != nil {
 		errorLogger.Error("error removing original PDF", slog.String("error", err.Error()))
 		return "", err
