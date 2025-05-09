@@ -52,7 +52,11 @@ func SlicePdfForStudent(db *gorm.DB, registrationNumber int) (string, error) {
 	}
 
 	logger.Info("Parsed pages", "registration_number", registrationNumber, "pages", pages)
-	exam, _:= repository.GetExam(db, student.ExamID)
+	exam, err := repository.GetExam(db, student.ExamID)
+	if err != nil {
+		errorLogger.Error("Error retrieving exam", "exam_id", student.ExamID, slog.String("error", err.Error()))
+		return "", err
+	}
 	fileName := fmt.Sprintf("scan_%s_%d.pdf", exam.Title, exam.ID)
 	// TODO - zmenit staticku cestu, treba vybrat dynamicky z priecinka
 	//inputPDF := "/home/timo/ScanEvalApp/assets/tmp/scan-pdfs/sken_zasadacka_190_400dpi.pdf"
