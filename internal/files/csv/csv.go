@@ -91,7 +91,6 @@ func ExportStudentsToCSV(db *gorm.DB, exam models.Exam) (string, error) {
 	
 	safeTitle := strings.ReplaceAll(exam.Title, " ", "_")
 
-	//fileName := fmt.Sprintf("%s%s_ID%d.csv", common.GLOBAL_EXPORT_DIR, safeTitle, exam.ID)
 	fileName := filepath.Join(absDirPath, fmt.Sprintf("%s_ID%d.csv", safeTitle, exam.ID))
 
 	file, err := os.Create(fileName)
