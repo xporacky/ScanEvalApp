@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+	"io"
 
 	"gorm.io/gorm"
 
@@ -279,14 +280,47 @@ func ParallelGeneratePDFs(db *gorm.DB, examID uint, templatePath, outputPDFPath 
 
 	// TODO -> podla zmeny DB mozno nejak inak premenovat vysledny subor, napr zobrat nieco z roku alebo neviem...
 	// Create a final pdf
-	finalPDFPath := filepath.Join(outputPDFPath, removeDiacritics(exam.Title)+fmt.Sprintf("%d", exam.ID)+".pdf")
-
-	// Move the final pdf into the correct path
-	if err := os.Rename(mainPDFPath, finalPDFPath); err != nil {
-		errorLogger.Error("error moving final PDF", slog.String("error", err.Error()))
+	dirPath, err := config.LoadLastPath()
+	if err != nil {
+		errorLogger.Error("Chyba načítania configu", slog.String("error", err.Error()))
 		return "", err
 	}
 
+	absDirPath, err := filepath.Abs(dirPath)
+	if err != nil {
+		errorLogger.Error("Chyba pri konverzii cesty", slog.String("error", err.Error()))
+		return "", err
+	}
+	finalPDFPath := filepath.Join(absDirPath, removeDiacritics(exam.Title)+fmt.Sprintf("%d", exam.ID)+".pdf")
+
+
+	srcFile, err := os.Open(mainPDFPath)
+	if err != nil {
+		errorLogger.Error("error opening source PDF", slog.String("error", err.Error()))
+		return "", err
+	}
+	defer srcFile.Close()
+
+	dstFile, err := os.Create(finalPDFPath)
+	if err != nil {
+		errorLogger.Error("error creating destination PDF", slog.String("error", err.Error()))
+		return "", err
+	}
+	defer dstFile.Close()
+
+	if _, err := io.Copy(dstFile, srcFile); err != nil {
+		errorLogger.Error("error copying PDF", slog.String("error", err.Error()))
+		return "", err
+	}
+
+	// Zavrieme súbory pred odstránením
+	srcFile.Close()
+	dstFile.Close()
+
+	if err := os.Remove(mainPDFPath); err != nil {
+		errorLogger.Error("error removing original PDF", slog.String("error", err.Error()))
+		return "", err
+	}
 	// Measure the total time
 	duration := time.Since(startTime)
 	logger.Debug("Celkový čas generovania PDF", "duration", duration)
