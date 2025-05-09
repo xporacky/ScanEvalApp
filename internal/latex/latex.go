@@ -13,6 +13,7 @@ import (
 	"gorm.io/gorm"
 
 	"ScanEvalApp/internal/common"
+	"ScanEvalApp/internal/config"
 	"ScanEvalApp/internal/database/models"
 	"ScanEvalApp/internal/files"
 	"ScanEvalApp/internal/logging"
@@ -364,22 +365,32 @@ func PrintSheet(db *gorm.DB, registrationNumber int) (string, error) {
 	}
 	logger.Info("PDF generated for student", "student_id", student.ID)
 
+	dirPath, err := config.LoadLastPath()
+	if err != nil {
+		errorLogger.Error("Chyba načítania configu", slog.String("error", err.Error()))
+		return "", err
+	}
+
+	absDirPath, err := filepath.Abs(dirPath)
+	if err != nil {
+		errorLogger.Error("Chyba pri konverzii cesty", slog.String("error", err.Error()))
+		return "", err
+	}
 	// Save the student's compiled PDF
-	studentPDFPath := filepath.Join(common.TEMPORARY_PDF_PATH, fmt.Sprintf("student_%d.pdf", student.RegistrationNumber))
+	studentPDFPath := filepath.Join(absDirPath, fmt.Sprintf("student_%d.pdf", student.RegistrationNumber))
 	if err := os.WriteFile(studentPDFPath, studentPDF, common.FILE_PERMISSION); err != nil {
 		errorLogger.Error("Error saving PDF for student", "student_id", student.ID, slog.String("error", err.Error()))
 		return "", err
 	}
-	// Get the absolute path of the generated pdf for logging purposes
-	absStudentPath, err := filepath.Abs(studentPDFPath)
+
 	if err != nil {
 		errorLogger.Error("Chyba pri získavaní absolútnej cesty k PDF", "student_id", student.ID, slog.String("error", err.Error()))
 	} else {
 		logger.Info("PDF saved successfully for student",
 			"student_id", student.ID,
-			"pdf_path", absStudentPath,
+			"pdf_path", studentPDFPath,
 		)
 	}
 
-	return absStudentPath, nil
+	return studentPDFPath, nil
 }
