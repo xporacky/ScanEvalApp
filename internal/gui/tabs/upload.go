@@ -196,7 +196,19 @@ func scanProcess(t *UploadTab, db *gorm.DB) {
 	safeTitle := common.SanitizeFilename(exam.Title)
 
 	if hadFailures {
-		t.progressChan <- fmt.Sprintf("Niektoré strany sa nepodarilo spracovať\nPDF bolo uložené do: %s%s_%d_failed_pages.pdf", common.GLOBAL_EXPORT_DIR, safeTitle, t.examID)
+		dirPath, err := config.LoadLastPath()
+		if err != nil {
+			errorLogger.Error("Chyba načítania configu", slog.String("error", err.Error()))
+			return 
+		}
+
+		// Prepočítaj relatívnu cestu na absolútnu
+		absDirPath, err := filepath.Abs(dirPath)
+		if err != nil {
+			errorLogger.Error("Chyba pri konverzii cesty", slog.String("error", err.Error()))
+			return 
+		}
+		t.progressChan <- fmt.Sprintf("Niektoré strany sa nepodarilo spracovať\nPDF bolo uložené do: %s%s_%d_failed_pages.pdf", absDirPath, safeTitle, t.examID)
 	} else {
 		t.progressChan <- "Spracovanie dokončené."
 	}
