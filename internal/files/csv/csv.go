@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"ScanEvalApp/internal/common"
+	"path/filepath"
+	"ScanEvalApp/internal/config"
 	"ScanEvalApp/internal/database/models"
 	"ScanEvalApp/internal/database/repository"
 	"ScanEvalApp/internal/logging"
@@ -77,10 +77,22 @@ func ExportStudentsToCSV(db *gorm.DB, exam models.Exam) (string, error) {
 		errorLogger.Error("Chyba pri načítaní študentov", slog.String("error", err.Error()))
 		return "", err
 	}
+	dirPath, err := config.LoadLastPath()
+	if err != nil {
+		errorLogger.Error("Chyba načítania configu", slog.String("error", err.Error()))
+		return "", err
+	}
 
+	absDirPath, err := filepath.Abs(dirPath)
+	if err != nil {
+		errorLogger.Error("Chyba pri konverzii cesty", slog.String("error", err.Error()))
+		return "", err
+	}
+	
 	safeTitle := strings.ReplaceAll(exam.Title, " ", "_")
 
-	fileName := fmt.Sprintf("%s%s_ID%d.csv", common.GLOBAL_EXPORT_DIR, safeTitle, exam.ID)
+	//fileName := fmt.Sprintf("%s%s_ID%d.csv", common.GLOBAL_EXPORT_DIR, safeTitle, exam.ID)
+	fileName := filepath.Join(absDirPath, fmt.Sprintf("%s_ID%d.csv", safeTitle, exam.ID))
 
 	file, err := os.Create(fileName)
 	if err != nil {
