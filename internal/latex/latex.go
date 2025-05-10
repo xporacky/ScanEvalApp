@@ -135,7 +135,7 @@ func MergePDFs(pdf1Path, pdf2Path, outputPath string) error {
 // and generates a LaTeX based PDF for each student by replacing template placeholders with student data.
 // The generated PDFs are merged into a single PDF, which is saved to the specified output path.
 // Returns an error and the path of the final merged PDF.
-func ParallelGeneratePDFs(db *gorm.DB, examID uint, templatePath) (string, error) {
+func ParallelGeneratePDFs(db *gorm.DB, examID uint, templatePath string) (string, error) {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 

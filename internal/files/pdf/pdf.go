@@ -117,13 +117,13 @@ func ExportFailedPagesToPDF(examTitle string, examID uint, pages []int, inputPDF
 	dirPath, err := config.LoadLastPath()
 	if err != nil {
 		errorLogger.Error("Chyba načítania configu", slog.String("error", err.Error()))
-		return "", err
+		return err
 	}
 
 	absDirPath, err := filepath.Abs(dirPath)
 	if err != nil {
 		errorLogger.Error("Chyba pri konverzii cesty", slog.String("error", err.Error()))
-		return "", err
+		return err
 	}
 
 	outputPDF := filepath.Join(absDirPath, fmt.Sprintf("%s%d_failed_pages.pdf", examTitle, examID))

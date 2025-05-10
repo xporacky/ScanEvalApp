@@ -2,6 +2,8 @@ package tabs
 
 import (
 	"fmt"
+	"log/slog"
+	"path/filepath"
 
 	"gioui.org/app"
 
@@ -17,10 +19,12 @@ import (
 	//"path/filepath"
 	//"ScanEvalApp/internal/database/models"
 	"ScanEvalApp/internal/common"
+	"ScanEvalApp/internal/config"
 	"ScanEvalApp/internal/database/repository"
 	"ScanEvalApp/internal/files"
 	"ScanEvalApp/internal/gui/themeUI"
 	"ScanEvalApp/internal/gui/widgets"
+	"ScanEvalApp/internal/logging"
 	"ScanEvalApp/internal/scanprocessing"
 
 	"time"
@@ -178,6 +182,7 @@ func (t *UploadTab) HandleEvent(evt interface{}) { // Zmena na interface{}
 
 func scanProcess(t *UploadTab, db *gorm.DB) {
 	var counter int = 0
+	errorLogger := logging.GetErrorLogger()
 	if t.examID == 0 && t.filePath == "" {
 		fmt.Println("nevybrané povinné súbory")
 		return
@@ -199,16 +204,16 @@ func scanProcess(t *UploadTab, db *gorm.DB) {
 		dirPath, err := config.LoadLastPath()
 		if err != nil {
 			errorLogger.Error("Chyba načítania configu", slog.String("error", err.Error()))
-			return 
+			return
 		}
 
 		// Prepočítaj relatívnu cestu na absolútnu
 		absDirPath, err := filepath.Abs(dirPath)
 		if err != nil {
 			errorLogger.Error("Chyba pri konverzii cesty", slog.String("error", err.Error()))
-			return 
+			return
 		}
-		t.progressChan <- fmt.Sprintf("Niektoré strany sa nepodarilo spracovať\nPDF bolo uložené do: %s%s_%d_failed_pages.pdf", absDirPath, safeTitle, t.examID)
+		t.progressChan <- fmt.Sprintf("Niektoré strany sa nepodarilo spracovať\nPDF bolo uložené do: %s/%s_%d_failed_pages.pdf", absDirPath, safeTitle, t.examID)
 	} else {
 		t.progressChan <- "Spracovanie dokončené."
 	}
