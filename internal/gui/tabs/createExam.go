@@ -1,12 +1,5 @@
 package tabs
 
-/*
-TODO:
-dorobit ulozenie do databazy
-dorobit scroll pri generovani otazok
-povolit iba jednu moznost pri danej otazke
-osetrit vstupy
-*/
 import (
 	"ScanEvalApp/internal/database/models"
 	"ScanEvalApp/internal/database/repository"
@@ -60,7 +53,7 @@ func NewUploadCsv(w *app.Window) *UploadCsv {
 var questionList widget.List = widget.List{List: layout.List{Axis: layout.Vertical}}
 
 type questionForm struct {
-	selectedOption widget.Enum // Uchováva vybranú možnosť (A, B, C, D, E)
+	selectedOption widget.Enum
 }
 
 // CreateExam renders the content for the "Vytvorenie Písomky" tab.
@@ -175,7 +168,6 @@ func (t *UploadCsv) CreateExam(gtx layout.Context, th *themeUI.Theme, db *gorm.D
 	)
 }
 
-// Funkcia na otvorenie dialógového okna na výber súboru
 func (t *UploadCsv) openFileDialog(db *gorm.DB) {
 	errorLogger := logging.GetErrorLogger()
 
@@ -185,7 +177,7 @@ func (t *UploadCsv) openFileDialog(db *gorm.DB) {
 		return
 	}
 	if file != nil {
-		defer file.Close() // Nezabudni zatvoriť súbor
+		defer file.Close()
 		if f, ok := file.(*os.File); ok {
 			t.filePath = f.Name()
 		} else {
@@ -200,8 +192,7 @@ func (t *UploadCsv) openFileDialog(db *gorm.DB) {
 	}
 }
 
-// Spracovanie eventov (pre Explorer)
-func (t *UploadCsv) HandleEvent(evt interface{}) { // Zmena na interface{}
+func (t *UploadCsv) HandleEvent(evt interface{}) {
 	switch e := evt.(type) {
 	case app.FrameEvent:
 		t.explorer.ListenEvents(e)

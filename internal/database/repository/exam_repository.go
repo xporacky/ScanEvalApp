@@ -3,7 +3,6 @@ package repository
 import (
 	"ScanEvalApp/internal/database/models"
 	"ScanEvalApp/internal/logging"
-	"fmt"
 	"log/slog"
 
 	"gorm.io/gorm"
@@ -78,9 +77,4 @@ func DeleteExam(db *gorm.DB, exam *models.Exam) error {
 
 	logger.Debug("Test vymazaný", slog.Uint64("test ID", uint64(exam.ID)))
 	return result.Error
-}
-
-func ShowAnswers(exam *models.Exam) {
-	fmt.Println("Zobrazenie odpovedí na test: ")
-	// Neskôr tu pridáme logiku na zobrazenie odpovedí.
 }

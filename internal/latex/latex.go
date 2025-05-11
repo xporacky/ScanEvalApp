@@ -37,7 +37,6 @@ func CompileLatexToPDF(latexContent []byte) ([]byte, error) {
 	}
 
 	defer func() {
-		// Kontrola chyby pri mazani temp suboru
 		if err := files.DeleteFile(texFile.Name()); err != nil {
 			errorLogger.Error("Error deleting temporary LaTeX file", slog.Group("CRITICAL", slog.String("error", err.Error())))
 		}
@@ -192,12 +191,6 @@ func ParallelGeneratePDFs(db *gorm.DB, examID uint, templatePath string) (string
 					return
 				}
 
-				// // Load the exam for the student
-				// if err := db.First(&exam, student.ExamID).Error; err != nil {
-				// 	errorLogger.Error("Error fetching exam for student", "student_id", student.ID, slog.String("error", err.Error()))
-				// 	return
-				// }
-
 				// Prepare the data to replace placeholders in the LaTeX template
 				data := TemplateData{
 					ID:        fmt.Sprintf("%d", student.RegistrationNumber),
@@ -278,7 +271,6 @@ func ParallelGeneratePDFs(db *gorm.DB, examID uint, templatePath string) (string
 		wg.Wait()
 	}
 
-	// TODO -> podla zmeny DB mozno nejak inak premenovat vysledny subor, napr zobrat nieco z roku alebo neviem...
 	// Create a final pdf
 	dirPath, err := config.LoadLastPath()
 	if err != nil {
@@ -408,21 +400,21 @@ func PrintSheet(db *gorm.DB, registrationNumber int) (string, error) {
 		errorLogger.Error("Chyba pri konverzii cesty", slog.String("error", err.Error()))
 		return "", err
 	}
+
 	// Save the student's compiled PDF
 	studentPDFPath := filepath.Join(absDirPath, fmt.Sprintf("student_%d.pdf", student.RegistrationNumber))
-	if err := os.WriteFile(studentPDFPath, studentPDF, common.FILE_PERMISSION); err != nil {
-		errorLogger.Error("Error saving PDF for student", "student_id", student.ID, slog.String("error", err.Error()))
+	err = os.WriteFile(studentPDFPath, studentPDF, common.FILE_PERMISSION)
+	if err != nil {
+		errorLogger.Error("Chyba pri ukladaní PDF pre študenta",
+			"student_id", student.ID,
+			slog.String("error", err.Error()))
 		return "", err
 	}
 
-	if err != nil {
-		errorLogger.Error("Chyba pri získavaní absolútnej cesty k PDF", "student_id", student.ID, slog.String("error", err.Error()))
-	} else {
-		logger.Info("PDF saved successfully for student",
-			"student_id", student.ID,
-			"pdf_path", studentPDFPath,
-		)
-	}
+	logger.Info("PDF úspešne uložené pre študenta",
+		"student_id", student.ID,
+		"pdf_path", studentPDFPath,
+	)
 
 	return studentPDFPath, nil
 }

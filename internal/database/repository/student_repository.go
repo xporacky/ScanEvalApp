@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"strconv"
 
-	"gorm.io/gorm"
-	//"fmt"
 	"ScanEvalApp/internal/logging"
 	"log/slog"
 	"strings"
 	"unicode"
+
+	"gorm.io/gorm"
 
 	"golang.org/x/text/transform"
 	"golang.org/x/text/unicode/norm"
@@ -99,13 +99,12 @@ func DeleteStudent(db *gorm.DB, student *models.Student) error {
 	return result.Error
 }
 
-// Funkcia na odstránenie diakritiky
 func RemoveDiacritics(s string) string {
 	t := transform.Chain(norm.NFD, transform.RemoveFunc(func(r rune) bool {
-		return unicode.Is(unicode.Mn, r) // Odstráni diakritické značky
+		return unicode.Is(unicode.Mn, r)
 	}), norm.NFC)
 	result, _, _ := transform.String(t, s)
-	return strings.ToLower(result) // Konvertuje na malé písmená pre case-insensitive porovnávanie
+	return strings.ToLower(result)
 }
 
 func GetStudentsQuery(db *gorm.DB, query string) ([]models.Student, error) {
@@ -115,7 +114,7 @@ func GetStudentsQuery(db *gorm.DB, query string) ([]models.Student, error) {
 	logger.Debug("Vyhľadávanie študentov podľa dotazu", slog.String("query", query))
 
 	var students []models.Student
-	query = RemoveDiacritics(query) // Odstráni diakritiku
+	query = RemoveDiacritics(query)
 
 	rows, err := db.Raw("SELECT * FROM students").Rows()
 	if err != nil {
@@ -127,7 +126,7 @@ func GetStudentsQuery(db *gorm.DB, query string) ([]models.Student, error) {
 	for rows.Next() {
 		var student models.Student
 		db.ScanRows(rows, &student)
-		// Porovnanie bez diakritiky
+
 		if strings.Contains(RemoveDiacritics(student.Name), query) ||
 			strings.Contains(RemoveDiacritics(student.Surname), query) ||
 			strings.Contains(fmt.Sprintf("%d", student.RegistrationNumber), query) {

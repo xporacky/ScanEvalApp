@@ -3,7 +3,7 @@ package window
 
 import (
 	"ScanEvalApp/internal/gui/fonts"
-	"ScanEvalApp/internal/gui/tabmanager" // Import tabmanager balíka
+	"ScanEvalApp/internal/gui/tabmanager"
 	"ScanEvalApp/internal/gui/tabs"
 	"ScanEvalApp/internal/gui/themeUI"
 	"ScanEvalApp/internal/logging"
@@ -27,7 +27,7 @@ func RunWindow(db *gorm.DB) error {
 	)
 
 	var ops op.Ops
-	tm := tabmanager.NewTabManager(5) // Vytvor TabManager
+	tm := tabmanager.NewTabManager(5)
 	tabNames := []string{"Písomky", "Študenti", "Vytvorenie Písomky", "Vyhodnotenie testu", "Nastavenia"}
 
 	uploadTab := tabs.NewUploadTab(w)
@@ -51,7 +51,7 @@ func RunWindow(db *gorm.DB) error {
 
 			layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					return tm.LayoutTabs(gtx, th, tabNames) // Vykreslenie záložiek
+					return tm.LayoutTabs(gtx, th, tabNames)
 				}),
 				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 					switch tm.ActiveTab {
@@ -63,10 +63,9 @@ func RunWindow(db *gorm.DB) error {
 						return uploadCsv.CreateExam(gtx, th, db, tm)
 					case 3:
 						if selectedTestID != 0 {
-							uploadTab.SetTestID(selectedTestID) // Nastavenie ID testu v UploadTab
+							uploadTab.SetTestID(selectedTestID)
 						}
-						return uploadTab.Layout(gtx, th, db, w) // Použitie inicializovaného UploadTab
-						//return tabs.Upload(gtx, th,w)
+						return uploadTab.Layout(gtx, th, db, w)
 					case 4:
 						return settingTab.Layout(gtx, th, w)
 					default:

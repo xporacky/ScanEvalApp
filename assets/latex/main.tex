@@ -10,7 +10,6 @@
 \usepackage{pgf}
 \definecolor{mygray}{rgb}{0.8, 0.8, 0.8} % Light gray
 
-% todo
 \setlength{\headheight}{65.90973pt}  % Nastavenie výšky hlavičky
 % \setlength{\headsep}{15pt}        % Posun hlavičky od textu
 \addtolength{\topmargin}{5pt} % Kompenzácia horného okraja
@@ -73,7 +72,6 @@
         }
 
         % Generate rows from `#1` (start) to `#2` (end), but limit to the exact total number of questions
-        % todo - pridanie premennej co by prenasobila yshift tak, aby boli vacsie medzeri medzi riadkami, a tym padom lepsie by sa detekovali kruzky
         \foreach \line in {#1,...,#2} {
             \begin{scope}[yshift=-\the\value{rowPosition}cm - 1.5cm] % Adjust row position
                 \node at (0, 0) {\normalsize\textbf{\the\value{rowCounter}}}; % Display question number as integer

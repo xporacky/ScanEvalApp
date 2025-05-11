@@ -9,8 +9,9 @@ import (
 	//"gioui.org/x/component"
 	"ScanEvalApp/internal/gui/themeUI"
 )
+
 // GeneratingContent vráti widget, ktorý ukazuje loading alebo výsledok
-func ContentGenerating(th *themeUI.Theme, isGenerating *bool, generatedPath *string) layout.Widget {
+func ContentGenerating(th *themeUI.Theme, isGenerating *bool, generatedPath *string, message *string) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{Axis: layout.Vertical, Alignment: layout.Middle}.Layout(gtx,
@@ -19,7 +20,7 @@ func ContentGenerating(th *themeUI.Theme, isGenerating *bool, generatedPath *str
 					if *isGenerating {
 						text = "Generujem..."
 					} else if *generatedPath == "" {
-						text = "Chyba pri generovaní (TIP: skontroluj logy a oprav chybu)"
+						text = "Chyba pri generovaní: " + *message
 					} else {
 						text = "Úspešne vygenerované:\n" + *generatedPath
 					}

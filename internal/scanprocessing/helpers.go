@@ -206,7 +206,7 @@ func LoadConfig(configFile string) error {
 	configPath := CONFIGS_DIR + configFile + ".json"
 	file, err := os.Open(configPath)
 	if err != nil {
-		return fmt.Errorf("Chyba pri otváraní konfiguračného súboru: %w", err)
+		return fmt.Errorf("chyba pri otváraní konfiguračného súboru: %w", err)
 	}
 	defer file.Close()
 
@@ -217,7 +217,7 @@ func LoadConfig(configFile string) error {
 
 	decoder := json.NewDecoder(file)
 	if err := decoder.Decode(&config); err != nil {
-		return fmt.Errorf("Chyba pri dekódovaní konfiguračného súboru: %w", err)
+		return fmt.Errorf("chyba pri dekódovaní konfiguračného súboru: %w", err)
 	}
 
 	MEAN_INTENSITY_X_LOWEST = config.MeanIntensityXLowest

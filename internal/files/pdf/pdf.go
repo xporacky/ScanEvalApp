@@ -8,6 +8,7 @@ import (
 	"ScanEvalApp/internal/logging"
 	"fmt"
 	"log/slog"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
@@ -28,15 +29,14 @@ func SlicePdfForStudent(db *gorm.DB, registrationNumber int) (string, error) {
 		return "", err
 	}
 
-	// Parse the pages string from the student record and split it into individual pages
 	pagesStr := student.Pages
 
 	if pagesStr == "" {
+		err = fmt.Errorf("študent (číslo registrácie: %d) nemá žiadne stránky v databáze", registrationNumber)
 		logger.Info("Študent nemá žiadne stránky v DB", "registration_number", registrationNumber)
-		return "", nil // TODO osetrit lebo v GUI sa zasa ked sa nevrati error vypise ze to bolo uspesne slicnutie
+		return "", err
 	}
 
-	// Split the pages string by the delimiter "-" and convert to integer values
 	pageParts := strings.Split(pagesStr, "-")
 	var pages []int
 	for _, part := range pageParts {
@@ -62,13 +62,21 @@ func SlicePdfForStudent(db *gorm.DB, registrationNumber int) (string, error) {
 	fileName := fmt.Sprintf("scan_%s_%d.pdf", safeTitle, exam.ID)
 	inputPDF := filepath.Join(common.GLOBAL_TEMP_SCAN, fileName)
 
+	if _, err := os.Stat(inputPDF); err != nil {
+		if os.IsNotExist(err) {
+			errorLogger.Error("PDF súbor pre test neexistuje", "file_path", inputPDF, slog.String("error", err.Error()))
+			return "", fmt.Errorf("PDF súbor pre test neexistuje: %s", inputPDF)
+		}
+		errorLogger.Error("Chyba pri kontrole PDF súboru", "file_path", inputPDF, slog.String("error", err.Error()))
+		return "", fmt.Errorf("chyba pri kontrole PDF súboru: %w", err)
+	}
+
 	dirPath, err := config.LoadLastPath()
 	if err != nil {
 		errorLogger.Error("Chyba načítania configu", slog.String("error", err.Error()))
 		return "", err
 	}
 
-	// Prepočítaj relatívnu cestu na absolútnu
 	absDirPath, err := filepath.Abs(dirPath)
 	if err != nil {
 		errorLogger.Error("Chyba pri konverzii cesty", slog.String("error", err.Error()))
@@ -76,17 +84,14 @@ func SlicePdfForStudent(db *gorm.DB, registrationNumber int) (string, error) {
 	}
 	outputPDF := filepath.Join(absDirPath, fmt.Sprintf("student_%d_vyplnene.pdf", registrationNumber))
 
-	// Convert the list of pages into arguments for pdftk
 	var pageArgs []string
 	for _, p := range pages {
 		pageArgs = append(pageArgs, strconv.Itoa(p))
 	}
 
-	// Vytvor exec.Command argumenty ako samostatné stringy
 	cmdArgs := append([]string{inputPDF, "cat"}, pageArgs...)
 	cmdArgs = append(cmdArgs, "output", outputPDF)
 
-	// Prepare the command-line arguments for pdftk
 	cmd := exec.Command("pdftk", cmdArgs...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {

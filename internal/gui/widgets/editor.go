@@ -17,15 +17,15 @@ type EditorField struct {
 	//Width		unit.Dp
 }
 
-func NewEditorField(th *material.Theme, input *widget.Editor, placeholder string,) *EditorField {
-    e := &EditorField{
-        Editor:      input, // Použitie existujúceho widget.Editor
-        Placeholder: placeholder,
-        BorderColor: color.NRGBA{A: 255}, // Default black border
+func NewEditorField(th *material.Theme, input *widget.Editor, placeholder string) *EditorField {
+	e := &EditorField{
+		Editor:      input,
+		Placeholder: placeholder,
+		BorderColor: color.NRGBA{A: 255},
 		//Width:       width,
-    }
-    e.Editor.SingleLine = true
-    return e
+	}
+	e.Editor.SingleLine = true
+	return e
 }
 
 func (e *EditorField) SetText(text string) {
@@ -39,10 +39,6 @@ func (e *EditorField) GetText() string {
 func (e *EditorField) SetBorderColor(color color.NRGBA) {
 	e.BorderColor = color
 }
-/*
-func (e *EditorField) SetWidth(width unit.Dp) {
-	e.Width = width
-}*/
 
 func (e *EditorField) Layout(gtx layout.Context, theme *themeUI.Theme) layout.Dimensions {
 	border := widget.Border{

@@ -1,12 +1,7 @@
 package scanprocessing
 
-import (
-)
-
-
 const NUMBER_OF_CHOICES = 5
 const NUMBER_OF_QUESTIONS_PER_PAGE = 20
-
 
 const TEMP_IMAGE_PATH = "./assets/tmp/temp-image.png"
 const TEMP_HEADER_IMAGE_PATH = "./assets/tmp/temp-header-image.png"
@@ -23,5 +18,3 @@ const (
 	StateCircleFound = iota
 	StateEmpty       = iota
 )
-
-

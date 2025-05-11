@@ -7,17 +7,12 @@ import (
 
 	"gioui.org/app"
 
-	//"gioui.org/io/system"
 	"gioui.org/layout"
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"gioui.org/x/explorer"
 
-	//"io"
-	"log"
-	//"path/filepath"
-	//"ScanEvalApp/internal/database/models"
 	"ScanEvalApp/internal/common"
 	"ScanEvalApp/internal/config"
 	"ScanEvalApp/internal/database/repository"
@@ -26,12 +21,12 @@ import (
 	"ScanEvalApp/internal/gui/widgets"
 	"ScanEvalApp/internal/logging"
 	"ScanEvalApp/internal/scanprocessing"
+	"log"
 
 	"time"
 
 	"gorm.io/gorm"
 
-	//"encoding/csv"
 	"os"
 )
 
@@ -81,7 +76,6 @@ func (t *UploadTab) SetTestID(id uint) {
 }
 
 func (t *UploadTab) Layout(gtx layout.Context, th *themeUI.Theme, db *gorm.DB, w *app.Window) layout.Dimensions {
-	// Spracovanie kliknutí na tlačidlo
 	if t.button.Clicked(gtx) {
 		go t.openFileDialog(db, th)
 	}
@@ -90,9 +84,7 @@ func (t *UploadTab) Layout(gtx layout.Context, th *themeUI.Theme, db *gorm.DB, w
 		t.dropdown.open = !t.dropdown.open
 	}
 
-	// Celý obsah obalíme do layout.Stack
 	return layout.Stack{}.Layout(gtx,
-		// Najskôr vykreslíme hlavnú obrazovku
 		layout.Expanded(func(gtx layout.Context) layout.Dimensions {
 			return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				return layout.Flex{
@@ -122,7 +114,6 @@ func (t *UploadTab) Layout(gtx layout.Context, th *themeUI.Theme, db *gorm.DB, w
 				)
 			})
 		}),
-		// Potom modal navrch (ak je viditeľný)
 		layout.Expanded(func(gtx layout.Context) layout.Dimensions {
 			if t.uploadModal.Visible {
 				return t.uploadModal.Layout(gtx, th)
@@ -132,7 +123,6 @@ func (t *UploadTab) Layout(gtx layout.Context, th *themeUI.Theme, db *gorm.DB, w
 	)
 }
 
-// Funkcia na otvorenie dialógového okna na výber súboru
 func (t *UploadTab) openFileDialog(db *gorm.DB, th *themeUI.Theme) {
 	file, err := t.explorer.ChooseFile()
 	if err != nil {
@@ -172,8 +162,7 @@ func (t *UploadTab) BuildProgressContent(th *themeUI.Theme) layout.Widget {
 	}
 }
 
-// Spracovanie eventov (pre Explorer)
-func (t *UploadTab) HandleEvent(evt interface{}) { // Zmena na interface{}
+func (t *UploadTab) HandleEvent(evt interface{}) {
 	switch e := evt.(type) {
 	case app.FrameEvent:
 		t.explorer.ListenEvents(e)
@@ -207,7 +196,6 @@ func scanProcess(t *UploadTab, db *gorm.DB) {
 			return
 		}
 
-		// Prepočítaj relatívnu cestu na absolútnu
 		absDirPath, err := filepath.Abs(dirPath)
 		if err != nil {
 			errorLogger.Error("Chyba pri konverzii cesty", slog.String("error", err.Error()))
@@ -250,7 +238,6 @@ func NewDropdown() Dropdown {
 }
 
 func (d *Dropdown) Layout(gtx layout.Context, th *material.Theme) layout.Dimensions {
-	// Ak sa zmenil výber, načítaj konfiguráciu
 	if d.selected.Value != d.lastValue {
 		d.lastValue = d.selected.Value
 		err := scanprocessing.LoadConfig(d.selected.Value)

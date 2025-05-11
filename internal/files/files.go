@@ -80,7 +80,6 @@ func DeleteFile(filePath string) error {
 	errorLogger := logging.GetErrorLogger()
 
 	if _, err := os.Stat(filePath); err == nil {
-		// File exists, attempt to remove it
 		err = os.Remove(filePath)
 		if err != nil {
 			errorLogger.Error("Chyba pri mazaní súboru", slog.Group("CRITICAL", slog.String("error", err.Error())), slog.String("file_path", filePath))
@@ -90,7 +89,6 @@ func DeleteFile(filePath string) error {
 	}
 	return nil
 }
-
 
 func GetFilesFromConfigs() ([]string, error) {
 	files, err := os.ReadDir("./configs")

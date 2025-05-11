@@ -29,18 +29,18 @@ func InitLogger() {
 		// Rotujúce log súbory pre app.log
 		appLogWriter := &lumberjack.Logger{
 			Filename:   filepath.Join(logsDir, "app.log"),
-			MaxSize:    5,  // Max 5 MB
-			MaxBackups: 3,  // Udržiava max 3 staré logy
-			MaxAge:     7,  // Ukladá logy max 7 dní
+			MaxSize:    5,    // Max 5 MB
+			MaxBackups: 3,    // Udržiava max 3 staré logy
+			MaxAge:     7,    // Ukladá logy max 7 dní
 			Compress:   true, // Kompresia starých logov
 		}
 
 		// Rotujúce log súbory pre error.log
 		errorLogWriter := &lumberjack.Logger{
 			Filename:   filepath.Join(logsDir, "error.log"),
-			MaxSize:    5,  // Max 5 MB
-			MaxBackups: 3,  // Udržiava max 3 staré logy
-			MaxAge:     7,  // Ukladá logy max 7 dní
+			MaxSize:    5,    // Max 5 MB
+			MaxBackups: 3,    // Udržiava max 3 staré logy
+			MaxAge:     7,    // Ukladá logy max 7 dní
 			Compress:   true, // Kompresia starých logov
 		}
 

@@ -5,18 +5,15 @@ import (
 	"ScanEvalApp/internal/files/pdf"
 	"fmt"
 
-	"gioui.org/layout"
-	"gioui.org/widget"
-	"gioui.org/widget/material"
-	"gorm.io/gorm"
-
-	//"image/color"
-
-	//"reflect"
 	"ScanEvalApp/internal/gui/themeUI"
 	"ScanEvalApp/internal/gui/widgets"
 	"ScanEvalApp/internal/logging"
 	"log/slog"
+
+	"gioui.org/layout"
+	"gioui.org/widget"
+	"gioui.org/widget/material"
+	"gorm.io/gorm"
 
 	"ScanEvalApp/internal/latex"
 
@@ -28,10 +25,8 @@ var downloadButtons []widget.Clickable
 var searchQuery widget.Editor
 var studentModal widgets.Modal
 
-// scrollovanie
 var studentList widget.List = widget.List{List: layout.List{Axis: layout.Vertical}}
 
-// StudentsTab renders the "Students" tab with a table of students.
 func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensions {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
@@ -43,10 +38,8 @@ func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensi
 		errorLogger.Error("Chyba pri načítaní študentov", slog.String("error", err.Error()))
 		return layout.Dimensions{}
 	}
-	// Filtrovanie študentov na základe textu v searchQuery
 	query := searchQuery.Text()
 
-	// Ak je query nenulové, filtrujeme podľa mena, priezviska a registračného čísla
 	if query != "" {
 		students, err = repository.GetStudentsQuery(db, query)
 		if err != nil {
@@ -61,7 +54,7 @@ func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensi
 		}
 	}
 	columns := []string{"Meno", "Priezvisko", "Dátum narodenia", "Registračné číslo", "Miestnosť", "Skóre", "Tlačiť hárok", "Stiahnúť hárok"}
-	columnWidths := []float32{0.2, 0.2, 0.15, 0.15, 0.1, 0.05, 0.075, 0.075} // Pomery šírok
+	columnWidths := []float32{0.2, 0.2, 0.15, 0.15, 0.1, 0.05, 0.075, 0.075}
 	if len(printButtons) != len(students) {
 		printButtons = make([]widget.Clickable, len(students))
 	}
@@ -69,7 +62,6 @@ func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensi
 		downloadButtons = make([]widget.Clickable, len(students))
 	}
 	return layout.Stack{}.Layout(gtx,
-		// Hlavný obsah aplikácie
 		layout.Expanded(func(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
@@ -82,6 +74,7 @@ func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensi
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					return layout.Inset{Left: insetWidth, Right: insetWidth}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 						return material.List(th.Material(), &studentList).Layout(gtx, len(students)+1, func(gtx layout.Context, i int) layout.Dimensions {
+							msg := ""
 							if i == 0 {
 								return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
 									layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
@@ -113,18 +106,18 @@ func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensi
 
 							student := students[i-1]
 							if printButtons[i-1].Clicked(gtx) {
-								// iba na testovanie, ci pocita dobre score
-								fmt.Println("Student: ", student.RegistrationNumber, "Odpovede: ", student.Answers, ", score: ", student.Score)
-								//printSheet(student.RegistrationNumber)
 								studentModal.Visible = true
 								studentModal.SetCloseBtnEnable = false
 								isGenerating := true
 								generatedPath := ""
-								studentModal.Content = widgets.ContentGenerating(th, &isGenerating, &generatedPath)
+								studentModal.Content = widgets.ContentGenerating(th, &isGenerating, &generatedPath, &msg)
 
 								go func() {
 									path, err := latex.PrintSheet(db, student.RegistrationNumber)
 									if err != nil {
+										msg = fmt.Sprintf("Chyba pri tlači hárku pre študenta (ID: %d, číslo registrácie: %d): %s",
+											student.ID, student.RegistrationNumber, err.Error())
+
 										errorLogger.Error("Chyba pri tlači hárku pre študenta",
 											"student_id", student.ID,
 											slog.Uint64("registration_number", uint64(student.RegistrationNumber)),
@@ -134,33 +127,35 @@ func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensi
 										generatedPath = path
 										isGenerating = false
 										studentModal.SetCloseBtnEnable = true
+										msg = ""
 										logger.Info("Úspešne vytlačený hárok pre študenta",
 											slog.Uint64("registration_number", uint64(student.RegistrationNumber)))
 									}
 								}()
 							}
 							if downloadButtons[i-1].Clicked(gtx) {
-								fmt.Printf("stiahnuť vyplneny harok")
 								studentModal.Visible = true
 								studentModal.SetCloseBtnEnable = false
 								isGenerating := true
 								generatedPath := ""
-								studentModal.Content = widgets.ContentGenerating(th, &isGenerating, &generatedPath)
+								studentModal.Content = widgets.ContentGenerating(th, &isGenerating, &generatedPath, &msg)
 
 								go func() {
-									// sem si zavolam funkciu, ktora pre studenta slicne z pdf dane subory a to ulozi ako pdf do tmp s nazvom studentovho id
 									path, err := pdf.SlicePdfForStudent(db, student.RegistrationNumber)
 									if err != nil {
+										msg = fmt.Sprintf("Chyba pri slicingu PDF pre študenta %d: %s", student.ID, err.Error())
 										errorLogger.Error("Chyba pri slicingu PDF pre študenta", "registration_number", student.RegistrationNumber, "error", err.Error())
+										isGenerating = false
+										studentModal.SetCloseBtnEnable = true
 									} else {
 										generatedPath = path
 										isGenerating = false
 										studentModal.SetCloseBtnEnable = true
+										msg = ""
 										logger.Info("Úspešne slicitované PDF pre študenta", "registration_number", student.RegistrationNumber)
 									}
 								}()
 							}
-								
 
 							return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
 								layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
@@ -199,7 +194,6 @@ func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensi
 				}),
 			)
 		}),
-		// Modal - vykreslí sa NAVRCHU, ak je viditeľný
 		layout.Expanded(func(gtx layout.Context) layout.Dimensions {
 			if studentModal.Visible {
 				return studentModal.Layout(gtx, th)
@@ -207,10 +201,4 @@ func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensi
 			return layout.Dimensions{}
 		}),
 	)
-}
-
-func printSheet(registrationNumber string) {
-	logger := logging.GetLogger()
-
-	logger.Info("Volám tlač hárku pre študenta ID", slog.String("ID", registrationNumber))
 }

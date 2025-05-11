@@ -29,10 +29,7 @@ var printExamBtns []widget.Clickable
 var exportCSV []widget.Clickable
 var modal widgets.Modal
 
-// scrollovanie
 var examList widget.List = widget.List{List: layout.List{Axis: layout.Vertical}}
-
-// Exams renders the "Exams" tab with dynamically generated columns based on data from the database.
 
 func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm.DB, tm *tabmanager.TabManager) layout.Dimensions {
 	logger := logging.GetLogger()
@@ -67,13 +64,13 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 		exportCSV = make([]widget.Clickable, len(exams))
 	}
 	return layout.Stack{}.Layout(gtx,
-		// Hlavný obsah aplikácie
 		layout.Expanded(func(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					return layout.Inset{Left: insetWidth, Right: insetWidth}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 						return material.List(th.Theme, &examList).Layout(gtx, len(exams)+1, func(gtx layout.Context, i int) layout.Dimensions {
-							if i == 0 { // Prvá položka je hlavička
+							msg := ""
+							if i == 0 {
 								return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
 									layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
 										return widgets.LabelBorder(gtx, th, headerSize, columns[0])
@@ -113,7 +110,7 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 							exam := exams[i-1]
 							if deleteButtons[i-1].Clicked(gtx) {
 								deleteExam(db, &exam)
-								exams = removeExamFromList(exams, i-1) // Remove exam from the list for UI update
+								exams = removeExamFromList(exams, i-1)
 							}
 							if showAnsButtons[i-1].Clicked(gtx) {
 								modal.Visible = true
@@ -126,8 +123,8 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 								modal.Content = Statistics(gtx, th, &exam)
 							}
 							if evaluateExamBtns[i-1].Clicked(gtx) {
-								*selectedExamID = exam.ID // Nastavenie ID testu
-								tm.ActiveTab = 3          // Prechod na UploadTab
+								*selectedExamID = exam.ID
+								tm.ActiveTab = 3
 
 							}
 							if printExamBtns[i-1].Clicked(gtx) {
@@ -135,11 +132,12 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 								modal.SetCloseBtnEnable = false
 								isGenerating := true
 								generatedPath := ""
-								modal.Content = widgets.ContentGenerating(th, &isGenerating, &generatedPath)
+								modal.Content = widgets.ContentGenerating(th, &isGenerating, &generatedPath, &msg)
 								go func() {
 									path, err := latex.ParallelGeneratePDFs(db, exam.ID, common.TEMPLATE_PATH)
 
 									if err != nil {
+										msg = "Chyba: pri generovaní PDF"
 										errorLogger.Error("Chyba pri generovaní PDF",
 											slog.String("error", err.Error()),
 											slog.String("path", path),
@@ -148,6 +146,7 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 										generatedPath = path
 										isGenerating = false
 										modal.SetCloseBtnEnable = true
+										msg = ""
 										logger.Info("Úspešne vygenerované PDF pre skúšku", slog.String("examID", fmt.Sprintf("%d", exam.ID)))
 									}
 								}()
@@ -157,16 +156,19 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 								modal.SetCloseBtnEnable = false
 								isGenerating := true
 								generatedPath := ""
-								modal.Content = widgets.ContentGenerating(th, &isGenerating, &generatedPath)
+								msg = ""
+								modal.Content = widgets.ContentGenerating(th, &isGenerating, &generatedPath, &msg)
 								go func() {
 									path, err := csv.ExportStudentsToCSV(db, exam)
 
 									if err != nil {
+										msg = "Chyba pri exportovani CSV"
 										errorLogger.Error("Chyba pri exportovani CSV", slog.String("error", err.Error()))
 									} else {
 										generatedPath = path
 										isGenerating = false
 										modal.SetCloseBtnEnable = true
+										msg = ""
 										logger.Info("Úspešne vyexportovane CSV pre skúšku", slog.String("examID", fmt.Sprintf("%d", exam.ID)))
 									}
 								}()
@@ -230,7 +232,6 @@ func Exams(gtx layout.Context, th *themeUI.Theme, selectedExamID *uint, db *gorm
 				}),
 			)
 		}),
-		// Modal - vykreslí sa NAVRCHU, ak je viditeľný
 		layout.Expanded(func(gtx layout.Context) layout.Dimensions {
 			if modal.Visible {
 				return modal.Layout(gtx, th)
@@ -244,7 +245,6 @@ func deleteExam(db *gorm.DB, exam *models.Exam) {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
-	// Deleting the test from the database
 	if err := repository.DeleteExam(db, exam); err != nil {
 		errorLogger.Error("Chyba pri vymazávaní testu", slog.Uint64("ID", uint64(exam.ID)), slog.String("error", err.Error()))
 		return
@@ -254,7 +254,6 @@ func deleteExam(db *gorm.DB, exam *models.Exam) {
 }
 
 func removeExamFromList(exams []models.Exam, index int) []models.Exam {
-	// Removing the test from the list at the specified index
 	return append(exams[:index], exams[index+1:]...)
 
 }
@@ -310,7 +309,6 @@ func Statistics(gtx layout.Context, th *themeUI.Theme, exam *models.Exam) layout
 	errorLogger := logging.GetErrorLogger()
 
 	checkboxes = make([]widget.Bool, len(statisticsOptions))
-	// Nastaviť všetky checkboxy na zaškrtnuté
 	for i := range checkboxes {
 		checkboxes[i] = widget.Bool{Value: true}
 	}
@@ -320,11 +318,13 @@ func Statistics(gtx layout.Context, th *themeUI.Theme, exam *models.Exam) layout
 			modal.SetCloseBtnEnable = false
 			isGenerating := true
 			generatedPath := ""
-			modal.Content = widgets.ContentGenerating(th, &isGenerating, &generatedPath)
+			msg := ""
+			modal.Content = widgets.ContentGenerating(th, &isGenerating, &generatedPath, &msg)
 			go func() {
 				selectedStats := collectSelectedStats()
 				path, err := latex.GenerateStatistics(selectedStats, exam)
 				if err != nil {
+					msg = "Chyba: " + err.Error()
 					errorLogger.Error("Chyba pri generovaní štatistík", slog.String("error", err.Error()))
 					isGenerating = false
 					modal.SetCloseBtnEnable = true

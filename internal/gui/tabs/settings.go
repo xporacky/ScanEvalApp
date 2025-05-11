@@ -1,17 +1,17 @@
 package tabs
 
 import (
-	
 	"log"
+
 	"gioui.org/app"
 	"gioui.org/layout"
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 
+	"ScanEvalApp/internal/config"
 	"ScanEvalApp/internal/gui/themeUI"
 	"ScanEvalApp/internal/gui/widgets"
-	"ScanEvalApp/internal/config"
 
 	"github.com/sqweek/dialog"
 )
@@ -26,7 +26,6 @@ func NewSettingTab(w *app.Window) *SettingTab {
 		selectFolderBtn: widget.Clickable{},
 	}
 
-	// Pokús sa načítať poslednú cestu zo súboru
 	if path, err := config.LoadLastPath(); err == nil {
 		tab.selectedPath = path
 	} else {
@@ -37,7 +36,6 @@ func NewSettingTab(w *app.Window) *SettingTab {
 }
 
 func (t *SettingTab) Layout(gtx layout.Context, th *themeUI.Theme, w *app.Window) layout.Dimensions {
-	// Kliknutie na "Vybrať priečinok"
 	if t.selectFolderBtn.Clicked(gtx) {
 		go func() {
 			dir, err := dialog.Directory().Title("Vyber priečinok").Browse()
@@ -47,12 +45,11 @@ func (t *SettingTab) Layout(gtx layout.Context, th *themeUI.Theme, w *app.Window
 			}
 			t.selectedPath = dir
 
-			// Ulož do config.json
 			if err := config.SaveLastPath(dir); err != nil {
 				log.Println("Chyba pri ukladaní cesty:", err)
 			}
 
-			w.Invalidate() // Obnov GUI
+			w.Invalidate()
 		}()
 	}
 	return layout.Inset{
@@ -68,7 +65,7 @@ func (t *SettingTab) Layout(gtx layout.Context, th *themeUI.Theme, w *app.Window
 				}.Layout(gtx,
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 						return layout.Inset{
-							Top: unit.Dp(5),
+							Top:   unit.Dp(5),
 							Right: unit.Dp(8),
 						}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 							return material.Label(th.Theme, unit.Sp(18), "Miesto ukladania súborov:").Layout(gtx)
@@ -87,7 +84,7 @@ func (t *SettingTab) Layout(gtx layout.Context, th *themeUI.Theme, w *app.Window
 					}),
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 						return layout.Inset{
-							Top: unit.Dp(2),
+							Top:   unit.Dp(2),
 							Right: unit.Dp(700),
 						}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 							btn := widgets.Button(th.Theme, &t.selectFolderBtn, widgets.FileFolderIcon, widgets.IconPositionStart, "Vybrať priečinok")
@@ -100,8 +97,5 @@ func (t *SettingTab) Layout(gtx layout.Context, th *themeUI.Theme, w *app.Window
 			}),
 		)
 	})
-	
-	
 
-	
-}	
+}

@@ -58,7 +58,6 @@ func New(material *material.Theme) *Theme {
 	}
 
 	t.Theme.TextSize = unit.Sp(14)
-	// default theme is dark
 	t.LoaderColor = rgb(0x000000)
 	t.Theme.Palette.Fg = rgb(0x000000)
 	t.Theme.Palette.Bg = rgb(0xffffff)

@@ -108,7 +108,6 @@ func GenerateStatistics(selectedStats []string, exam *models.Exam) (string, erro
 		return "", err
 	}
 
-	// Prepočítaj relatívnu cestu na absolútnu
 	absDirPath, err := filepath.Abs(dirPath)
 	if err != nil {
 		errorLogger.Error("Chyba pri konverzii cesty", slog.String("error", err.Error()))
@@ -228,6 +227,7 @@ func GenerateLatexReport(exam *models.Exam, statsData map[string]interface{}) ([
 	\title{Štatistiky testu: ` + latexEscape(exam.Title) + `}
 	\date{}
 	\begin{document}
+	\pagestyle{empty}
 	\maketitle
 	`)
 
@@ -396,8 +396,8 @@ func buildPlotData(scores []int) (labels string, coordinates string) {
 func buildPerQuestionPlotData(successRates []float64) (labels string, coordinates string) {
 	var labelParts, coordParts []string
 	for i, rate := range successRates {
-		labelParts = append(labelParts, fmt.Sprintf("%d", i+1))              // Popisky pre os y (príklady)
-		coordParts = append(coordParts, fmt.Sprintf("(%.1f,%d)", rate, i+1)) // Opravené súradnice: (úspešnosť, príklad)
+		labelParts = append(labelParts, fmt.Sprintf("%d", i+1))
+		coordParts = append(coordParts, fmt.Sprintf("(%.1f,%d)", rate, i+1))
 	}
 	return strings.Join(labelParts, ","), strings.Join(coordParts, "\n")
 }
