@@ -7,7 +7,7 @@ Dokumentácia dostupná [TU](https://docs.google.com/document/d/1oPEVyG-Ius-a9JK
 - nainstaluje aj golang verziu 1.23.2 (ked to budete spustat druhy a viac krat tak dajte -f aby vam znova nepridavalo cestu do .bashrc)
 
 ### Pullnutie novej verzie
-`git pull` \
+`git pull` 
 
 ### Spustenie (v pripade nutnosti buildovania novej verzie ju zbuilduje a spusti)
-`./start.sh` \
+`./start.sh` 
