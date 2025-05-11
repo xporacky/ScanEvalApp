@@ -1,5 +1,0 @@
-# .dockerignore
-.git
-.idea
-*.md
-Dockerfile
