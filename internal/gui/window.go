@@ -28,7 +28,7 @@ func RunWindow(db *gorm.DB) error {
 
 	var ops op.Ops
 	tm := tabmanager.NewTabManager(5)
-	tabNames := []string{"Písomky", "Študenti", "Vytvorenie Písomky", "Vyhodnotenie testu", "Nastavenia"}
+	tabNames := []string{"Písomky", "Študenti", "Vytvorenie Písomky", "Vyhodnotenie Písomky", "Nastavenia"}
 
 	uploadTab := tabs.NewUploadTab(w)
 	settingTab := tabs.NewSettingTab(w)
