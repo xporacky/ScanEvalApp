@@ -9,3 +9,4 @@ out.txt
 logs/*
 assets/tmp/Matematicky_test1.pdf
 tests/logs
+database/*
