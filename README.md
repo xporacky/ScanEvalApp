@@ -1,4 +1,5 @@
 # ScanEvalApp
+Projekt prevzal Libor Poracky, Jan Dodok, Boris Cizmar, Adrian Benedik, Adrian Lapos
 
 Dokumentácia dostupná [TU](https://docs.google.com/document/d/1oPEVyG-Ius-a9JKvhcH9mh4ZzbzJkZ4PRGxit0UCV0w/edit?usp=sharing)
 
