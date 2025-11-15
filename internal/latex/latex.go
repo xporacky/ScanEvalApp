@@ -8,12 +8,9 @@ import (
 "os"
 "os/exec"
 "path/filepath"
-"strings"
 "sync"
 "time"
-"unicode"
 
-"golang.org/x/text/unicode/norm"
 "gorm.io/gorm"
 
 "ScanEvalApp/internal/common"
@@ -22,44 +19,6 @@ import (
 "ScanEvalApp/internal/files"
 "ScanEvalApp/internal/logging"
 )
-
-// TemplateData represents the data used for replacing placeholders in a LaTeX template.
-type TemplateData struct {
-ID        string
-Meno      string
-Datum     string
-Miestnost string
-Cas       string
-Bloky     int
-QrCode    string
-}
-
-// removeDiacritics removes diacritics from the input string and replaces spaces with underscores.
-func removeDiacritics(input string) string {
-t := norm.NFD.String(input)
-t = strings.Map(func(r rune) rune {
-if unicode.IsMark(r) {
-return -1
-}
-return r
-}, t)
-// Replace spaces with underscores
-t = strings.ReplaceAll(t, " ", "_")
-return t
-}
-
-// FindStudentByRegistrationNumber finds a student in the database by their registration number.
-func FindStudentByRegistrationNumber(db *gorm.DB, registrationNumber int) (*models.Student, error) {
-errorLogger := logging.GetErrorLogger()
-var student models.Student
-// Query the database for the student with the specified registration number
-if err := db.Where("registration_number = ?", registrationNumber).First(&student).Error; err != nil {
-// Log an error if the student is not found
-errorLogger.Error("Student not found with ", "registration_number", registrationNumber, "error", err.Error())
-return nil, err
-}
-return &student, nil
-}
 
 // CompileLatexToPDF compiles a LaTeX template into a PDF.
 func CompileLatexToPDF(latexContent []byte) ([]byte, error) {
@@ -646,3 +605,4 @@ logger.Info("PDF úspešne uložené pre študenta",
 
 return studentPDFPath, nil
 }
+
