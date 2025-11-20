@@ -10,3 +10,9 @@ logs/*
 assets/tmp/Matematicky_test1.pdf
 tests/logs
 database/*
+
+# Ignore backup/save directory accidentally committed by team
+save/
+
+# Ignore generated LaTeX temp output added by team
+assets/tmp/
