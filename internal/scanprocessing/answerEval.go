@@ -32,16 +32,16 @@ var MEAN_INTENSITY_X_HIGHEST float64
 // Returns:
 //   - int: The index of the last question found (or -1 if none were found).
 //   - []rune: A slice containing the student's selected answers as runes (e.g., 'A', 'B', 'C', etc.).
-func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int) (int, []rune) {
+func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int, numberOfChoices int) (int, []rune) {
 	logger := logging.GetLogger()
 	var studentAnswers []rune
 	croppedMat := CropMatAnswersOnly(mat)
 	questionNumber := common.QUESTION_NUMBER_NOT_FOUND
 	for i := 0; i < NUMBER_OF_QUESTIONS_PER_PAGE; i++ {
-		studentAnswers = append(studentAnswers, GetAnswer(&croppedMat, i))
+		studentAnswers = append(studentAnswers, GetAnswer(&croppedMat, i, numberOfChoices))
 		// if we dont have question number yet try to find it
 		if questionNumber == common.QUESTION_NUMBER_NOT_FOUND {
-			questionNumber = GetQuestionNumber(&croppedMat, i)
+			questionNumber = GetQuestionNumber(&croppedMat, i, numberOfChoices)
 			continue
 		}
 		questionNumber++
@@ -123,9 +123,9 @@ func FindRectangle(mat *gocv.Mat, minAreaSize float64, maxAreaSize float64) imag
 //
 // Returns:
 //   - int: The extracted question number. If OCR fails, it returns zero (default int value).
-func GetQuestionNumber(mat *gocv.Mat, i int) int {
+func GetQuestionNumber(mat *gocv.Mat, i int, numberOfChoices int) int {
 	errorLogger := logging.GetErrorLogger()
-	rect := image.Rectangle{Min: image.Point{PADDING, PADDING + (i * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE)}, Max: image.Point{(mat.Cols() / (NUMBER_OF_CHOICES + 1)) - PADDING, ((i + 1) * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE) - PADDING}}
+	rect := image.Rectangle{Min: image.Point{PADDING, PADDING + (i * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE)}, Max: image.Point{(mat.Cols() / (numberOfChoices + 1)) - PADDING, ((i + 1) * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE) - PADDING}}
 	questionMat := mat.Region(rect)
 	defer questionMat.Close()
 	SaveMat(TEMP_IMAGE_PATH, questionMat)
@@ -159,15 +159,15 @@ func GetQuestionNumber(mat *gocv.Mat, i int) int {
 //
 // Returns:
 //   - rune: The selected answer (e.g., 'a', 'b', 'c', etc.). Returns 'x' if no valid or multiple answers are detected.
-func GetAnswer(mat *gocv.Mat, i int) rune {
+func GetAnswer(mat *gocv.Mat, i int, numberOfChoices int) rune {
 	answer := rune('x')
 	state := StateEmpty
-	for j := 1; j <= NUMBER_OF_CHOICES; j++ {
+	for j := 1; j <= numberOfChoices; j++ {
 		padding := CHECKBOX_AREA_PADDING
 		if i == 0 || i == NUMBER_OF_QUESTIONS_PER_PAGE-1 {
 			padding = 0
 		}
-		checkbox := image.Rectangle{Min: image.Point{(mat.Cols() / (NUMBER_OF_CHOICES + 1) * (j)), padding + (i * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE)}, Max: image.Point{(mat.Cols() / (NUMBER_OF_CHOICES + 1)) * (j + 1), ((i + 1) * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE) - padding}}
+		checkbox := image.Rectangle{Min: image.Point{(mat.Cols() / (numberOfChoices + 1) * (j)), padding + (i * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE)}, Max: image.Point{(mat.Cols() / (numberOfChoices + 1)) * (j + 1), ((i + 1) * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE) - padding}}
 		checkboxMat := mat.Region(checkbox)
 		rect := FindRectangle(&checkboxMat, ANSWER_SQUARE_MIN_AREA_SIZE, ANSWER_SQUARE_MAX_AREA_SIZE)
 		if rect.Empty() {

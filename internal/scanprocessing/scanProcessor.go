@@ -158,7 +158,12 @@ func ProcessPage(doc *fitz.Document, pageNumber int, exam *models.Exam, db *gorm
 	}
 
 	logger.Info("Našiel sa študent v databáze", "studentID", student.ID, "name", student.Name)
-	questionNumber, answers := EvaluateAnswers(&mat, exam.QuestionCount)
+	//questionNumber, answers := EvaluateAnswers(&mat, exam.QuestionCount)
+	choices := exam.OptionCount
+	if choices == 0 {
+		choices = NUMBER_OF_CHOICES
+	}
+	questionNumber, answers := EvaluateAnswers(&mat, exam.QuestionCount, choices)
 
 	if len(answers) == 0 {
 		errorLogger.Error("Chyba pri rozpoznávaní odpovedí - žiadne odpovede detekované", "PDF strana", pageNumber+1)
@@ -181,7 +186,8 @@ func ProcessPage(doc *fitz.Document, pageNumber int, exam *models.Exam, db *gorm
 	}
 
 	mutexUpdate.Lock()
-	err = repository.UpdateStudentAnswers(db, student.ID, exam.ID, questionNumber, answers, pageNumber+1)
+	//err = repository.UpdateStudentAnswers(db, student.ID, exam.ID, questionNumber, answers, pageNumber+1)
+	err = repository.UpdateStudentAnswers(db, uint(student.RegistrationNumber), exam.ID, questionNumber, answers, pageNumber+1)
 	mutexUpdate.Unlock()
 
 	if err != nil {

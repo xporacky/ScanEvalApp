@@ -139,7 +139,8 @@ func GetStudentsQuery(db *gorm.DB, query string) ([]models.Student, error) {
 }
 
 func UpdateStudentAnswers(db *gorm.DB, studentId uint, examId uint, questionNumber int, answers []rune, pageNumber int) error {
-	student, err := GetStudentById(db, studentId, examId)
+	//student, err := GetStudentById(db, studentId, examId)
+	student, err := GetStudentByRegistrationNumber(db, studentId, examId)
 	if err != nil {
 		return err
 	}

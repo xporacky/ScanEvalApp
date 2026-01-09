@@ -183,7 +183,8 @@ func GetStudent(mat *gocv.Mat, db *gorm.DB, examID uint) (*models.Student, error
 			return nil, err
 		}
 		logger.Info("Id studenta bolo najdene z qr kodu", slog.Int("id", id))
-		return repository.GetStudentById(db, uint(id), examID)
+		//return repository.GetStudentById(db, uint(id), examID)
+		return repository.GetStudentByRegistrationNumber(db, uint(id), examID)
 
 	}
 	logger.Warn("QR kód nebol nájdený, pokúšame sa získať registrationNumber zo záhlavia")
