@@ -15,6 +15,14 @@ import (
 var MEAN_INTENSITY_X_LOWEST float64
 var MEAN_INTENSITY_X_HIGHEST float64
 
+// checkboxPaddingForChoices returns the padding value to be used for checkbox inner area calculation
+func answerSquareAreaBounds(choices int) (float64, float64) {
+	if choices == 8 {
+		return ANSWER_SQUARE_MIN_AREA_SIZE_8, ANSWER_SQUARE_MAX_AREA_SIZE_8
+	}
+	return ANSWER_SQUARE_MIN_AREA_SIZE, ANSWER_SQUARE_MAX_AREA_SIZE
+}
+
 // EvaluateAnswers processes a scanned answer sheet image and extracts the student's answers.
 //
 // It takes a pointer to a gocv.Mat representing the scanned sheet and the total number of questions expected.
@@ -162,6 +170,7 @@ func GetQuestionNumber(mat *gocv.Mat, i int, numberOfChoices int) int {
 func GetAnswer(mat *gocv.Mat, i int, numberOfChoices int) rune {
 	answer := rune('x')
 	state := StateEmpty
+	pad := checkboxPaddingForChoices(numberOfChoices)
 	for j := 1; j <= numberOfChoices; j++ {
 		padding := CHECKBOX_AREA_PADDING
 		if i == 0 || i == NUMBER_OF_QUESTIONS_PER_PAGE-1 {
@@ -169,7 +178,9 @@ func GetAnswer(mat *gocv.Mat, i int, numberOfChoices int) rune {
 		}
 		checkbox := image.Rectangle{Min: image.Point{(mat.Cols() / (numberOfChoices + 1) * (j)), padding + (i * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE)}, Max: image.Point{(mat.Cols() / (numberOfChoices + 1)) * (j + 1), ((i + 1) * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE) - padding}}
 		checkboxMat := mat.Region(checkbox)
-		rect := FindRectangle(&checkboxMat, ANSWER_SQUARE_MIN_AREA_SIZE, ANSWER_SQUARE_MAX_AREA_SIZE)
+		//rect := FindRectangle(&checkboxMat, ANSWER_SQUARE_MIN_AREA_SIZE, ANSWER_SQUARE_MAX_AREA_SIZE)
+		minArea, maxArea := answerSquareAreaBounds(numberOfChoices)
+		rect := FindRectangle(&checkboxMat, minArea, maxArea)
 		if rect.Empty() {
 			if state == StateCircleFound {
 				return rune('x')
@@ -178,7 +189,7 @@ func GetAnswer(mat *gocv.Mat, i int, numberOfChoices int) rune {
 			state = StateCircleFound
 			continue
 		}
-		checkboxWithoutBorder := image.Rectangle{Min: image.Point{rect.Min.X + CHECKBOX_PADDING, rect.Min.Y + CHECKBOX_PADDING}, Max: image.Point{rect.Max.X - CHECKBOX_PADDING, rect.Max.Y - CHECKBOX_PADDING}}
+		checkboxWithoutBorder := image.Rectangle{Min: image.Point{rect.Min.X + pad, rect.Min.Y + pad}, Max: image.Point{rect.Max.X - pad, rect.Max.Y - pad}}
 		rectMat := checkboxMat.Region(checkboxWithoutBorder)
 		meanIntensity := rectMat.Mean()
 		if meanIntensity.Val1 < MEAN_INTENSITY_X_HIGHEST && meanIntensity.Val1 > MEAN_INTENSITY_X_LOWEST {
