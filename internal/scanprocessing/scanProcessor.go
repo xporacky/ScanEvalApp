@@ -187,7 +187,7 @@ func ProcessPage(doc *fitz.Document, pageNumber int, exam *models.Exam, db *gorm
 
 	mutexUpdate.Lock()
 	//err = repository.UpdateStudentAnswers(db, student.ID, exam.ID, questionNumber, answers, pageNumber+1)
-	err = repository.UpdateStudentAnswers(db, uint(student.RegistrationNumber), exam.ID, questionNumber, answers, pageNumber+1)
+	err = repository.UpdateStudentAnswers(db, student.ID, exam.ID, questionNumber, answers, pageNumber+1)
 	mutexUpdate.Unlock()
 
 	if err != nil {

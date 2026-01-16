@@ -21,6 +21,11 @@ import (
 // ImportStudentsFromCSV parses student records from the given CSV content
 // and stores them in the database.
 func ImportStudentsFromCSV(db *gorm.DB, csvContent string, examID uint) error {
+	exam, err := repository.GetExam(db, examID)
+	if err != nil {
+		return fmt.Errorf("chyba pri načítaní testu: %w", err)
+	}
+
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
@@ -53,8 +58,9 @@ func ImportStudentsFromCSV(db *gorm.DB, csvContent string, examID uint) error {
 			RegistrationNumber: registrationNumber,
 			Room:               row[4],
 			ExamID:             examID,
+			Answers:            strings.Repeat("0", exam.QuestionCount),
 		}
-
+		student.Answers = strings.Repeat("0", exam.QuestionCount)
 		if err := repository.CreateStudent(db, &student); err != nil {
 			errorLogger.Error("Chyba pri ukladaní študenta", slog.String("studentName", student.Name), slog.String("error", err.Error()))
 			return err
