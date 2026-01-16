@@ -38,8 +38,14 @@ func GetStudentById(db *gorm.DB, id uint, examID uint) (*models.Student, error) 
 	result := db.Where("ID = ? AND exam_id = ?", id, examID).First(&student)
 
 	if result.Error != nil {
-		errorLogger.Error("Študent nebol nájdený", "student id", id, slog.Group("CRITICAL", slog.String("error", result.Error.Error())))
-		return nil, result.Error
+		// Fallback: Try to find student by ID without exam constraint
+		logger.Warn("Študent nebol nájdený v teste, skúšam cross-exam vyhľadávanie", "student id", id, "exam_id", examID)
+		result = db.Where("ID = ?", id).First(&student)
+		if result.Error != nil {
+			errorLogger.Error("Študent nebol nájdený ani cross-exam", "student id", id, slog.Group("CRITICAL", slog.String("error", result.Error.Error())))
+			return nil, result.Error
+		}
+		logger.Info("Študent nájdený cross-exam", "student_id", id, "original_exam_id", student.ExamID, "target_exam_id", examID)
 	}
 	logger.Debug("Študent nájdený", slog.String("name", student.Name), slog.String("surname", student.Surname))
 	return &student, nil
@@ -57,8 +63,14 @@ func GetStudentByRegistrationNumber(db *gorm.DB, registrationNumber uint, examID
 	result := db.Where("registration_number = ? AND exam_id = ?", registrationNumber, examID).First(&student)
 
 	if result.Error != nil {
-		errorLogger.Error("Študent nebol nájdený", "student registration number", registrationNumber, slog.Group("CRITICAL", slog.String("error", result.Error.Error())))
-		return nil, result.Error
+		// Fallback: Try to find student by registration_number without exam constraint
+		logger.Warn("Študent nebol nájdený v teste, skúšam cross-exam vyhľadávanie", "registration_number", registrationNumber, "exam_id", examID)
+		result = db.Where("registration_number = ?", registrationNumber).First(&student)
+		if result.Error != nil {
+			errorLogger.Error("Študent nebol nájdený ani cross-exam", "student registration number", registrationNumber, slog.Group("CRITICAL", slog.String("error", result.Error.Error())))
+			return nil, result.Error
+		}
+		logger.Info("Študent nájdený cross-exam", "registration_number", registrationNumber, "original_exam_id", student.ExamID, "target_exam_id", examID)
 	}
 	logger.Debug("Študent nájdený", slog.String("name", student.Name), slog.String("surname", student.Surname))
 	return &student, nil

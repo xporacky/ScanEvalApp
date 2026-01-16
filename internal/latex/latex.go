@@ -313,6 +313,22 @@ func ParallelGeneratePDFs(db *gorm.DB, examID uint) (string, error) {
 		return "", err
 	}
 
+	// Check if there are any students assigned to this exam
+	var studentCount int64
+	if err := db.Model(&models.Student{}).Where("exam_id = ?", examID).Count(&studentCount).Error; err != nil {
+		errorLogger.Error("Error counting students for exam", "exam_id", examID, "error", err.Error())
+		return "", err
+	}
+
+	if studentCount == 0 {
+		errorLogger.Error("Nemôžem generovať PDF - test nemá priradených žiadnych študentov",
+			"exam_id", examID,
+			"exam_title", exam.Title)
+		return "", fmt.Errorf("test '%s' nemá priradených žiadnych študentov. Pridajte študentov pred generovaním PDF", exam.Title)
+	}
+
+	logger.Debug("Student count for exam", "exam_id", examID, "student_count", studentCount)
+
 	// Synchronize goroutines using a WaitGroup
 	var wg sync.WaitGroup
 	var pdfMergeMutex sync.Mutex
@@ -380,7 +396,7 @@ func ParallelGeneratePDFs(db *gorm.DB, examID uint) (string, error) {
 					QrCode:    fmt.Sprintf("%d", student.ID),
 				}
 
-				// Replace placeholders in the LaTeX template with the student data
+				// Replace placeholders in the LaTeX template with the student dSata
 				updatedLatex, err := ReplaceTemplatePlaceholders(latexTemplate, data)
 				if err != nil {
 					errorLogger.Error("Error replacing placeholders for student", "student_id", student.ID, "error", err.Error())

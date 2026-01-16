@@ -176,15 +176,31 @@ func GetStudent(mat *gocv.Mat, db *gorm.DB, examID uint) (*models.Student, error
 
 	qrText := ReadQR(mat)
 	if qrText != "" {
-		var id int
-		_, err := fmt.Sscan(qrText, &id)
+		var numberFromQR int
+		_, err := fmt.Sscan(qrText, &numberFromQR)
 		if err != nil {
-			errorLogger.Error("Chyba pri konverzii QR textu na ID", slog.String("qrText", qrText), slog.String("error", err.Error()))
+			errorLogger.Error("Chyba pri konverzii QR textu na číslo", slog.String("qrText", qrText), slog.String("error", err.Error()))
 			return nil, err
 		}
-		logger.Info("Id studenta bolo najdene z qr kodu", slog.Int("id", id))
-		return repository.GetStudentById(db, uint(id), examID)
+		logger.Info("Číslo z QR kódu načítané", slog.Int("number", numberFromQR))
 
+		// Try as ID first (for backward compatibility with old scans)
+		student, err := repository.GetStudentById(db, uint(numberFromQR), examID)
+		if err == nil {
+			logger.Info("Študent nájdený pomocou ID z QR kódu", slog.Int("id", numberFromQR))
+			return student, nil
+		}
+
+		// If not found by ID, try as RegistrationNumber
+		logger.Warn("Študent nenájdený pomocou ID, skúšam ako RegistrationNumber", slog.Int("number", numberFromQR))
+		student, err = repository.GetStudentByRegistrationNumber(db, uint(numberFromQR), examID)
+		if err == nil {
+			logger.Info("Študent nájdený pomocou RegistrationNumber z QR kódu", slog.Int("regNum", numberFromQR))
+			return student, nil
+		}
+
+		errorLogger.Error("Študent nenájdený ani ako ID ani ako RegistrationNumber", slog.Int("number", numberFromQR))
+		return nil, err
 	}
 	logger.Warn("QR kód nebol nájdený, pokúšame sa získať registrationNumber zo záhlavia")
 

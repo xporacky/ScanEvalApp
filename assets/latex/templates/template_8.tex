@@ -54,27 +54,27 @@
     \setcounter{rowPosition}{1}
 
     \begin{tikzpicture}[font=\small]
-        \draw[thick, black] (-1, -22) rectangle (15.5, -2);
+        \draw[thick, black] (-0.3, -22) rectangle (16.5, -2);
 
         \foreach \position/\letter in {1/A,2/B,3/C,4/D,5/E,6/F,7/G,8/H} {
-            \node at ({\position * 1.75}, -1.5) {\letter};
+            \node at ({\position * 2 - 0.5}, -1.5) {\letter};
         }
 
         \foreach \line in {#1,...,#2} {
             \begin{scope}[yshift=-\the\value{rowPosition}cm - 1.5cm]
                 \node at (0, 0) {\normalsize\textbf{\the\value{rowCounter}}};
                 \foreach \position in {1,2,3,4,5,6,7,8} {
-                    \node[mygray] at ({\position * 1.75},0) {\scalebox{1.8}{\textbf{$\times$}}};
-                    \node[draw, rectangle, inner sep=4pt] at ({\position * 1.75}, 0) {};
+                    \node[mygray] at ({\position * 2 - 0.5},0) {\scalebox{2}{\textbf{$\times$}}};
+                    \node[draw, rectangle, inner sep=5pt] at ({\position * 2 - 0.5}, 0) {};
                 }
                 \ifnum\value{rowPosition}=5
-                    \draw[thin, black] (-1, -\the\value{rowPosition} cm + 4.5cm) -- (15.5, -\the\value{rowPosition} cm + 4.5cm);
+                    \draw[thin, black] (-0.3, -\the\value{rowPosition} cm + 4.5cm) -- (16.5, -\the\value{rowPosition} cm + 4.5cm);
                 \fi
                 \ifnum\value{rowPosition}=10
-                    \draw[thin, black] (-1, -\the\value{rowPosition} cm + 9.5cm) -- (15.5, -\the\value{rowPosition} cm + 9.5cm);
+                    \draw[thin, black] (-0.3, -\the\value{rowPosition} cm + 9.5cm) -- (16.5, -\the\value{rowPosition} cm + 9.5cm);
                 \fi
                 \ifnum\value{rowPosition}=15
-                    \draw[thin, black] (-1, -\the\value{rowPosition} cm + 14.5cm) -- (15.5, -\the\value{rowPosition} cm + 14.5cm);
+                    \draw[thin, black] (-0.3, -\the\value{rowPosition} cm + 14.5cm) -- (16.5, -\the\value{rowPosition} cm + 14.5cm);
                 \fi
                 \stepcounter{rowPosition}
                 \stepcounter{rowCounter}
@@ -100,4 +100,3 @@
 \end{center}
 \end{document}
 	
-
