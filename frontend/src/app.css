@@ -1,0 +1,436 @@
+.page {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 48px 32px 64px;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 24px;
+    margin-bottom: 32px;
+}
+
+.title h1 {
+    margin: 12px 0 8px;
+    font-size: 36px;
+    letter-spacing: 0.4px;
+}
+
+.title p {
+    margin: 0;
+    color: rgba(238, 243, 251, 0.72);
+    font-size: 16px;
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.8);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-size: 12px;
+}
+
+.panel {
+    background: rgba(14, 22, 35, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35);
+}
+
+.panel-header,
+.row {
+    display: grid;
+    grid-template-columns: 2.2fr 1fr 1fr 0.7fr 0.7fr 0.7fr 0.9fr;
+    gap: 12px;
+    align-items: center;
+    padding: 16px 20px;
+}
+
+.students-table .panel-header,
+.students-table .row {
+    grid-template-columns: 1.4fr 1.4fr 1fr 1fr 1fr 0.8fr 0.8fr 1fr;
+}
+
+.exams-table .panel-header,
+.exams-table .row {
+    grid-template-columns: 1.5fr 0.9fr 0.9fr 0.7fr 0.8fr 0.8fr 0.9fr 1fr 1fr 1.1fr 0.6fr 0.8fr;
+}
+
+.panel-header {
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 12px;
+    color: rgba(238, 243, 251, 0.65);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.panel-body {
+    display: flex;
+    flex-direction: column;
+}
+
+.row {
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    font-size: 15px;
+}
+
+.row:nth-child(odd) {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.cell.title {
+    font-weight: 600;
+}
+
+.cell.action {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.btn {
+    padding: 6px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    cursor: pointer;
+    font-size: 11px;
+}
+
+.btn.danger {
+    background: rgba(248, 113, 113, 0.18);
+    border-color: rgba(248, 113, 113, 0.4);
+    color: #fff;
+}
+
+.btn.ghost {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: rgba(238, 243, 251, 0.9);
+}
+
+.loading,
+.error,
+.empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: rgba(238, 243, 251, 0.7);
+}
+
+.empty-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.empty-sub {
+    font-size: 14px;
+    color: rgba(238, 243, 251, 0.55);
+}
+
+.tabs {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.tab {
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(238, 243, 251, 0.8);
+    border-radius: 999px;
+    padding: 10px 16px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 12px;
+}
+
+.tab.active {
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 24px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 18px;
+}
+
+.form label {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 13px;
+    color: rgba(238, 243, 251, 0.8);
+}
+
+.form input[type="text"],
+.form input[type="number"],
+.form input[type="file"] {
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(10, 15, 25, 0.7);
+    color: #fff;
+}
+
+.file {
+    position: relative;
+}
+
+.file-name {
+    margin-top: 6px;
+    font-size: 12px;
+    color: rgba(238, 243, 251, 0.6);
+}
+
+.form-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.form-actions button {
+    padding: 10px 18px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.form-actions .primary {
+    background: #3b82f6;
+    color: #fff;
+}
+
+.form-actions .secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.status {
+    font-size: 12px;
+    color: rgba(238, 243, 251, 0.6);
+}
+
+.status.success {
+    color: #7dd3fc;
+}
+
+.status.error {
+    color: #f87171;
+}
+
+.answers {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.answer-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 10px 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.radio {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: rgba(238, 243, 251, 0.8);
+}
+
+.radio input {
+    accent-color: #60a5fa;
+}
+
+.eval-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.eval-form select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    padding: 10px 36px 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: #0f1826;
+    color: #eef3fb;
+    background-image: linear-gradient(45deg, transparent 50%, #9fb4d9 50%),
+        linear-gradient(135deg, #9fb4d9 50%, transparent 50%);
+    background-position: calc(100% - 18px) 50%, calc(100% - 12px) 50%;
+    background-size: 6px 6px, 6px 6px;
+    background-repeat: no-repeat;
+}
+
+.eval-form select option {
+    background: #0f1826;
+    color: #eef3fb;
+}
+
+.file-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.settings-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 24px;
+}
+
+.file-path {
+    flex: 1;
+    font-size: 12px;
+    color: rgba(238, 243, 251, 0.7);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.stats-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.stats-list {
+    display: grid;
+    gap: 10px;
+}
+
+.stats-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: rgba(238, 243, 251, 0.85);
+}
+
+.stats-item input {
+    accent-color: #60a5fa;
+}
+
+.modal {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(7, 10, 18, 0.6);
+    backdrop-filter: blur(6px);
+    z-index: 1000;
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-card {
+    width: min(720px, 92vw);
+    background: rgba(14, 22, 35, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 18px;
+    padding: 20px 24px 24px;
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.modal-body {
+    margin-top: 16px;
+    padding: 16px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    min-height: 80px;
+}
+
+.answers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 12px;
+}
+
+.answer-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.06);
+    font-size: 14px;
+}
+
+.answer-num {
+    color: rgba(238, 243, 251, 0.6);
+}
+
+.answer-val {
+    font-weight: 600;
+    color: #e0f2fe;
+}
+
+@media (max-width: 900px) {
+    .panel-header {
+        display: none;
+    }
+
+    .row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .row .cell {
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .row .cell::before {
+        content: attr(data-label);
+        color: rgba(238, 243, 251, 0.6);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .tabs {
+        flex-wrap: wrap;
+    }
+}

@@ -30,6 +30,7 @@ func DetectAnswersOnSheet(mat *gocv.Mat, choices, questions int) ([]rune, error)
 // getAnswerParametric je parametrická verzia GetAnswer,
 // používa choices a questions namiesto konštánt.
 func getAnswerParametric(mat *gocv.Mat, rowIndex, choices, questions int) rune {
+	choices = 8
 	answer := rune('x')
 	state := StateEmpty
 
@@ -38,9 +39,18 @@ func getAnswerParametric(mat *gocv.Mat, rowIndex, choices, questions int) rune {
 		if rowIndex == 0 || rowIndex == questions-1 {
 			padding = 0
 		}
+		stepPx := 138
+		xMin := j * stepPx
+		xMax := (j + 1) * stepPx
+		if xMin < 0 {
+			xMin = 0
+		}
+		if xMax > mat.Cols() {
+			xMax = mat.Cols()
+		}
 		checkbox := image.Rectangle{
-			Min: image.Point{(mat.Cols() / (choices + 1) * (j)), padding + (rowIndex * mat.Rows() / questions)},
-			Max: image.Point{(mat.Cols() / (choices + 1)) * (j + 1), ((rowIndex + 1) * mat.Rows() / questions) - padding},
+			Min: image.Point{xMin, padding + (rowIndex * mat.Rows() / questions)},
+			Max: image.Point{xMax, ((rowIndex + 1) * mat.Rows() / questions) - padding},
 		}
 		checkboxMat := mat.Region(checkbox)
 		rect := FindRectangle(&checkboxMat, ANSWER_SQUARE_MIN_AREA_SIZE, ANSWER_SQUARE_MAX_AREA_SIZE)

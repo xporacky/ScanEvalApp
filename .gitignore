@@ -1,12 +1,3 @@
-main
-ScanEvalApp
-scan-eval-db.db
-main.aux
-main.log
-assets/tmp/output.pdf
-assets/tmp/scan-images/*
-out.txt
-logs/*
-assets/tmp/Matematicky_test1.pdf
-tests/logs
-database/*
+build/bin
+node_modules
+frontend/dist
