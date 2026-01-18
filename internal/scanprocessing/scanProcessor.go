@@ -177,10 +177,24 @@ func ProcessPage(doc *fitz.Document, pageNumber int, exam *models.Exam, db *gorm
 		// Gather pageNumbers to map
 		AddFailedPage(failedPages, exam.ID, pageNumber)
 		return
-	} else if ((questionNumber + 1) % NUMBER_OF_QUESTIONS_PER_PAGE) != 0 {
-		errorLogger.Error("Chyba pri rozpoznávaní čísiel otázok - menej otazok nez pocet", "PDF strana", pageNumber+1)
-		// fmt.Printf("questionNumber %d %% len(answers) %d - strana: %d\n", questionNumber+1, len(answers), pageNumber+1)
-		// Gather pageNumbers to map
+	}
+
+	// Validácia počtu otázok: strana musí mať buď plných 20 otázok, alebo byť poslednou stranou s menej otázkami
+	questionsOnPage := (questionNumber + 1) % NUMBER_OF_QUESTIONS_PER_PAGE
+	if questionsOnPage == 0 {
+		questionsOnPage = NUMBER_OF_QUESTIONS_PER_PAGE
+	}
+
+	// Skontrolujeme či je to buď plná strana (20 otázok) alebo posledná strana testu
+	isFullPage := questionsOnPage == NUMBER_OF_QUESTIONS_PER_PAGE
+	isLastPage := (questionNumber + 1) == exam.QuestionCount
+
+	if !isFullPage && !isLastPage {
+		errorLogger.Error("Chyba pri rozpoznávaní čísiel otázok - neočakávaný počet otázok na strane",
+			"PDF strana", pageNumber+1,
+			"posledná otázka", questionNumber+1,
+			"otázok na strane", questionsOnPage,
+			"očakávaných", exam.QuestionCount)
 		AddFailedPage(failedPages, exam.ID, pageNumber)
 		return
 	}

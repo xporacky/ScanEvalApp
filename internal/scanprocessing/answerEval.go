@@ -53,7 +53,7 @@ func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int, numberOfChoices int) 
 			continue
 		}
 		questionNumber++
-		if questionNumber > numberOfQuestions {
+		if questionNumber >= numberOfQuestions {
 			logger.Info("Všetky otázky boli nájdené")
 			break
 		}
