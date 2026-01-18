@@ -10,3 +10,7 @@ logs/*
 assets/tmp/Matematicky_test1.pdf
 tests/logs
 database/*
+save/
+ScanEvalApp_git/
+frontend/dist/
+frontend/node_modules/

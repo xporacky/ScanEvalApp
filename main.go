@@ -1,34 +1,36 @@
 package main
 
 import (
-	"ScanEvalApp/internal/database/migrations"
-	window "ScanEvalApp/internal/gui"
-	"ScanEvalApp/internal/logging"
-	"log/slog"
+	"embed"
 
-	"gioui.org/app"
+	"github.com/wailsapp/wails/v2"
+	"github.com/wailsapp/wails/v2/pkg/options"
+	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 )
 
+//go:embed all:frontend/dist
+var assets embed.FS
+
 func main() {
-	logging.InitLogger()
-	logger := logging.GetLogger()
-	errorLogger := logging.GetErrorLogger()
+	// Create an instance of the app structure
+	app := NewApp()
 
-	logger.Info("---------------------------------------------------")
-	errorLogger.Error("---------------------------------------------------")
+	// Create application with options
+	err := wails.Run(&options.App{
+		Title:  "ScanEvalApp",
+		Width:  1024,
+		Height: 768,
+		AssetServer: &assetserver.Options{
+			Assets: assets,
+		},
+		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
+		OnStartup:        app.startup,
+		Bind: []interface{}{
+			app,
+		},
+	})
 
-	logger.Info("Aplikácia spustená")
-
-	// inicializacia a migracia db
-	logger.Info("Spúšťam migráciu databázy.")
-	db, err := migrations.MigrateDB()
 	if err != nil {
-		errorLogger.Error("Nepodarilo sa pripojiť k databáze", slog.Group("CRITICAL", slog.String("error", err.Error())))
-		panic("failed to connect to database")
+		println("Error:", err.Error())
 	}
-	logger.Info("Migrácia databázy dokončená.")
-
-	logger.Info("Spúšťam GUI.")
-	go window.RunWindow(db)
-	app.Main()
 }
