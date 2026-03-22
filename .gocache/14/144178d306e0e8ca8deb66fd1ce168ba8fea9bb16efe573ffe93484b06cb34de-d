@@ -1,0 +1,4 @@
+./egl.go
+_cgo_gotypes.go
+egl_unix.cgo1.go
+_cgo_import.go

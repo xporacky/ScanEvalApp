@@ -113,7 +113,7 @@ func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensi
 								studentModal.Content = widgets.ContentGenerating(th, &isGenerating, &generatedPath, &msg)
 
 								go func() {
-									path, err := latex.PrintSheet(db, student.RegistrationNumber)
+									path, err := latex.PrintSheet(db, student.ID)
 									if err != nil {
 										msg = fmt.Sprintf("Chyba pri tlači hárku pre študenta (ID: %d, číslo registrácie: %d): %s",
 											student.ID, student.RegistrationNumber, err.Error())
@@ -141,7 +141,7 @@ func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensi
 								studentModal.Content = widgets.ContentGenerating(th, &isGenerating, &generatedPath, &msg)
 
 								go func() {
-									path, err := pdf.SlicePdfForStudent(db, student.RegistrationNumber)
+									path, err := pdf.SlicePdfForStudent(db, student.ID)
 									if err != nil {
 										msg = fmt.Sprintf("Chyba pri slicingu PDF pre študenta %d: %s", student.ID, err.Error())
 										errorLogger.Error("Chyba pri slicingu PDF pre študenta", "registration_number", student.RegistrationNumber, "error", err.Error())

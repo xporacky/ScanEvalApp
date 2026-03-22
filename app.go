@@ -156,7 +156,7 @@ func (a *App) CreateExam(title, schoolYear, dateISO string, questionCount, optio
 	return repository.CreateExam(a.db, exam)
 }
 
-func (a *App) CreateExamWithCSV(title, schoolYear, dateTime string, questionCount, optionCount int, answers []string, csvContent string) error {
+func (a *App) CreateExamWithCSV(title, schoolYear, dateTime string, questionCount, optionCount int, answers []string, csvContent string, showName bool) error {
 	if a.dbErr != nil {
 		return a.dbErr
 	}
@@ -167,7 +167,7 @@ func (a *App) CreateExamWithCSV(title, schoolYear, dateTime string, questionCoun
 		return fmt.Errorf("invalid input")
 	}
 
-	return services.CreateExamWithCSV(a.db, title, schoolYear, dateTime, questionCount, optionCount, answers, csvContent)
+	return services.CreateExamWithCSV(a.db, title, schoolYear, dateTime, questionCount, optionCount, answers, csvContent, showName)
 }
 
 func (a *App) DeleteExam(examID uint) error {
@@ -283,32 +283,32 @@ func (a *App) GetExamAnswers(examID uint) (string, error) {
 	return exam.Questions, nil
 }
 
-func (a *App) PrintStudentSheet(registrationNumber int) (string, error) {
+func (a *App) PrintStudentSheet(studentID uint) (string, error) {
 	if a.dbErr != nil {
 		return "", a.dbErr
 	}
 	if a.db == nil {
 		return "", fmt.Errorf("database not initialized")
 	}
-	if registrationNumber <= 0 {
-		return "", fmt.Errorf("invalid registration number")
+	if studentID == 0 {
+		return "", fmt.Errorf("invalid student id")
 	}
 
-	return latex.PrintSheet(a.db, registrationNumber)
+	return latex.PrintSheet(a.db, studentID)
 }
 
-func (a *App) DownloadStudentSheet(registrationNumber int) (string, error) {
+func (a *App) DownloadStudentSheet(studentID uint) (string, error) {
 	if a.dbErr != nil {
 		return "", a.dbErr
 	}
 	if a.db == nil {
 		return "", fmt.Errorf("database not initialized")
 	}
-	if registrationNumber <= 0 {
-		return "", fmt.Errorf("invalid registration number")
+	if studentID == 0 {
+		return "", fmt.Errorf("invalid student id")
 	}
 
-	return pdf.SlicePdfForStudent(a.db, registrationNumber)
+	return pdf.SlicePdfForStudent(a.db, studentID)
 }
 
 func (a *App) ExportExamStudentsCSV(examID uint) (string, error) {

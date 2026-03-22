@@ -3,8 +3,8 @@ package pdf
 import (
 	"ScanEvalApp/internal/common"
 	"ScanEvalApp/internal/config"
+	"ScanEvalApp/internal/database/models"
 	"ScanEvalApp/internal/database/repository"
-	"ScanEvalApp/internal/latex"
 	"ScanEvalApp/internal/logging"
 	"fmt"
 	"log/slog"
@@ -19,20 +19,21 @@ import (
 
 // SlicePdfForStudent slices a PDF file based on the pages specified in the students record in DB.
 // It uses the pdftk tool to extract specific pages from the input PDF and saves the result to an output PDF.
-func SlicePdfForStudent(db *gorm.DB, registrationNumber int) (string, error) {
+func SlicePdfForStudent(db *gorm.DB, studentID uint) (string, error) {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
-	student, err := latex.FindStudentByRegistrationNumber(db, registrationNumber)
-	if err != nil {
-		errorLogger.Error("Error finding student", "registration_number", registrationNumber, slog.String("error", err.Error()))
+	var student models.Student
+	if err := db.First(&student, studentID).Error; err != nil {
+		errorLogger.Error("Error finding student", "student_id", studentID, slog.String("error", err.Error()))
 		return "", err
 	}
+	registrationNumber := student.RegistrationNumber
 
 	pagesStr := student.Pages
 
 	if pagesStr == "" {
-		err = fmt.Errorf("študent (číslo registrácie: %d) nemá žiadne stránky v databáze", registrationNumber)
+		err := fmt.Errorf("študent (číslo registrácie: %d) nemá žiadne stránky v databáze", registrationNumber)
 		logger.Info("Študent nemá žiadne stránky v DB", "registration_number", registrationNumber)
 		return "", err
 	}

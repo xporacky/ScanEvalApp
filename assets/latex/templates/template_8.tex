@@ -1,4 +1,7 @@
 \documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[main=slovak,provide=*]{babel}
 \usepackage{tikz}
 \usepackage{subfig}
 \usepackage{graphicx}
@@ -10,87 +13,171 @@
 
 \definecolor{mygray}{rgb}{0.8, 0.8, 0.8}
 
-\setlength{\headheight}{65.90973pt}
-\addtolength{\topmargin}{5pt}
+\setlength{\headheight}{110pt}
+\addtolength{\topmargin}{-25pt}
+
 \pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
 
-\fancyhead[L]{
-    \raisebox{1ex}{
-    %\includegraphics[width=2.1cm]{assets/latex/stu-fei-vector-logo.png}
-    }
-}
+\fancyhead[C]{%
+    \begin{tikzpicture}[remember picture,overlay]
+        \node[anchor=west] at (-8.3,-0.1) {\includegraphics[width=2.2cm]{assets/latex/stu-fei-vector-logo.png}};
 
-\fancyhead[R]{
-    \raisebox{5ex}{
-        \scalebox{0.5}{
-           \qrcode{ {{.QrCode}} }
+        \node[anchor=west] at (-8.3,2.1) {\textbf{Variant testu:}};
+        \draw[thick] (-4.9,1.8) rectangle (-4.3,2.4);
+        \draw[thick] (-4.15,1.8) rectangle (-3.55,2.4);
+        \node at (-4.225,2.1) {\footnotesize {{.Variant}}};
+
+        \node[anchor=west] at (2.0,2.1) {\textbf{ID:}};
+        \foreach \x in {0,1,2,3,4,5,6,7} {
+            \draw[thick] (3.0+\x*0.72,1.8) rectangle ++(0.6,0.6);
         }
-    }
-}
+        \node at (6.18,2.12) {\Large /};
+        \node at (3.3,2.1) {\footnotesize {{index .IDDigits 0}}};
+        \node at (4.02,2.1) {\footnotesize {{index .IDDigits 1}}};
+        \node at (4.74,2.1) {\footnotesize {{index .IDDigits 2}}};
+        \node at (5.46,2.1) {\footnotesize {{index .IDDigits 3}}};
+        \node at (6.18,2.1) {\footnotesize {{index .IDDigits 4}}};
+        \node at (6.90,2.1) {\footnotesize {{index .IDDigits 5}}};
+        \node at (7.62,2.1) {\footnotesize {{index .IDDigits 6}}};
+        \node at (8.34,2.1) {\footnotesize {{index .IDDigits 7}}};
 
-\fancyhead[C]{
-    \parbox{1\textwidth}{
-        \centering
-        \textbf{Meno: {{.Meno}}} \hspace{1.5em}
-        \textbf{ID: {{.ID}}} \\[0.5em]
-        \textbf{Dátum: {{.Datum}}} \hspace{1.5em}
-        \textbf{Miestnosť: {{.Miestnost}}} \hspace{1.5em}
-        \textbf{Čas: {{.Cas}}}
-    }
+        \node at (0,0.9) {\textbf{\Large {{.TestName}}}};
+
+        \node at (0,-0.1) {%
+            \begin{tabular}{c c c}
+                \textbf{Dátum: {{.Datum}}} &
+                \textbf{Čas: {{.Cas}}} &
+                \textbf{Miestnosť: {{.Miestnost}}}
+            \end{tabular}
+        };
+
+        {{if .ShowName}}\node[anchor=west] at (3.0,1.4) {\footnotesize \textbf{Meno: {{.Meno}}}};{{end}}
+        \node[anchor=east] at (8.2,0.3) {
+            \qrcode[height=1.5cm]{ {{.QrCode}} }
+        };
+
+        \draw[thick] (-9.2,-0.7) -- (9.2,-0.7);
+    \end{tikzpicture}%
 }
 
 \newcounter{rowCounter}
 \setcounter{rowCounter}{1}
 \newcounter{rowPosition}
 \newcounter{blocksNeeded}
-\newcounter{remainingQuestions}
 
 \newcommand{\ceilDiv}[1]{%
-    \pgfmathsetmacro{\tempResult}{int((#1 + 19) / 20)}
-    \setcounter{blocksNeeded}{\tempResult}
+    \pgfmathtruncatemacro{\tempResult}{(#1 + 14)/15}%
+    \setcounter{blocksNeeded}{\tempResult}%
 }
 
-\newcommand{\generateBlock}[2]{
+\newcommand{\legendEmptyBox}[2]{%
+    \draw[gray, thick] (#1,#2) rectangle ++(0.45,0.45);
+}
+
+\newcommand{\legendCrossBox}[2]{%
+    \draw[gray, thick] (#1,#2) rectangle ++(0.45,0.45);
+    \draw[thick] (#1+0.02,#2+0.02) -- (#1+0.43,#2+0.43);
+    \draw[thick] (#1+0.02,#2+0.43) -- (#1+0.43,#2+0.02);
+}
+
+\newcommand{\legendCrossOutside}[2]{%
+    \draw[gray, thick] (#1,#2) rectangle ++(0.45,0.45);
+    \draw[thick] (#1+0.10,#2+0.20) -- (#1+0.50,#2+0.60);
+    \draw[thick] (#1+0.10,#2+0.60) -- (#1+0.50,#2+0.20);
+}
+
+\newcommand{\legendFilledBox}[2]{%
+    \draw[gray, thick] (#1,#2) rectangle ++(0.45,0.45);
+    \fill[black!85] (#1,#2) rectangle (#1+0.45,#2+0.45);
+}
+
+\newcommand{\legendCircledFilledBox}[2]{%
+    \draw[gray, thick] (#1,#2) rectangle ++(0.45,0.45);
+    \fill[black!85] (#1,#2) rectangle (#1+0.45,#2+0.45);
+    \draw[thick] (#1+0.225,#2+0.225) circle (0.31);
+}
+
+\newcommand{\generateBlock}[2]{%
     \setcounter{rowPosition}{1}
 
     \begin{tikzpicture}[font=\small]
-        \draw[thick, black] (-1, -22) rectangle (15.5, -2);
+        \draw[thick, black] (-1,-17) rectangle (15.5,-2);
 
         \foreach \position/\letter in {1/A,2/B,3/C,4/D,5/E,6/F,7/G,8/H} {
             \node at ({\position * 1.75}, -1.5) {\letter};
         }
 
         \foreach \line in {#1,...,#2} {
-            \begin{scope}[yshift=-\the\value{rowPosition}cm - 1.5cm]
-                \node at (0, 0) {\normalsize\textbf{\the\value{rowCounter}}};
-                \foreach \position in {1,2,3,4,5,6,7,8} {
-                    \node[mygray] at ({\position * 1.75},0) {\scalebox{1.8}{\textbf{$\times$}}};
-                    \node[draw, rectangle, inner sep=4pt] at ({\position * 1.75}, 0) {};
-                }
-                \ifnum\value{rowPosition}=5
-                    \draw[thin, black] (-1, -\the\value{rowPosition} cm + 4.5cm) -- (15.5, -\the\value{rowPosition} cm + 4.5cm);
-                \fi
-                \ifnum\value{rowPosition}=10
-                    \draw[thin, black] (-1, -\the\value{rowPosition} cm + 9.5cm) -- (15.5, -\the\value{rowPosition} cm + 9.5cm);
-                \fi
-                \ifnum\value{rowPosition}=15
-                    \draw[thin, black] (-1, -\the\value{rowPosition} cm + 14.5cm) -- (15.5, -\the\value{rowPosition} cm + 14.5cm);
-                \fi
-                \stepcounter{rowPosition}
-                \stepcounter{rowCounter}
-            \end{scope}
+            \pgfmathsetmacro{\y}{-(\value{rowPosition}) - 1.5}
+
+            \node at (0,\y) {\normalsize\textbf{\arabic{rowCounter}}};
+
+            \foreach \position in {1,2,3,4,5,6,7,8} {
+                \node[mygray] at ({\position * 1.75},\y) {\scalebox{1.8}{\textbf{$\times$}}};
+                \node[draw, rectangle, inner sep=4pt] at ({\position * 1.75}, \y) {};
+            }
+
+            \ifnum\value{rowPosition}=5
+                \draw[thin, black] (-1,-7.0) -- (15.5,-7.0);
+            \fi
+            \ifnum\value{rowPosition}=10
+                \draw[thin, black] (-1,-12.0) -- (15.5,-12.0);
+            \fi
+            \ifnum\value{rowPosition}=15
+                \draw[thin, black] (-1,-17.0) -- (15.5,-17.0);
+            \fi
+
+            \stepcounter{rowPosition}
+            \stepcounter{rowCounter}
         }
-    \end{tikzpicture}
+
+        \node[anchor=west] at (-1,-17.5) {\footnotesize\textbf{Legenda:}};
+
+        \node[anchor=west] at (-1,-18.2) {\footnotesize Správna odpoveď};
+        \legendEmptyBox{-0.45}{-19.1}
+        \legendEmptyBox{0.30}{-19.1}
+        \legendCrossBox{1.05}{-19.1}
+        \legendEmptyBox{1.80}{-19.1}
+
+        \node[anchor=west] at (3.5,-18.2) {\footnotesize Nesprávna odpoveď};
+        \legendCrossBox{4.05}{-19.1}
+        \legendEmptyBox{4.80}{-19.1}
+        \legendCrossBox{5.55}{-19.1}
+        \legendEmptyBox{6.30}{-19.1}
+
+        \node[anchor=west] at (8.0,-18.2) {\footnotesize Nesprávna odpoveď};
+        \legendEmptyBox{8.55}{-19.1}
+        \legendCrossOutside{9.30}{-19.1}
+        \legendEmptyBox{10.05}{-19.1}
+        \legendEmptyBox{10.80}{-19.1}
+
+        \node[anchor=west] at (-1,-20.2) {\footnotesize Oprava};
+        \legendCrossBox{-0.45}{-21.1}
+        \legendEmptyBox{0.30}{-21.1}
+        \legendFilledBox{1.05}{-21.1}
+        \legendEmptyBox{1.80}{-21.1}
+
+        \node[anchor=west] at (3.5,-20.2) {\footnotesize Spätná oprava};
+        \legendCrossBox{4.05}{-21.1}
+        \legendCrossBox{4.80}{-21.1}
+        \legendCircledFilledBox{5.55}{-21.1}
+        \legendCrossBox{6.30}{-21.1}
+    \end{tikzpicture}%
 }
 
-\newcommand{\generateMultipleBlocks}[1]{
-    \setcounter{remainingQuestions}{#1}
+\newcommand{\generateMultipleBlocks}[1]{%
     \ceilDiv{#1}
-    \foreach \blockIndex in {1,...,\the\value{blocksNeeded}} {
-        \pgfmathsetmacro{\startQuestion}{\the\value{rowCounter}}
-        \pgfmathsetmacro{\endQuestion}{min(\the\value{rowCounter} + 19, #1)}
-        \generateBlock{\number\startQuestion}{\number\endQuestion}
-        \addtocounter{remainingQuestions}{-\the\value{rowPosition}}
+    \foreach \blockIndex in {1,...,\theblocksNeeded} {
+        \pgfmathtruncatemacro{\startQuestion}{\value{rowCounter}}
+        \pgfmathtruncatemacro{\endQuestion}{min(\value{rowCounter}+14,#1)}
+
+        \generateBlock{\startQuestion}{\endQuestion}
+
+        \ifnum\blockIndex<\theblocksNeeded\relax
+            \newpage
+        \fi
     }
 }
 
@@ -99,4 +186,3 @@
     \generateMultipleBlocks{ {{.Bloky}} }
 \end{center}
 \end{document}
-	

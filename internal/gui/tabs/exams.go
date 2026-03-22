@@ -135,7 +135,6 @@ isGenerating := true
 generatedPath := ""
 modal.Content = widgets.ContentGenerating(th, &isGenerating, &generatedPath, &msg)
 go func() {
-// FIXED: Removed the templatePath parameter - using dynamic template selection
 path, err := latex.ParallelGeneratePDFs(db, exam.ID)
 
 if err != nil {

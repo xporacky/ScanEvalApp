@@ -2,6 +2,7 @@ package repository
 
 import (
 	"ScanEvalApp/internal/database/models"
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -57,6 +58,10 @@ func GetStudentByRegistrationNumber(db *gorm.DB, registrationNumber uint, examID
 	result := db.Where("registration_number = ? AND exam_id = ?", registrationNumber, examID).First(&student)
 
 	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			logger.Debug("Študent nebol nájdený", "student registration number", registrationNumber, "exam_id", examID)
+			return nil, result.Error
+		}
 		errorLogger.Error("Študent nebol nájdený", "student registration number", registrationNumber, slog.Group("CRITICAL", slog.String("error", result.Error.Error())))
 		return nil, result.Error
 	}

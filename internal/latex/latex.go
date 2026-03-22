@@ -3,12 +3,12 @@ package latex
 import (
 	"bytes"
 	"fmt"
-	"html/template"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sync"
+	"text/template"
 	"time"
 
 	"gorm.io/gorm"
@@ -19,6 +19,34 @@ import (
 	"ScanEvalApp/internal/files"
 	"ScanEvalApp/internal/logging"
 )
+
+func buildIDDigits(registrationNumber int) []string {
+	id := fmt.Sprintf("%d", registrationNumber)
+	digits := make([]string, 8)
+	for i, r := range id {
+		if i >= len(digits) {
+			break
+		}
+		digits[i] = string(r)
+	}
+	return digits
+}
+
+func buildTemplateData(student models.Student, exam models.Exam) TemplateData {
+	return TemplateData{
+		ID:        latexEscape(fmt.Sprintf("%d", student.RegistrationNumber)),
+		IDDigits:  buildIDDigits(student.RegistrationNumber),
+		Meno:      latexEscape(fmt.Sprintf("%s %s", student.Name, student.Surname)),
+		ShowName:  exam.ShowName,
+		Datum:     latexEscape(exam.Date.Format("02. 01. 2006")),
+		Miestnost: latexEscape(student.Room),
+		Cas:       latexEscape(exam.Date.Format("15:04")),
+		Bloky:     exam.QuestionCount,
+		QrCode:    fmt.Sprintf("%d", student.RegistrationNumber),
+		TestName:  latexEscape(exam.Title),
+		Variant:   "",
+	}
+}
 
 // CompileLatexToPDF compiles a LaTeX template into a PDF.
 func CompileLatexToPDF(latexContent []byte) ([]byte, error) {
@@ -309,6 +337,8 @@ func ParallelGeneratePDFs(db *gorm.DB, examID uint) (string, error) {
 	// Synchronize goroutines using a WaitGroup
 	var wg sync.WaitGroup
 	var pdfMergeMutex sync.Mutex
+	var generationErrMutex sync.Mutex
+	var generationErr error
 	var processedCount int64
 
 	// Variable to store the path of the main PDF
@@ -351,6 +381,11 @@ func ParallelGeneratePDFs(db *gorm.DB, examID uint) (string, error) {
 
 				latexTemplate, err := os.ReadFile(templatePath)
 				if err != nil {
+					generationErrMutex.Lock()
+					if generationErr == nil {
+						generationErr = err
+					}
+					generationErrMutex.Unlock()
 					errorLogger.Error("Error reading LaTeX template for student",
 						"student_id", student.ID,
 						"error", err.Error(),
@@ -363,20 +398,16 @@ func ParallelGeneratePDFs(db *gorm.DB, examID uint) (string, error) {
 					"template_size_bytes", len(latexTemplate))
 
 				// Prepare the data to replace placeholders in the LaTeX template
-				data := TemplateData{
-					ID:        fmt.Sprintf("%d", student.RegistrationNumber),
-					Meno:      fmt.Sprintf("%s %s", student.Name, student.Surname),
-					Datum:     exam.Date.Format("02. 01. 2006"),
-					Miestnost: student.Room,
-					Cas:       exam.Date.Format("15:04"),
-					Bloky:     exam.QuestionCount,
-					// QrCode:    fmt.Sprintf("%d", student.ID),
-					QrCode: fmt.Sprintf("%d", student.RegistrationNumber),
-				}
+				data := buildTemplateData(student, exam)
 
 				// Replace placeholders in the LaTeX template with the student data
 				updatedLatex, err := ReplaceTemplatePlaceholders(latexTemplate, data)
 				if err != nil {
+					generationErrMutex.Lock()
+					if generationErr == nil {
+						generationErr = err
+					}
+					generationErrMutex.Unlock()
 					errorLogger.Error("Error replacing placeholders for student", "student_id", student.ID, "error", err.Error())
 					return
 				}
@@ -401,6 +432,11 @@ func ParallelGeneratePDFs(db *gorm.DB, examID uint) (string, error) {
 				// Compile the LaTeX template into a PDF
 				studentPDF, err := CompileLatexToPDF(updatedLatex)
 				if err != nil {
+					generationErrMutex.Lock()
+					if generationErr == nil {
+						generationErr = err
+					}
+					generationErrMutex.Unlock()
 					errorLogger.Error("Error generating PDF for student", "student_id", student.ID, "error", err.Error())
 					return
 				}
@@ -408,6 +444,11 @@ func ParallelGeneratePDFs(db *gorm.DB, examID uint) (string, error) {
 				// Save the generated PDF for the student
 				studentPDFPath := filepath.Join(common.TEMPORARY_PDF_PATH, fmt.Sprintf("student_%d.pdf", student.ID))
 				if err := os.WriteFile(studentPDFPath, studentPDF, common.FILE_PERMISSION); err != nil {
+					generationErrMutex.Lock()
+					if generationErr == nil {
+						generationErr = err
+					}
+					generationErrMutex.Unlock()
 					errorLogger.Error("Error saving PDF for student", "student_id", student.ID, "error", err.Error())
 					return
 				}
@@ -425,12 +466,22 @@ func ParallelGeneratePDFs(db *gorm.DB, examID uint) (string, error) {
 					// Merge the new student PDF with the existing main PDF
 					mergedPDFPath := filepath.Join(common.TEMPORARY_PDF_PATH, "merged.pdf")
 					if err := MergePDFs(mainPDFPath, studentPDFPath, mergedPDFPath); err != nil {
+						generationErrMutex.Lock()
+						if generationErr == nil {
+							generationErr = err
+						}
+						generationErrMutex.Unlock()
 						errorLogger.Error("Error merging PDF for student", "student_id", student.ID, "error", err.Error())
 						return
 					}
 
 					// Rename the merged PDF to be the main PDF
 					if err := os.Rename(mergedPDFPath, mainPDFPath); err != nil {
+						generationErrMutex.Lock()
+						if generationErr == nil {
+							generationErr = err
+						}
+						generationErrMutex.Unlock()
 						errorLogger.Error("Error updating main PDF for student", "student_id", student.ID, "error", err.Error())
 						return
 					}
@@ -458,6 +509,13 @@ func ParallelGeneratePDFs(db *gorm.DB, examID uint) (string, error) {
 
 		// Waiting for all goroutines
 		wg.Wait()
+	}
+
+	if !mainPDFSet {
+		if generationErr != nil {
+			return "", generationErr
+		}
+		return "", fmt.Errorf("pre test %d sa nepodarilo vygenerovať žiadne PDF", examID)
 	}
 
 	// Create a final pdf
@@ -515,14 +573,14 @@ func ParallelGeneratePDFs(db *gorm.DB, examID uint) (string, error) {
 }
 
 // PrintSheet generates a PDF for a student based on their registration number.
-func PrintSheet(db *gorm.DB, registrationNumber int) (string, error) {
+func PrintSheet(db *gorm.DB, studentID uint) (string, error) {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
-	// Find student by registrationNumber
-	student, err := FindStudentByRegistrationNumber(db, registrationNumber)
-	if err != nil {
-		errorLogger.Error("Error finding student", "registration_number", registrationNumber, "error", err.Error())
+	// Find student by primary key so registration numbers can repeat across exams.
+	var student models.Student
+	if err := db.First(&student, studentID).Error; err != nil {
+		errorLogger.Error("Error finding student", "student_id", studentID, "error", err.Error())
 		return "", err
 	}
 
@@ -549,15 +607,7 @@ func PrintSheet(db *gorm.DB, registrationNumber int) (string, error) {
 	logger.Info("LaTeX template loaded", "template_path", templatePath, "option_count", exam.OptionCount)
 
 	// Create data template based on student's data from the database
-	data := TemplateData{
-		ID:        fmt.Sprintf("%d", student.RegistrationNumber),
-		Meno:      fmt.Sprintf("%s %s", student.Name, student.Surname),
-		Datum:     exam.Date.Format("02. 01. 2006"),
-		Miestnost: student.Room,
-		Cas:       exam.Date.Format("15:04"),
-		Bloky:     exam.QuestionCount,
-		QrCode:    fmt.Sprintf("%d", student.ID),
-	}
+	data := buildTemplateData(student, exam)
 
 	logger.Info("Template data prepared", "student_id", student.ID, "registration_number", student.RegistrationNumber)
 

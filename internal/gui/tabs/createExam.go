@@ -37,6 +37,7 @@ var (
 	showQuestions    bool
 	optionCountInput int = 2 // Default to 5 options (index 2 corresponds to "5" in options slice)
 	optionSelector   widgets.OptionSelectorStyle
+	showNameCheckbox widget.Bool = widget.Bool{Value: true}
 )
 
 type UploadCsv struct {
@@ -70,7 +71,7 @@ func (t *UploadCsv) CreateExam(gtx layout.Context, th *themeUI.Theme, db *gorm.D
 		optionSelector = widgets.OptionSelector(th, optionValues, &optionCountInput, "Počet možností")
 	}
 
-	columnWidths := []float32{0.25, 0.15, 0.2, 0.15, 0.25} // Adjusted widths for new field
+	columnWidths := []float32{0.22, 0.12, 0.18, 0.12, 0.18, 0.18}
 	insetwidth := unit.Dp(10)
 
 	if createButton.Clicked(gtx) {
@@ -121,6 +122,11 @@ func (t *UploadCsv) CreateExam(gtx layout.Context, th *themeUI.Theme, db *gorm.D
 						return layout.UniformInset(insetwidth).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 							// Option selector for number of options (3-8)
 							return optionSelector.Layout(gtx)
+						})
+					}),
+					layout.Flexed(columnWidths[5], func(gtx layout.Context) layout.Dimensions {
+						return layout.UniformInset(insetwidth).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+							return widgets.Checkbox(gtx, th, &showNameCheckbox, "Zobraziť meno", unit.Sp(15))
 						})
 					}),
 				)
@@ -332,7 +338,8 @@ func submitForm(db *gorm.DB, t *UploadCsv, tm *tabmanager.TabManager) {
 		Date:          parsedDateTime,
 		QuestionCount: pocetOtazok,
 		Questions:     answersStr,
-		OptionCount:   optionCount, // Save the option count
+		OptionCount:   optionCount,
+		ShowName:      showNameCheckbox.Value,
 	}
 
 	// Save to database

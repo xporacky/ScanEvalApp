@@ -13,7 +13,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func CreateExamWithCSV(db *gorm.DB, title, schoolYear, dateTime string, questionCount, optionCount int, answers []string, csvContent string) error {
+func CreateExamWithCSV(db *gorm.DB, title, schoolYear, dateTime string, questionCount, optionCount int, answers []string, csvContent string, showName bool) error {
 	if !isValidSchoolYear(schoolYear) {
 		return fmt.Errorf("invalid school year")
 	}
@@ -33,6 +33,7 @@ func CreateExamWithCSV(db *gorm.DB, title, schoolYear, dateTime string, question
 		QuestionCount: questionCount,
 		Questions:     answersStr,
 		OptionCount:   optionCount,
+		ShowName:      showName,
 	}
 
 	if err := repository.CreateExam(db, &exam); err != nil {

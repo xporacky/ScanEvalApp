@@ -36,6 +36,7 @@ const state = {
   formDateTime: '',
   formQuestionCount: 10,
   formOptionCount: 5,
+  formShowName: true,
   evalExamId: 0,
   evalFilePath: '',
   evalConfig: '',
@@ -230,7 +231,7 @@ function renderStudents() {
           <span class="cell" data-label="Test">${student.examId}</span>
           <span class="cell" data-label="Score">${student.score}</span>
           <span class="cell action" data-label="Akcie">
-            <button class="btn" data-student-print="${student.registrationNumber}">Tlačiť hárok</button>
+            <button class="btn" data-student-print="${student.id}">Tlačiť hárok</button>
           
           </span>
         </div>
@@ -242,10 +243,10 @@ function renderStudents() {
 
   document.querySelectorAll('[data-student-print]').forEach((btn) => {
     btn.addEventListener('click', async () => {
-      const reg = Number(btn.dataset.studentPrint);
-      if (!reg) return;
+      const studentId = Number(btn.dataset.studentPrint);
+      if (!studentId) return;
       try {
-        const path = await PrintStudentSheet(reg);
+        const path = await PrintStudentSheet(studentId);
         if (path) {
           await OpenPath(path);
         }
@@ -258,10 +259,10 @@ function renderStudents() {
 
   document.querySelectorAll('[data-student-download]').forEach((btn) => {
     btn.addEventListener('click', async () => {
-      const reg = Number(btn.dataset.studentDownload);
-      if (!reg) return;
+      const studentId = Number(btn.dataset.studentDownload);
+      if (!studentId) return;
       try {
-        const path = await DownloadStudentSheet(reg);
+        const path = await DownloadStudentSheet(studentId);
         if (path) {
           await OpenPath(path);
         }
@@ -334,6 +335,13 @@ function renderCreateExam() {
           Pocet moznosti
           <input id="option-count" type="number" min="2" max="8" value="${state.formOptionCount}" required />
         </label>
+        <label class="toggle-field">
+          Zobrazit meno
+          <span class="toggle-row">
+            <input id="show-name" type="checkbox" ${state.formShowName ? 'checked' : ''} />
+            <span class="toggle-text">${state.formShowName ? 'Ano' : 'Nie'}</span>
+          </span>
+        </label>
         <label class="file">
           CSV so studentmi
           <input id="csv-file" type="file" accept=".csv" />
@@ -359,6 +367,7 @@ function renderCreateExam() {
   const dateTimeEl = document.getElementById('date-time');
   const questionCountEl = document.getElementById('question-count');
   const optionCountEl = document.getElementById('option-count');
+  const showNameEl = document.getElementById('show-name');
 
   titleEl.addEventListener('input', () => {
     state.formTitle = titleEl.value;
@@ -374,6 +383,11 @@ function renderCreateExam() {
   });
   optionCountEl.addEventListener('input', () => {
     state.formOptionCount = Number(optionCountEl.value) || 0;
+  });
+  showNameEl.addEventListener('change', () => {
+    state.formShowName = showNameEl.checked;
+    const toggleText = document.querySelector('.toggle-text');
+    if (toggleText) toggleText.textContent = state.formShowName ? 'Ano' : 'Nie';
   });
 
   document.getElementById('generate').addEventListener('click', () => {
@@ -404,11 +418,12 @@ function renderCreateExam() {
     const dateTime = state.formDateTime.trim();
     const questionCount = Number(state.formQuestionCount);
     const optionCount = Number(state.formOptionCount);
+    const showName = Boolean(state.formShowName);
 
     renderAnswerSelectors(answersEl);
 
     try {
-      await CreateExamWithCSV(title, schoolYear, dateTime, questionCount, optionCount, state.answers, state.csvContent);
+      await CreateExamWithCSV(title, schoolYear, dateTime, questionCount, optionCount, state.answers, state.csvContent, showName);
       statusEl.textContent = 'Ulozene.';
       statusEl.className = 'status success';
       state.csvContent = '';
@@ -419,6 +434,7 @@ function renderCreateExam() {
       state.formDateTime = '';
       state.formQuestionCount = 10;
       state.formOptionCount = 5;
+      state.formShowName = true;
       await refreshData();
       state.activeTab = 'exams';
       renderContent();

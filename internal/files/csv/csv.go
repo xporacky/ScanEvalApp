@@ -7,6 +7,7 @@ import (
 	"ScanEvalApp/internal/database/repository"
 	"ScanEvalApp/internal/logging"
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -61,6 +62,20 @@ func ImportStudentsFromCSV(db *gorm.DB, csvContent string, examID uint) error {
 			Answers:            strings.Repeat("0", exam.QuestionCount),
 		}
 		student.Answers = strings.Repeat("0", exam.QuestionCount)
+		_, err = repository.GetStudentByRegistrationNumber(db, uint(registrationNumber), examID)
+		if err == nil {
+			logger.Info("Študent už je v teste, preskakujem import duplicitného záznamu",
+				slog.Int("registrationNumber", registrationNumber),
+				slog.Uint64("examID", uint64(examID)))
+			continue
+		}
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			errorLogger.Error("Chyba pri overení existencie študenta",
+				slog.Int("registrationNumber", registrationNumber),
+				slog.String("error", err.Error()))
+			return err
+		}
+
 		if err := repository.CreateStudent(db, &student); err != nil {
 			errorLogger.Error("Chyba pri ukladaní študenta", slog.String("studentName", student.Name), slog.String("error", err.Error()))
 			return err
