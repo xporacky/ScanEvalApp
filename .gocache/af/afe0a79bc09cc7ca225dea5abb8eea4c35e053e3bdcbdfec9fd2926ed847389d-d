@@ -1,0 +1,5 @@
+./clipboard.go
+./doc.go
+./key.go
+./pointer.go
+./router.go

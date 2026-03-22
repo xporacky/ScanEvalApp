@@ -1,0 +1,11 @@
+{
+    "sqltools.useNodeRuntime": true,
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "driver": "SQLite",
+            "database": "${workspaceFolder:ScanEvalApp}/internal/database/scan-eval-db.db",
+            "name": "ScanEvalAppDB"
+        }
+    ]
+}

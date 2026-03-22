@@ -1,0 +1,17 @@
+./app.go
+./datadir.go
+./doc.go
+./egl_x11.go
+./ime.go
+./os.go
+./os_unix.go
+./system.go
+./vulkan.go
+./vulkan_wayland.go
+./vulkan_x11.go
+./window.go
+_cgo_gotypes.go
+egl_wayland.cgo1.go
+os_wayland.cgo1.go
+os_x11.cgo1.go
+_cgo_import.go

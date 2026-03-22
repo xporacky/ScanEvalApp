@@ -1,0 +1,1 @@
+time=2026-01-19T00:00:37.076+01:00 level=ERROR msg="Chyba pri pripájaní k databáze" CRITICAL.error="unable to open database file: no such file or directory"

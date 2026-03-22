@@ -1,0 +1,6 @@
+./gl.go
+./types.go
+./util.go
+_cgo_gotypes.go
+gl_unix.cgo1.go
+_cgo_import.go

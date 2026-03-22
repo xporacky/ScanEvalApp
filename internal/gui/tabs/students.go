@@ -1,0 +1,204 @@
+package tabs
+
+import (
+	"ScanEvalApp/internal/database/repository"
+	"ScanEvalApp/internal/files/pdf"
+	"fmt"
+
+	"ScanEvalApp/internal/gui/themeUI"
+	"ScanEvalApp/internal/gui/widgets"
+	"ScanEvalApp/internal/logging"
+	"log/slog"
+
+	"gioui.org/layout"
+	"gioui.org/widget"
+	"gioui.org/widget/material"
+	"gorm.io/gorm"
+
+	"ScanEvalApp/internal/latex"
+
+	"gioui.org/unit"
+)
+
+var printButtons []widget.Clickable
+var downloadButtons []widget.Clickable
+var searchQuery widget.Editor
+var studentModal widgets.Modal
+
+var studentList widget.List = widget.List{List: layout.List{Axis: layout.Vertical}}
+
+func Students(gtx layout.Context, th *themeUI.Theme, db *gorm.DB) layout.Dimensions {
+	logger := logging.GetLogger()
+	errorLogger := logging.GetErrorLogger()
+	insetWidth := unit.Dp(15)
+	headerSize := unit.Sp(17)
+
+	students, err := repository.GetAllStudents(db)
+	if err != nil {
+		errorLogger.Error("Chyba pri načítaní študentov", slog.String("error", err.Error()))
+		return layout.Dimensions{}
+	}
+	query := searchQuery.Text()
+
+	if query != "" {
+		students, err = repository.GetStudentsQuery(db, query)
+		if err != nil {
+			errorLogger.Error("Chyba pri načítaní študentov", slog.String("error", err.Error()))
+			return layout.Dimensions{}
+		}
+	} else {
+		students, err = repository.GetAllStudents(db)
+		if err != nil {
+			errorLogger.Error("Chyba pri načítaní študentov", slog.String("error", err.Error()))
+			return layout.Dimensions{}
+		}
+	}
+	columns := []string{"Meno", "Priezvisko", "Dátum narodenia", "Registračné číslo", "Miestnosť", "Skóre", "Tlačiť hárok", "Stiahnúť hárok"}
+	columnWidths := []float32{0.2, 0.2, 0.15, 0.15, 0.1, 0.05, 0.075, 0.075}
+	if len(printButtons) != len(students) {
+		printButtons = make([]widget.Clickable, len(students))
+	}
+	if len(downloadButtons) != len(students) {
+		downloadButtons = make([]widget.Clickable, len(students))
+	}
+	return layout.Stack{}.Layout(gtx,
+		layout.Expanded(func(gtx layout.Context) layout.Dimensions {
+			return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+					return layout.UniformInset(unit.Dp(10)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+						editor := widgets.NewEditorField(th.Theme, &searchQuery, "🔎   Vyhľadávanie (Meno, Priezvisko, Registračné číslo)") // Šírku riadi columnWidths
+						return editor.Layout(gtx, th)
+					})
+				}),
+
+				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+					return layout.Inset{Left: insetWidth, Right: insetWidth}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+						return material.List(th.Material(), &studentList).Layout(gtx, len(students)+1, func(gtx layout.Context, i int) layout.Dimensions {
+							msg := ""
+							if i == 0 {
+								return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
+									layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
+										return widgets.LabelBorder(gtx, th, headerSize, columns[0])
+									}),
+									layout.Flexed(columnWidths[1], func(gtx layout.Context) layout.Dimensions {
+										return widgets.LabelBorder(gtx, th, headerSize, columns[1])
+									}),
+									layout.Flexed(columnWidths[2], func(gtx layout.Context) layout.Dimensions {
+										return widgets.LabelBorder(gtx, th, headerSize, columns[2])
+									}),
+									layout.Flexed(columnWidths[3], func(gtx layout.Context) layout.Dimensions {
+										return widgets.LabelBorder(gtx, th, headerSize, columns[3])
+									}),
+									layout.Flexed(columnWidths[4], func(gtx layout.Context) layout.Dimensions {
+										return widgets.LabelBorder(gtx, th, headerSize, columns[4])
+									}),
+									layout.Flexed(columnWidths[5], func(gtx layout.Context) layout.Dimensions {
+										return widgets.LabelBorder(gtx, th, headerSize, columns[5])
+									}),
+									layout.Flexed(columnWidths[6], func(gtx layout.Context) layout.Dimensions {
+										return widgets.LabelBorder(gtx, th, headerSize, columns[6])
+									}),
+									layout.Flexed(columnWidths[6], func(gtx layout.Context) layout.Dimensions {
+										return widgets.LabelBorder(gtx, th, headerSize, columns[7])
+									}),
+								)
+							}
+
+							student := students[i-1]
+							if printButtons[i-1].Clicked(gtx) {
+								studentModal.Visible = true
+								studentModal.SetCloseBtnEnable = false
+								isGenerating := true
+								generatedPath := ""
+								studentModal.Content = widgets.ContentGenerating(th, &isGenerating, &generatedPath, &msg)
+
+								go func() {
+									path, err := latex.PrintSheet(db, student.ID)
+									if err != nil {
+										msg = fmt.Sprintf("Chyba pri tlači hárku pre študenta (ID: %d, číslo registrácie: %d): %s",
+											student.ID, student.RegistrationNumber, err.Error())
+
+										errorLogger.Error("Chyba pri tlači hárku pre študenta",
+											"student_id", student.ID,
+											slog.Uint64("registration_number", uint64(student.RegistrationNumber)),
+											slog.String("path", path),
+											slog.String("error", err.Error()))
+									} else {
+										generatedPath = path
+										isGenerating = false
+										studentModal.SetCloseBtnEnable = true
+										msg = ""
+										logger.Info("Úspešne vytlačený hárok pre študenta",
+											slog.Uint64("registration_number", uint64(student.RegistrationNumber)))
+									}
+								}()
+							}
+							if downloadButtons[i-1].Clicked(gtx) {
+								studentModal.Visible = true
+								studentModal.SetCloseBtnEnable = false
+								isGenerating := true
+								generatedPath := ""
+								studentModal.Content = widgets.ContentGenerating(th, &isGenerating, &generatedPath, &msg)
+
+								go func() {
+									path, err := pdf.SlicePdfForStudent(db, student.ID)
+									if err != nil {
+										msg = fmt.Sprintf("Chyba pri slicingu PDF pre študenta %d: %s", student.ID, err.Error())
+										errorLogger.Error("Chyba pri slicingu PDF pre študenta", "registration_number", student.RegistrationNumber, "error", err.Error())
+										isGenerating = false
+										studentModal.SetCloseBtnEnable = true
+									} else {
+										generatedPath = path
+										isGenerating = false
+										studentModal.SetCloseBtnEnable = true
+										msg = ""
+										logger.Info("Úspešne slicitované PDF pre študenta", "registration_number", student.RegistrationNumber)
+									}
+								}()
+							}
+
+							return layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
+								layout.Flexed(columnWidths[0], func(gtx layout.Context) layout.Dimensions {
+									return widgets.Body1Border(gtx, th, student.Name)
+								}),
+								layout.Flexed(columnWidths[1], func(gtx layout.Context) layout.Dimensions {
+									return widgets.Body1Border(gtx, th, student.Surname)
+								}),
+								layout.Flexed(columnWidths[2], func(gtx layout.Context) layout.Dimensions {
+									return widgets.Body1Border(gtx, th, student.BirthDate.Format("2006-01-02"))
+								}),
+								layout.Flexed(columnWidths[3], func(gtx layout.Context) layout.Dimensions {
+									return widgets.Body1Border(gtx, th, fmt.Sprintf("%d", student.RegistrationNumber))
+								}),
+								layout.Flexed(columnWidths[4], func(gtx layout.Context) layout.Dimensions {
+									return widgets.Body1Border(gtx, th, student.Room)
+								}),
+								layout.Flexed(columnWidths[5], func(gtx layout.Context) layout.Dimensions {
+									return widgets.Body1Border(gtx, th, fmt.Sprintf("%d", student.Score))
+								}),
+								layout.Flexed(columnWidths[6], func(gtx layout.Context) layout.Dimensions {
+									btn := widgets.Button(th.Theme, &printButtons[i-1], widgets.SaveIcon, widgets.IconPositionStart, "Tlačiť")
+									btn.Background = themeUI.Gray
+									btn.Color = themeUI.White
+									return btn.Layout(gtx, th)
+								}),
+								layout.Flexed(columnWidths[7], func(gtx layout.Context) layout.Dimensions {
+									btn := widgets.Button(th.Theme, &downloadButtons[i-1], widgets.SaveIcon, widgets.IconPositionStart, "Stiahnúť")
+									btn.Background = themeUI.Gray
+									btn.Color = themeUI.White
+									return btn.Layout(gtx, th)
+								}),
+							)
+						})
+					})
+				}),
+			)
+		}),
+		layout.Expanded(func(gtx layout.Context) layout.Dimensions {
+			if studentModal.Visible {
+				return studentModal.Layout(gtx, th)
+			}
+			return layout.Dimensions{}
+		}),
+	)
+}
