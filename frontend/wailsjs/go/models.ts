@@ -63,6 +63,32 @@ export namespace main {
 		    return a;
 		}
 	}
+	export class ExamTemplate {
+	    title: string;
+	    schoolYear: string;
+	    dateTime: string;
+	    questionCount: number;
+	    optionCount: number;
+	    showName: boolean;
+	    answers: string[];
+	    studentCSVContent: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ExamTemplate(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.title = source["title"];
+	        this.schoolYear = source["schoolYear"];
+	        this.dateTime = source["dateTime"];
+	        this.questionCount = source["questionCount"];
+	        this.optionCount = source["optionCount"];
+	        this.showName = source["showName"];
+	        this.answers = source["answers"];
+	        this.studentCSVContent = source["studentCSVContent"];
+	    }
+	}
 	export class StudentSummary {
 	    id: number;
 	    name: string;

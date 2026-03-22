@@ -59,6 +59,17 @@ type ExamSummary struct {
 	StudentCount  int       `json:"studentCount"`
 }
 
+type ExamTemplate struct {
+	Title             string   `json:"title"`
+	SchoolYear        string   `json:"schoolYear"`
+	DateTime          string   `json:"dateTime"`
+	QuestionCount     int      `json:"questionCount"`
+	OptionCount       int      `json:"optionCount"`
+	ShowName          bool     `json:"showName"`
+	Answers           []string `json:"answers"`
+	StudentCSVContent string   `json:"studentCSVContent"`
+}
+
 func (a *App) ListExams() ([]ExamSummary, error) {
 	if a.dbErr != nil {
 		return nil, a.dbErr
@@ -328,6 +339,39 @@ func (a *App) ExportExamStudentsCSV(examID uint) (string, error) {
 	}
 
 	return csv.ExportStudentsToCSV(a.db, *exam)
+}
+
+func (a *App) ExportExamTemplateCSV(title, schoolYear, dateTime string, questionCount, optionCount int, answers []string, studentCSVContent string, showName bool) (string, error) {
+	template := csv.ExamTemplate{
+		Title:             title,
+		SchoolYear:        schoolYear,
+		DateTime:          dateTime,
+		QuestionCount:     questionCount,
+		OptionCount:       optionCount,
+		ShowName:          showName,
+		Answers:           answers,
+		StudentCSVContent: studentCSVContent,
+	}
+
+	return csv.ExportExamTemplateCSV(template)
+}
+
+func (a *App) ParseExamTemplateCSV(csvContent string) (ExamTemplate, error) {
+	template, err := csv.ParseExamTemplateCSV(csvContent)
+	if err != nil {
+		return ExamTemplate{}, err
+	}
+
+	return ExamTemplate{
+		Title:             template.Title,
+		SchoolYear:        template.SchoolYear,
+		DateTime:          template.DateTime,
+		QuestionCount:     template.QuestionCount,
+		OptionCount:       template.OptionCount,
+		ShowName:          template.ShowName,
+		Answers:           template.Answers,
+		StudentCSVContent: template.StudentCSVContent,
+	}, nil
 }
 
 func (a *App) ListConfigs() ([]string, error) {

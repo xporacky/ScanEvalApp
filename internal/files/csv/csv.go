@@ -19,6 +19,17 @@ import (
 	"gorm.io/gorm"
 )
 
+type ExamTemplate struct {
+	Title             string
+	SchoolYear        string
+	DateTime          string
+	QuestionCount     int
+	OptionCount       int
+	ShowName          bool
+	Answers           []string
+	StudentCSVContent string
+}
+
 // ImportStudentsFromCSV parses student records from the given CSV content
 // and stores them in the database.
 func ImportStudentsFromCSV(db *gorm.DB, csvContent string, examID uint) error {
@@ -154,4 +165,148 @@ func ExportStudentsToCSV(db *gorm.DB, exam models.Exam) (string, error) {
 	logger.Info("Export študentov do CSV úspešný", slog.String("fileName", fileName), slog.Int("studentCount", len(students)))
 
 	return fileName, nil
+}
+
+func ExportExamTemplateCSV(template ExamTemplate) (string, error) {
+	errorLogger := logging.GetErrorLogger()
+
+	dirPath, err := config.LoadLastPath()
+	if err != nil {
+		errorLogger.Error("Chyba načítania configu", slog.String("error", err.Error()))
+		return "", err
+	}
+
+	absDirPath, err := filepath.Abs(dirPath)
+	if err != nil {
+		errorLogger.Error("Chyba pri konverzii cesty", slog.String("error", err.Error()))
+		return "", err
+	}
+
+	fileName := "test_sablona.csv"
+	if strings.TrimSpace(template.Title) != "" {
+		fileName = common.SanitizeFilename(template.Title) + "_sablona.csv"
+	}
+	filePath := filepath.Join(absDirPath, fileName)
+
+	file, err := os.Create(filePath)
+	if err != nil {
+		errorLogger.Error("Chyba pri vytváraní CSV šablóny", slog.String("fileName", filePath), slog.String("error", err.Error()))
+		return "", err
+	}
+	defer file.Close()
+
+	file.Write([]byte{0xEF, 0xBB, 0xBF})
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	rows := [][]string{
+		{"section", "key", "value"},
+		{"meta", "title", template.Title},
+		{"meta", "school_year", template.SchoolYear},
+		{"meta", "date_time", template.DateTime},
+		{"meta", "question_count", strconv.Itoa(template.QuestionCount)},
+		{"meta", "option_count", strconv.Itoa(template.OptionCount)},
+		{"meta", "show_name", strconv.FormatBool(template.ShowName)},
+	}
+
+	for index, answer := range template.Answers {
+		rows = append(rows, []string{"answer", strconv.Itoa(index + 1), strings.TrimSpace(answer)})
+	}
+
+	rows = append(rows, []string{"payload", "students_csv", template.StudentCSVContent})
+
+	for _, row := range rows {
+		if err := writer.Write(row); err != nil {
+			errorLogger.Error("Chyba pri zápise CSV šablóny", slog.String("fileName", filePath), slog.String("error", err.Error()))
+			return "", err
+		}
+	}
+
+	return filePath, nil
+}
+
+func ParseExamTemplateCSV(csvContent string) (ExamTemplate, error) {
+	reader := csv.NewReader(strings.NewReader(csvContent))
+	rows, err := reader.ReadAll()
+	if err != nil {
+		return ExamTemplate{}, err
+	}
+	if len(rows) == 0 {
+		return ExamTemplate{}, fmt.Errorf("csv sablona je prazdna")
+	}
+
+	template := ExamTemplate{
+		OptionCount: 5,
+		ShowName:    true,
+	}
+
+	for i, row := range rows {
+		if len(row) < 3 {
+			continue
+		}
+		section := strings.TrimSpace(strings.TrimPrefix(row[0], "\ufeff"))
+		key := strings.TrimSpace(row[1])
+		value := row[2]
+
+		if i == 0 && strings.EqualFold(section, "section") {
+			continue
+		}
+
+		switch section {
+		case "meta":
+			switch key {
+			case "title":
+				template.Title = value
+			case "school_year":
+				template.SchoolYear = value
+			case "date_time":
+				template.DateTime = value
+			case "question_count":
+				template.QuestionCount, err = strconv.Atoi(strings.TrimSpace(value))
+				if err != nil {
+					return ExamTemplate{}, fmt.Errorf("neplatny question_count")
+				}
+			case "option_count":
+				template.OptionCount, err = strconv.Atoi(strings.TrimSpace(value))
+				if err != nil {
+					return ExamTemplate{}, fmt.Errorf("neplatny option_count")
+				}
+			case "show_name":
+				template.ShowName, err = strconv.ParseBool(strings.TrimSpace(value))
+				if err != nil {
+					return ExamTemplate{}, fmt.Errorf("neplatny show_name")
+				}
+			}
+		case "answer":
+			template.Answers = append(template.Answers, strings.TrimSpace(value))
+		case "payload":
+			if key == "students_csv" {
+				template.StudentCSVContent = value
+			}
+		}
+	}
+
+	if template.QuestionCount <= 0 {
+		template.QuestionCount = len(template.Answers)
+	}
+	if template.QuestionCount <= 0 {
+		return ExamTemplate{}, fmt.Errorf("sablona neobsahuje pocet otazok")
+	}
+
+	for len(template.Answers) < template.QuestionCount {
+		template.Answers = append(template.Answers, "")
+	}
+	if len(template.Answers) > template.QuestionCount {
+		template.Answers = template.Answers[:template.QuestionCount]
+	}
+
+	if template.OptionCount < 2 {
+		template.OptionCount = 2
+	}
+	if template.OptionCount > 8 {
+		template.OptionCount = 8
+	}
+
+	return template, nil
 }

@@ -15,11 +15,13 @@ import {
   DownloadStudentSheet,
   PickPDF,
   PickFolder,
+  ExportExamTemplateCSV,
   GetSavePath,
   SetSavePath,
   GetExamStats,
   GenerateExamStatisticsPDF,
   ExportExamStudentsCSV,
+  ParseExamTemplateCSV,
 } from '../wailsjs/go/main/App';
 import { EventsOn } from '../wailsjs/runtime/runtime';
 
@@ -31,6 +33,7 @@ const state = {
   answers: [],
   csvContent: '',
   csvName: '',
+  templateCsvName: '',
   formTitle: '',
   formSchoolYear: '',
   formDateTime: '',
@@ -310,8 +313,24 @@ function renderAnswerSelectors(container) {
   });
 }
 
+function syncAnswersState() {
+  const questionCount = Math.max(Number(state.formQuestionCount) || 0, 0);
+  state.answers = Array.from({ length: questionCount }, (_, i) => state.answers[i] || '');
+}
+
+function getStudentCsvLabel() {
+  if (state.csvName) return state.csvName;
+  if (state.csvContent) return 'Nacitane zo sablony';
+  return 'Ziadny subor';
+}
+
+function getTemplateCsvLabel() {
+  return state.templateCsvName || 'Ziadny subor';
+}
+
 function renderCreateExam() {
   const content = document.getElementById('content');
+  syncAnswersState();
   content.innerHTML = `
     <form id="create-exam" class="form">
       <div class="form-grid">
@@ -345,11 +364,17 @@ function renderCreateExam() {
         <label class="file">
           CSV so studentmi
           <input id="csv-file" type="file" accept=".csv" />
-          <span class="file-name">${state.csvName || 'Ziadny subor'}</span>
+          <span class="file-name">${getStudentCsvLabel()}</span>
+        </label>
+        <label class="file">
+          CSV sablona testu
+          <input id="template-csv-file" type="file" accept=".csv" />
+          <span class="file-name">${getTemplateCsvLabel()}</span>
         </label>
       </div>
       <div class="form-actions">
         <button type="button" id="generate" class="secondary">Generovat otazky</button>
+        <button type="button" id="save-template" class="secondary">Ulozit CSV sablonu</button>
         <button type="submit" class="primary">Vytvorit test</button>
         <span id="form-status" class="status"></span>
       </div>
@@ -361,6 +386,7 @@ function renderCreateExam() {
   const statusEl = document.getElementById('form-status');
   const answersEl = document.getElementById('answers');
   const fileInput = document.getElementById('csv-file');
+  const templateFileInput = document.getElementById('template-csv-file');
 
   const titleEl = document.getElementById('title');
   const schoolYearEl = document.getElementById('school-year');
@@ -380,6 +406,7 @@ function renderCreateExam() {
   });
   questionCountEl.addEventListener('input', () => {
     state.formQuestionCount = Number(questionCountEl.value) || 0;
+    syncAnswersState();
   });
   optionCountEl.addEventListener('input', () => {
     state.formOptionCount = Number(optionCountEl.value) || 0;
@@ -408,6 +435,68 @@ function renderCreateExam() {
     renderCreateExam();
   });
 
+  templateFileInput.addEventListener('change', async () => {
+    const file = templateFileInput.files?.[0];
+    if (!file) {
+      state.templateCsvName = '';
+      renderCreateExam();
+      return;
+    }
+
+    statusEl.textContent = 'Nacitavam sablonu...';
+    statusEl.className = 'status';
+
+    try {
+      const text = await file.text();
+      const template = await ParseExamTemplateCSV(text);
+      state.templateCsvName = file.name;
+      state.formTitle = template.title || '';
+      state.formSchoolYear = template.schoolYear || '';
+      state.formDateTime = template.dateTime || '';
+      state.formQuestionCount = Number(template.questionCount) || 0;
+      state.formOptionCount = Number(template.optionCount) || 5;
+      state.formShowName = Boolean(template.showName);
+      state.answers = Array.isArray(template.answers) ? template.answers : [];
+      state.csvContent = template.studentCSVContent || '';
+      state.csvName = template.studentCSVContent ? 'Nacitane zo sablony' : '';
+      renderCreateExam();
+      const nextStatusEl = document.getElementById('form-status');
+      if (nextStatusEl) {
+        nextStatusEl.textContent = 'Sablona nacitana.';
+        nextStatusEl.className = 'status success';
+      }
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = 'Chyba pri nacitani sablony.';
+      statusEl.className = 'status error';
+    }
+  });
+
+  document.getElementById('save-template').addEventListener('click', async () => {
+    statusEl.textContent = 'Ukladam sablonu...';
+    statusEl.className = 'status';
+    syncAnswersState();
+
+    try {
+      const path = await ExportExamTemplateCSV(
+        state.formTitle.trim(),
+        state.formSchoolYear.trim(),
+        state.formDateTime.trim(),
+        Number(state.formQuestionCount) || 0,
+        Number(state.formOptionCount) || 0,
+        state.answers,
+        state.csvContent,
+        Boolean(state.formShowName),
+      );
+      statusEl.textContent = path ? `Sablona ulozena: ${path}` : 'Sablona ulozena.';
+      statusEl.className = 'status success';
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = 'Chyba pri ukladani sablony.';
+      statusEl.className = 'status error';
+    }
+  });
+
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     statusEl.textContent = 'Ukladam...';
@@ -428,6 +517,7 @@ function renderCreateExam() {
       statusEl.className = 'status success';
       state.csvContent = '';
       state.csvName = '';
+      state.templateCsvName = '';
       state.answers = [];
       state.formTitle = '';
       state.formSchoolYear = '';

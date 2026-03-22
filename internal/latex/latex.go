@@ -21,8 +21,11 @@ import (
 )
 
 func buildIDDigits(registrationNumber int) []string {
-	id := fmt.Sprintf("%d", registrationNumber)
-	digits := make([]string, 8)
+	id := fmt.Sprintf("%07d", registrationNumber)
+	if len(id) > 7 {
+		id = id[:7]
+	}
+	digits := make([]string, 7)
 	for i, r := range id {
 		if i >= len(digits) {
 			break

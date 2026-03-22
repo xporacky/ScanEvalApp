@@ -30,18 +30,21 @@
         \node at (-4.225,2.1) {\footnotesize {{.Variant}}};
 
         \node[anchor=west] at (2.0,2.1) {\textbf{ID:}};
-        \foreach \x in {0,1,2,3,4,5,6,7} {
-            \draw[thick] (3.0+\x*0.72,1.8) rectangle ++(0.6,0.6);
-        }
-        \node at (6.18,2.12) {\Large /};
+        \draw[thick] (3.00,1.8) rectangle ++(0.6,0.6);
+        \draw[thick] (3.72,1.8) rectangle ++(0.6,0.6);
+        \draw[thick] (4.44,1.8) rectangle ++(0.6,0.6);
+        \draw[thick] (5.16,1.8) rectangle ++(0.6,0.6);
+        \draw[thick] (6.60,1.8) rectangle ++(0.6,0.6);
+        \draw[thick] (7.32,1.8) rectangle ++(0.6,0.6);
+        \draw[thick] (8.04,1.8) rectangle ++(0.6,0.6);
+        \node at (6.18,2.1) {\Large /};
         \node at (3.3,2.1) {\footnotesize {{index .IDDigits 0}}};
         \node at (4.02,2.1) {\footnotesize {{index .IDDigits 1}}};
         \node at (4.74,2.1) {\footnotesize {{index .IDDigits 2}}};
         \node at (5.46,2.1) {\footnotesize {{index .IDDigits 3}}};
-        \node at (6.18,2.1) {\footnotesize {{index .IDDigits 4}}};
-        \node at (6.90,2.1) {\footnotesize {{index .IDDigits 5}}};
-        \node at (7.62,2.1) {\footnotesize {{index .IDDigits 6}}};
-        \node at (8.34,2.1) {\footnotesize {{index .IDDigits 7}}};
+        \node at (6.90,2.1) {\footnotesize {{index .IDDigits 4}}};
+        \node at (7.62,2.1) {\footnotesize {{index .IDDigits 5}}};
+        \node at (8.34,2.1) {\footnotesize {{index .IDDigits 6}}};
 
         \node at (0,0.9) {\textbf{\Large {{.TestName}}}};
 
