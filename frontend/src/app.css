@@ -183,12 +183,57 @@
 
 .form input[type="text"],
 .form input[type="number"],
-.form input[type="file"] {
+.form input[type="file"],
+.form input[type="date"],
+.form input[type="time"] {
     padding: 10px 12px;
     border-radius: 10px;
     border: 1px solid rgba(255, 255, 255, 0.18);
     background: rgba(10, 15, 25, 0.7);
     color: #fff;
+}
+
+.form input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    opacity: 0.6;
+    cursor: pointer;
+}
+
+.time-selects {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.time-selects select {
+    padding: 10px 8px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(10, 15, 25, 0.7);
+    color: #fff;
+    cursor: pointer;
+    appearance: none;
+    text-align: center;
+    width: 58px;
+}
+
+.time-sep {
+    color: #fff;
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+.datetime-row {
+    display: flex;
+    gap: 8px;
+}
+
+.datetime-row input[type="date"] {
+    flex: 1;
+}
+
+.datetime-row input[type="time"] {
+    width: 110px;
 }
 
 .file {

@@ -23,6 +23,7 @@ import {
   ExportExamStudentsCSV,
   ParseExamTemplateCSV,
   PrintLegendPDF,
+  UpdateExamAnswers,
 } from '../wailsjs/go/main/App';
 import { EventsOn } from '../wailsjs/runtime/runtime';
 
@@ -111,6 +112,51 @@ const statisticsOptions = [
   'Úspešnosť absolútna aj relatívna pre jednotlivé príklady',
 ];
 
+// "DD.MM.YYYY HH:mm" -> "YYYY-MM-DD" for date input
+function toDateInput(dtStr) {
+  if (!dtStr) return '';
+  const m = dtStr.match(/^(\d{2})\.(\d{2})\.(\d{4}) (\d{2}):(\d{2})$/);
+  if (!m) return '';
+  return `${m[3]}-${m[2]}-${m[1]}`;
+}
+
+// "DD.MM.YYYY HH:mm" -> "HH:mm" for time input
+function toHourInput(dtStr) {
+  if (!dtStr) return '08';
+  const m = dtStr.match(/^(\d{2})\.(\d{2})\.(\d{4}) (\d{2}):(\d{2})$/);
+  return m ? m[4] : '08';
+}
+
+function toMinuteInput(dtStr) {
+  if (!dtStr) return '00';
+  const m = dtStr.match(/^(\d{2})\.(\d{2})\.(\d{4}) (\d{2}):(\d{2})$/);
+  if (!m) return '00';
+  const min = parseInt(m[5], 10);
+  return String(Math.round(min / 5) * 5).padStart(2, '0');
+}
+
+function makeHourOptions(selected) {
+  return Array.from({ length: 24 }, (_, i) => {
+    const v = String(i).padStart(2, '0');
+    return `<option value="${v}" ${v === selected ? 'selected' : ''}>${v}</option>`;
+  }).join('');
+}
+
+function makeMinuteOptions(selected) {
+  return Array.from({ length: 12 }, (_, i) => {
+    const v = String(i * 5).padStart(2, '0');
+    return `<option value="${v}" ${v === selected ? 'selected' : ''}>${v}</option>`;
+  }).join('');
+}
+
+// "YYYY-MM-DD" + "HH:mm" -> "DD.MM.YYYY HH:mm" for backend
+function combineDatetime(dateStr, timeStr) {
+  if (!dateStr || !timeStr) return '';
+  const d = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!d) return '';
+  return `${d[3]}.${d[2]}.${d[1]} ${timeStr}`;
+}
+
 function formatDate(value) {
   if (!value) return '-';
   const date = new Date(value);
@@ -144,7 +190,7 @@ function renderExams() {
       <span>Možnosti</span>
       <span>Študenti</span>
       <span>Tlačiť</span>
-      <span>Odpovede</span>
+      <span>Upraviť odpovede</span>
       <span>Vyhodnotiť</span>
       <span>Štatistika PDF</span>
       <span>CSV</span>
@@ -164,7 +210,7 @@ function renderExams() {
             <button class="btn" data-action="print" data-exam-id="${exam.id}">Tlačiť</button>
           </span>
           <span class="cell" data-label="Odpovede">
-            <button class="btn" data-action="answers" data-exam-id="${exam.id}">Odpovede</button>
+            <button class="btn" data-action="answers" data-exam-id="${exam.id}">Upraviť odpovede</button>
           </span>
           <span class="cell" data-label="Vyhodnotiť">
             <button class="btn" data-action="evaluate" data-exam-id="${exam.id}">Vyhodnotiť</button>
@@ -345,8 +391,15 @@ function renderCreateExam() {
           <input id="school-year" type="text" placeholder="2024/25" value="${state.formSchoolYear}" required />
         </label>
         <label>
-          Datum a cas (dd.MM.yyyy HH:mm)
-          <input id="date-time" type="text" placeholder="01.03.2025 10:00" value="${state.formDateTime}" required />
+          Dátum a čas
+          <div class="datetime-row">
+            <input id="date-part" type="date" value="${toDateInput(state.formDateTime)}" required />
+            <div class="time-selects">
+              <select id="hour-part">${makeHourOptions(toHourInput(state.formDateTime))}</select>
+              <span class="time-sep">:</span>
+              <select id="minute-part">${makeMinuteOptions(toMinuteInput(state.formDateTime))}</select>
+            </div>
+          </div>
         </label>
         <label>
           Pocet otazok
@@ -392,7 +445,9 @@ function renderCreateExam() {
 
   const titleEl = document.getElementById('title');
   const schoolYearEl = document.getElementById('school-year');
-  const dateTimeEl = document.getElementById('date-time');
+  const datePartEl = document.getElementById('date-part');
+  const hourPartEl = document.getElementById('hour-part');
+  const minutePartEl = document.getElementById('minute-part');
   const questionCountEl = document.getElementById('question-count');
   const optionCountEl = document.getElementById('option-count');
   const showNameEl = document.getElementById('show-name');
@@ -403,9 +458,12 @@ function renderCreateExam() {
   schoolYearEl.addEventListener('input', () => {
     state.formSchoolYear = schoolYearEl.value;
   });
-  dateTimeEl.addEventListener('input', () => {
-    state.formDateTime = dateTimeEl.value;
-  });
+  const syncDateTime = () => {
+    state.formDateTime = combineDatetime(datePartEl.value, `${hourPartEl.value}:${minutePartEl.value}`);
+  };
+  datePartEl.addEventListener('change', syncDateTime);
+  hourPartEl.addEventListener('change', syncDateTime);
+  minutePartEl.addEventListener('change', syncDateTime);
   questionCountEl.addEventListener('input', () => {
     state.formQuestionCount = Number(questionCountEl.value) || 0;
     syncAnswersState();
@@ -888,22 +946,68 @@ function bindExamActions() {
       }
       if (action === 'answers') {
         try {
-          const answers = await GetExamAnswers(examId);
-          if (answers) {
-            const items = answers
-              .split('')
-              .map(
-                (ans, idx) =>
-                  `<div class="answer-item"><span class="answer-num">${idx + 1}.</span><span class="answer-val">${ans.toUpperCase()}</span></div>`,
-              )
-              .join('');
-            showModal('Odpovede testu', `<div class="answers-grid">${items}</div>`);
-          } else {
-            showModal('Odpovede testu', '<div class="empty">Odpovede neboli najdene.</div>');
-          }
+          const exam = state.exams.find((e) => e.id === examId);
+          const currentAnswers = await GetExamAnswers(examId);
+          const options = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+          const questionCount = exam ? exam.questionCount : (currentAnswers ? currentAnswers.length : 0);
+          const optionCount = exam ? (exam.optionCount || 5) : 5;
+          const activeOptions = options.slice(0, Math.min(Math.max(optionCount, 2), options.length));
+          const answersArr = Array.from({ length: questionCount }, (_, i) =>
+            currentAnswers && currentAnswers[i] ? currentAnswers[i].toUpperCase() : '',
+          );
+
+          const rows = answersArr
+            .map(
+              (ans, idx) => `
+              <div class="answer-row">
+                <span>Otazka ${String(idx + 1).padStart(2, '0')}</span>
+                ${activeOptions
+                  .map(
+                    (opt) => `
+                  <label class="radio">
+                    <input type="radio" name="eq${idx}" value="${opt}" ${ans === opt ? 'checked' : ''} />
+                    <span>${opt}</span>
+                  </label>`,
+                  )
+                  .join('')}
+              </div>`,
+            )
+            .join('');
+
+          showModal(
+            'Upraviť odpovede',
+            `<div class="answers" id="edit-answers-container">${rows}</div>
+             <div style="margin-top:12px;display:flex;align-items:center;gap:12px;">
+               <button class="btn primary" id="save-answers-btn">Uložiť</button>
+               <span id="save-answers-status" class="status"></span>
+             </div>`,
+          );
+
+          const editAnswers = [...answersArr];
+          document.querySelectorAll('#edit-answers-container input[type="radio"]').forEach((input) => {
+            input.addEventListener('change', () => {
+              const qIndex = Number(input.name.replace('eq', '')) || 0;
+              editAnswers[qIndex] = input.value;
+            });
+          });
+
+          document.getElementById('save-answers-btn').addEventListener('click', async () => {
+            const statusEl = document.getElementById('save-answers-status');
+            statusEl.textContent = 'Ukladam...';
+            statusEl.className = 'status';
+            try {
+              await UpdateExamAnswers(examId, editAnswers);
+              statusEl.textContent = 'Ulozene.';
+              statusEl.className = 'status success';
+            } catch (err) {
+              console.error(err);
+              statusEl.textContent = 'Chyba: ' + (err?.message || err || 'neznama chyba');
+              statusEl.className = 'status error';
+            }
+          });
         } catch (err) {
           console.error(err);
-          showModal('Odpovede testu', '<div class="error">Nacitavanie odpovedi zlyhalo.</div>');
+          showModal('Upraviť odpovede', '<div class="error">Nacitavanie odpovedi zlyhalo.</div>');
         }
         return;
       }

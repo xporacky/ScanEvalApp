@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"ScanEvalApp/internal/common"
@@ -497,4 +498,23 @@ func (a *App) SetSavePath(path string) error {
 		return fmt.Errorf("path is empty")
 	}
 	return config.SaveLastPath(path)
+}
+
+func (a *App) UpdateExamAnswers(examID uint, answers []string) error {
+	if a.dbErr != nil {
+		return a.dbErr
+	}
+	if a.db == nil {
+		return fmt.Errorf("database not initialized")
+	}
+	if examID == 0 {
+		return fmt.Errorf("invalid exam id")
+	}
+
+	exam, err := repository.GetExam(a.db, examID)
+	if err != nil {
+		return err
+	}
+	exam.Questions = strings.Join(answers, "")
+	return repository.UpdateExam(a.db, exam)
 }
