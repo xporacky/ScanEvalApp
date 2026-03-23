@@ -22,6 +22,7 @@ import {
   GenerateExamStatisticsPDF,
   ExportExamStudentsCSV,
   ParseExamTemplateCSV,
+  PrintLegendPDF,
 } from '../wailsjs/go/main/App';
 import { EventsOn } from '../wailsjs/runtime/runtime';
 
@@ -69,6 +70,7 @@ function renderShell() {
         <button class="tab" data-tab="students">Študenti</button>
         <button class="tab" data-tab="upload">Vyhodnotiť písomku</button>
         <button class="tab" data-tab="settings">Nastavenia</button>
+        <button class="tab" data-tab="legenda">Legenda</button>
       </nav>
       <section class="panel">
         <div id="content" class="panel-body"></div>
@@ -699,7 +701,39 @@ function renderContent() {
   }
   if (state.activeTab === 'settings') {
     renderSettings();
+    return;
   }
+  if (state.activeTab === 'legenda') {
+    renderLegenda();
+  }
+}
+
+function renderLegenda() {
+  const content = document.getElementById('content');
+  content.innerHTML = `
+    <div class="legenda-page">
+      <h2>Legenda</h2>
+      <p>Vygeneruje PDF s návodom na vyplnenie testu a uloží ho do nastaveného priečinka.</p>
+      <button class="btn primary" id="print-legenda">Tlačiť legendu</button>
+      <span id="legenda-status" class="status"></span>
+    </div>
+  `;
+
+  document.getElementById('print-legenda').addEventListener('click', async () => {
+    const statusEl = document.getElementById('legenda-status');
+    statusEl.textContent = 'Generujem PDF...';
+    statusEl.className = 'status';
+    try {
+      const path = await PrintLegendPDF();
+      statusEl.textContent = 'Ulozene: ' + path;
+      statusEl.className = 'status success';
+      if (path) await OpenPath(path);
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = 'Chyba: ' + (err?.message || err || 'neznama chyba');
+      statusEl.className = 'status error';
+    }
+  });
 }
 
 function renderUpload() {

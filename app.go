@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"time"
@@ -206,6 +207,36 @@ func (a *App) PrintExamPDF(examID uint) (string, error) {
 	}
 
 	return latex.ParallelGeneratePDFs(a.db, examID)
+}
+
+func (a *App) PrintLegendPDF() (string, error) {
+	templatePath := "./assets/latex/templates/Legenda.tex"
+	latexContent, err := os.ReadFile(templatePath)
+	if err != nil {
+		return "", fmt.Errorf("nepodarilo sa nacitat Legenda.tex: %w", err)
+	}
+
+	pdfBytes, err := latex.CompileLatexToPDF(latexContent)
+	if err != nil {
+		return "", fmt.Errorf("chyba kompilacie: %w", err)
+	}
+
+	dirPath, err := config.LoadLastPath()
+	if err != nil {
+		return "", fmt.Errorf("chyba nacitania cesty: %w", err)
+	}
+
+	absDirPath, err := filepath.Abs(dirPath)
+	if err != nil {
+		return "", fmt.Errorf("chyba konverzie cesty: %w", err)
+	}
+
+	outputPath := filepath.Join(absDirPath, "Legenda.pdf")
+	if err := os.WriteFile(outputPath, pdfBytes, common.FILE_PERMISSION); err != nil {
+		return "", fmt.Errorf("chyba ukladania PDF: %w", err)
+	}
+
+	return outputPath, nil
 }
 
 func (a *App) OpenPath(path string) error {
