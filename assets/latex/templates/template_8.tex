@@ -24,11 +24,6 @@
     \begin{tikzpicture}[remember picture,overlay]
         \node[anchor=west] at (-8.3,-0.1) {\includegraphics[width=2.2cm]{assets/latex/stu-fei-vector-logo.png}};
 
-        \node[anchor=west] at (-8.3,2.1) {\textbf{Variant testu:}};
-        \draw[thick] (-4.9,1.8) rectangle (-4.3,2.4);
-        \draw[thick] (-4.15,1.8) rectangle (-3.55,2.4);
-        \node at (-4.225,2.1) {\footnotesize {{.Variant}}};
-
         \node[anchor=west] at (2.0,2.1) {\textbf{ID:}};
         \draw[thick] (3.00,1.8) rectangle ++(0.6,0.6);
         \draw[thick] (3.72,1.8) rectangle ++(0.6,0.6);
@@ -118,8 +113,8 @@
             \node at (0,\y) {\normalsize\textbf{\arabic{rowCounter}}};
 
             \foreach \position in {1,2,3,4,5,6,7,8} {
-                \node[mygray] at ({\position * 1.75},\y) {\scalebox{1.8}{\textbf{$\times$}}};
-                \node[draw, rectangle, inner sep=4pt] at ({\position * 1.75}, \y) {};
+                \node[mygray] at ({\position * 1.75},\y) {\scalebox{2.1}{\textbf{$\times$}}};
+                \node[draw, rectangle, inner sep=9pt] at ({\position * 1.75}, \y) {};
             }
 
             \ifnum\value{rowPosition}=5
@@ -136,37 +131,6 @@
             \stepcounter{rowCounter}
         }
 
-        \node[anchor=west] at (-1,-17.5) {\footnotesize\textbf{Legenda:}};
-
-        \node[anchor=west] at (-1,-18.2) {\footnotesize Správna odpoveď};
-        \legendEmptyBox{-0.45}{-19.1}
-        \legendEmptyBox{0.30}{-19.1}
-        \legendCrossBox{1.05}{-19.1}
-        \legendEmptyBox{1.80}{-19.1}
-
-        \node[anchor=west] at (3.5,-18.2) {\footnotesize Nesprávna odpoveď};
-        \legendCrossBox{4.05}{-19.1}
-        \legendEmptyBox{4.80}{-19.1}
-        \legendCrossBox{5.55}{-19.1}
-        \legendEmptyBox{6.30}{-19.1}
-
-        \node[anchor=west] at (8.0,-18.2) {\footnotesize Nesprávna odpoveď};
-        \legendEmptyBox{8.55}{-19.1}
-        \legendCrossOutside{9.30}{-19.1}
-        \legendEmptyBox{10.05}{-19.1}
-        \legendEmptyBox{10.80}{-19.1}
-
-        \node[anchor=west] at (-1,-20.2) {\footnotesize Oprava};
-        \legendCrossBox{-0.45}{-21.1}
-        \legendEmptyBox{0.30}{-21.1}
-        \legendFilledBox{1.05}{-21.1}
-        \legendEmptyBox{1.80}{-21.1}
-
-        \node[anchor=west] at (3.5,-20.2) {\footnotesize Spätná oprava};
-        \legendCrossBox{4.05}{-21.1}
-        \legendCrossBox{4.80}{-21.1}
-        \legendCircledFilledBox{5.55}{-21.1}
-        \legendCrossBox{6.30}{-21.1}
     \end{tikzpicture}%
 }
 

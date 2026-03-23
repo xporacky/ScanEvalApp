@@ -530,7 +530,7 @@ function renderCreateExam() {
       renderContent();
     } catch (err) {
       console.error(err);
-      statusEl.textContent = 'Chyba pri ukladani.';
+      statusEl.textContent = 'Chyba pri ukladani: ' + (err?.message || err || 'neznama chyba');
       statusEl.className = 'status error';
     }
   });
