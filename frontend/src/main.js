@@ -7,6 +7,7 @@ import {
   ListExams,
   ListStudents,
   PrintExamPDF,
+  PrintExamPDFWithLegend,
   OpenPath,
   GetExamAnswers,
   ListConfigs,
@@ -62,7 +63,7 @@ function renderShell() {
         <div class="title">
           <div class="badge">ScanEval</div>
           <h1>ScanEvalApp</h1>
-        
+       
         </div>
       </header>
       <nav class="tabs">
@@ -166,6 +167,88 @@ function formatDate(value) {
     month: '2-digit',
     day: '2-digit',
   }).format(date);
+}
+
+// ==================== PRINT DIALOG ====================
+
+async function showPrintDialog(examId) {
+  const modalContent = `
+    <div class="print-dialog">
+      <div class="info-banner">
+        <div class="info-icon">🖨️</div>
+        <div class="info-text">
+          <strong>Voľby tlače</strong><br>
+          Vyberte, či chcete vytlačiť test s legendou alebo bez legendy.
+        </div>
+      </div>
+     
+      <div class="print-options">
+        <label class="print-option">
+          <input type="radio" name="printOption" value="with" checked>
+          <div class="option-content">
+            <span class="option-icon">📚</span>
+            <div>
+              <strong>S legendou</strong>
+              <small>Prvá strana s návodom na vyplnenie</small>
+            </div>
+          </div>
+        </label>
+       
+        <label class="print-option">
+          <input type="radio" name="printOption" value="without">
+          <div class="option-content">
+            <span class="option-icon">📄</span>
+            <div>
+              <strong>Bez legendy</strong>
+              <small>Iba testovacie hárky</small>
+            </div>
+          </div>
+        </label>
+      </div>
+     
+      <div class="form-actions">
+        <button class="btn primary" id="confirm-print">Tlačiť</button>
+        <button class="btn ghost" onclick="hideModal()">Zrušiť</button>
+      </div>
+      <div id="print-status" class="status"></div>
+    </div>
+  `;
+ 
+  showModal('Tlač testu', modalContent);
+ 
+  const confirmBtn = document.getElementById('confirm-print');
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', async () => {
+      const selectedOption = document.querySelector('input[name="printOption"]:checked').value;
+      const statusEl = document.getElementById('print-status');
+     
+      statusEl.textContent = 'Generujem PDF...';
+      statusEl.className = 'status';
+     
+      try {
+        let path;
+        if (selectedOption === 'with') {
+          path = await PrintExamPDFWithLegend(examId);
+        } else {
+          path = await PrintExamPDF(examId);
+        }
+       
+        if (path) {
+          statusEl.textContent = 'Hotovo!';
+          statusEl.className = 'status success';
+          await OpenPath(path);
+          setTimeout(() => hideModal(), 1000);
+        } else {
+          statusEl.textContent = 'Chyba pri generovaní PDF';
+          statusEl.className = 'status error';
+        }
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = 'Chyba: ' + (err?.message || err || 'neznáma chyba');
+        statusEl.className = 'status error';
+      }
+    });
+  }
 }
 
 function renderExams() {
@@ -283,7 +366,7 @@ function renderStudents() {
           <span class="cell" data-label="Score">${student.score}</span>
           <span class="cell action" data-label="Akcie">
             <button class="btn" data-student-print="${student.id}">Tlačiť hárok</button>
-          
+         
           </span>
         </div>
       `,
@@ -933,15 +1016,8 @@ function bindExamActions() {
 
       const action = btn.dataset.action;
       if (action === 'print') {
-        try {
-          const path = await PrintExamPDF(examId);
-          if (path) {
-            await OpenPath(path);
-          }
-        } catch (err) {
-          console.error(err);
-          window.alert('Tlač zlyhala. Skontroluj logs.');
-        }
+        // Show the print dialog instead of directly printing
+        showPrintDialog(examId);
         return;
       }
       if (action === 'answers') {
@@ -1121,5 +1197,9 @@ async function init() {
     refreshData();
   });
 }
+
+
+window.hideModal = hideModal;
+window.showPrintDialog = showPrintDialog;
 
 init();

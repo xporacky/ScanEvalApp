@@ -518,3 +518,15 @@ func (a *App) UpdateExamAnswers(examID uint, answers []string) error {
 	exam.Questions = strings.Join(answers, "")
 	return repository.UpdateExam(a.db, exam)
 }
+
+func (a *App) PrintExamPDFWithLegend(examID uint) (string, error) {
+    if a.dbErr != nil {
+        return "", a.dbErr
+    }
+    if a.db == nil {
+        return "", fmt.Errorf("database not initialized")
+    }
+
+    return latex.ParallelGeneratePDFsWithLegend(a.db, examID)
+}
+
