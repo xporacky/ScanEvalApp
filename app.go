@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"time"
@@ -294,6 +295,19 @@ func (a *App) GetExamAnswers(examID uint) (string, error) {
 	return exam.Questions, nil
 }
 
+func (a *App) UpdateExamAnswers(examID uint, answers []string) error {
+	if a.dbErr != nil {
+		return a.dbErr
+	}
+	if a.db == nil {
+		return fmt.Errorf("database not initialized")
+	}
+	if examID == 0 {
+		return fmt.Errorf("invalid exam id")
+	}
+	return services.UpdateExamAnswers(a.db, examID, answers)
+}
+
 func (a *App) PrintStudentSheet(studentID uint) (string, error) {
 	if a.dbErr != nil {
 		return "", a.dbErr
@@ -466,4 +480,33 @@ func (a *App) SetSavePath(path string) error {
 		return fmt.Errorf("path is empty")
 	}
 	return config.SaveLastPath(path)
+}
+
+func (a *App) PrintLegend() (string, error) {
+	legendContent, err := os.ReadFile("assets/latex/legend.tex")
+	if err != nil {
+		return "", fmt.Errorf("failed to read legend.tex: %w", err)
+	}
+
+	pdfBytes, err := latex.CompileLatexToPDF(legendContent)
+	if err != nil {
+		return "", fmt.Errorf("failed to compile legend: %w", err)
+	}
+
+	dirPath, cfgErr := config.LoadLastPath()
+	if cfgErr != nil || dirPath == "" {
+		dirPath = os.TempDir()
+	}
+
+	absDirPath, err := filepath.Abs(dirPath)
+	if err != nil {
+		absDirPath = os.TempDir()
+	}
+
+	outputPath := filepath.Join(absDirPath, "legenda.pdf")
+	if err := os.WriteFile(outputPath, pdfBytes, 0644); err != nil {
+		return "", fmt.Errorf("failed to save legend PDF: %w", err)
+	}
+
+	return outputPath, nil
 }

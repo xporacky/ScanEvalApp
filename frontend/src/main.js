@@ -22,6 +22,8 @@ import {
   GenerateExamStatisticsPDF,
   ExportExamStudentsCSV,
   ParseExamTemplateCSV,
+  UpdateExamAnswers,
+  PrintLegend,
 } from '../wailsjs/go/main/App';
 import { EventsOn } from '../wailsjs/runtime/runtime';
 
@@ -133,6 +135,10 @@ function renderExams() {
   }
 
   content.innerHTML = `
+    <div class="exams-page">
+    <div class="exams-toolbar">
+      <button class="btn secondary" id="btn-print-legend">Tlačiť legendu</button>
+    </div>
     <div class="exams-table">
     <div class="panel-header">
       <span>Názov</span>
@@ -180,6 +186,7 @@ function renderExams() {
       `,
       )
       .join('')}
+    </div>
     </div>
   `;
 }
@@ -281,7 +288,7 @@ function renderAnswerSelectors(container) {
   const options = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
   const optionCount = Number(document.getElementById('option-count').value) || 5;
   const questionCount = Number(document.getElementById('question-count').value) || 0;
-  const maxOptions = Math.min(Math.max(optionCount, 2), options.length);
+  const maxOptions = Math.min(Math.max(optionCount, 3), options.length);
   const activeOptions = options.slice(0, maxOptions);
 
   state.answers = Array.from({ length: questionCount }, (_, i) => state.answers[i] || '');
@@ -343,8 +350,8 @@ function renderCreateExam() {
           <input id="school-year" type="text" placeholder="2024/25" value="${state.formSchoolYear}" required />
         </label>
         <label>
-          Datum a cas (dd.MM.yyyy HH:mm)
-          <input id="date-time" type="text" placeholder="01.03.2025 10:00" value="${state.formDateTime}" required />
+          Datum (dd.MM.yyyy)
+          <input id="date-time" type="text" placeholder="01.03.2025" value="${state.formDateTime}" required />
         </label>
         <label>
           Pocet otazok
@@ -352,7 +359,7 @@ function renderCreateExam() {
         </label>
         <label>
           Pocet moznosti
-          <input id="option-count" type="number" min="2" max="8" value="${state.formOptionCount}" required />
+          <input id="option-count" type="number" min="3" max="8" value="${state.formOptionCount}" required />
         </label>
         <label class="toggle-field">
           Zobrazit meno
@@ -854,19 +861,42 @@ function bindExamActions() {
       }
       if (action === 'answers') {
         try {
+          const exam = state.exams.find(e => e.id === examId);
+          const questionCount = exam ? exam.questionCount : 0;
+          const optionCount = exam ? (exam.optionCount || 5) : 5;
           const answers = await GetExamAnswers(examId);
-          if (answers) {
-            const items = answers
-              .split('')
-              .map(
-                (ans, idx) =>
-                  `<div class="answer-item"><span class="answer-num">${idx + 1}.</span><span class="answer-val">${ans.toUpperCase()}</span></div>`,
-              )
-              .join('');
-            showModal('Odpovede testu', `<div class="answers-grid">${items}</div>`);
-          } else {
-            showModal('Odpovede testu', '<div class="empty">Odpovede neboli najdene.</div>');
+          const currentAnswers = answers ? answers.split('') : [];
+          const options = Array.from({length: optionCount}, (_, i) => String.fromCharCode(65 + i));
+          let rows = '';
+          for (let q = 0; q < questionCount; q++) {
+            const cur = (currentAnswers[q] || '').toLowerCase();
+            const opts = options.map(opt =>
+              `<label class="radio-opt"><input type="radio" name="ans-q${q}" value="${opt.toLowerCase()}" ${cur === opt.toLowerCase() ? 'checked' : ''} />${opt}</label>`
+            ).join('');
+            rows += `<div class="answer-edit-row"><span class="answer-num">${q + 1}.</span><div class="radio-opts">${opts}</div></div>`;
           }
+          const modalContent = `
+            <div class="answers-edit-form">
+              <div class="answers-edit-grid">${rows}</div>
+              <div class="modal-actions">
+                <button id="save-answers-btn" class="btn primary">Uložiť odpovede</button>
+              </div>
+            </div>`;
+          showModal('Odpovede testu', modalContent);
+          document.getElementById('save-answers-btn').addEventListener('click', async () => {
+            const newAnswers = [];
+            for (let q = 0; q < questionCount; q++) {
+              const checked = document.querySelector(`input[name="ans-q${q}"]:checked`);
+              newAnswers.push(checked ? checked.value : '');
+            }
+            try {
+              await UpdateExamAnswers(examId, newAnswers);
+              hideModal();
+            } catch (err) {
+              console.error(err);
+              window.alert('Ukladanie odpovedi zlyhalo.');
+            }
+          });
         } catch (err) {
           console.error(err);
           showModal('Odpovede testu', '<div class="error">Nacitavanie odpovedi zlyhalo.</div>');
@@ -918,6 +948,19 @@ function bindExamActions() {
       }
     });
   });
+
+  const legendBtn = document.getElementById('btn-print-legend');
+  if (legendBtn) {
+    legendBtn.addEventListener('click', async () => {
+      try {
+        const path = await PrintLegend();
+        if (path) await OpenPath(path);
+      } catch (err) {
+        console.error(err);
+        window.alert('Tlač legendy zlyhala. Skontroluj logs.');
+      }
+    });
+  }
 }
 
 async function refreshData() {

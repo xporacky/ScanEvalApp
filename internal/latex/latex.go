@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"sync"
 	"text/template"
 	"time"
@@ -43,11 +44,10 @@ func buildTemplateData(student models.Student, exam models.Exam) TemplateData {
 		ShowName:  exam.ShowName,
 		Datum:     latexEscape(exam.Date.Format("02. 01. 2006")),
 		Miestnost: latexEscape(student.Room),
-		Cas:       latexEscape(exam.Date.Format("15:04")),
+		Cas:       "",
 		Bloky:     exam.QuestionCount,
 		QrCode:    fmt.Sprintf("%d", student.RegistrationNumber),
 		TestName:  latexEscape(exam.Title),
-		Variant:   "",
 	}
 }
 
@@ -329,195 +329,116 @@ func ParallelGeneratePDFs(db *gorm.DB, examID uint) (string, error) {
 
 	logger.Info("Using template", "template_path", templatePath, "option_count", exam.OptionCount)
 
-	// Continue with the rest of your function...
-	var rooms []string
-	// Fetch unique room names from the database
-	if err := db.Model(&models.Student{}).Where("exam_id = ?", examID).Distinct().Pluck("room", &rooms).Error; err != nil {
-		errorLogger.Error("Error fetching distinct rooms", "error", err.Error())
+	// Fetch all students and sort by last 3 digits of RegistrationNumber
+	var allStudents []models.Student
+	if err := db.Where("exam_id = ?", examID).Find(&allStudents).Error; err != nil {
+		errorLogger.Error("Error fetching students", "error", err.Error())
 		return "", err
 	}
-
-	// Synchronize goroutines using a WaitGroup
-	var wg sync.WaitGroup
-	var pdfMergeMutex sync.Mutex
-	var generationErrMutex sync.Mutex
-	var generationErr error
-	var processedCount int64
-
-	// Variable to store the path of the main PDF
-	var mainPDFPath string
-	var mainPDFSet bool
-
-	logger.Debug("Starting parallel PDF generation",
-		"option_count", exam.OptionCount,
-		"template_path", templatePath,
-		"num_rooms", len(rooms))
+	sort.Slice(allStudents, func(i, j int) bool {
+		return allStudents[i].RegistrationNumber%1000 < allStudents[j].RegistrationNumber%1000
+	})
 
 	// Measure the total time for PDF generation and merging
 	startTime := time.Now()
 
-	// Loop through each room and process students due to correct ordering of PDFs
-	for _, room := range rooms {
-		logger.Info("Processing students in room", "room", room)
+	// Phase 1: Generate all PDFs in parallel
+	type studentPDFResult struct {
+		index     int
+		pdfPath   string
+		studentID uint
+		err       error
+	}
 
-		// Fetch all students in the current room
-		var students []models.Student
-		if err := db.Where("room = ? AND exam_id = ?", room, examID).Find(&students).Error; err != nil {
-			errorLogger.Error("Error fetching students", "error", err.Error())
-			return "", err
+	results := make([]studentPDFResult, len(allStudents))
+	var wg sync.WaitGroup
+	var genErrMu sync.Mutex
+	var genErr error
+
+	latexTemplate, err := os.ReadFile(templatePath)
+	if err != nil {
+		errorLogger.Error("Error reading LaTeX template", "error", err.Error(), "template_path", templatePath)
+		return "", err
+	}
+
+	for i, student := range allStudents {
+		wg.Add(1)
+		go func(idx int, s models.Student) {
+			defer wg.Done()
+
+			data := buildTemplateData(s, exam)
+			updatedLatex, err := ReplaceTemplatePlaceholders(latexTemplate, data)
+			if err != nil {
+				genErrMu.Lock()
+				if genErr == nil {
+					genErr = err
+				}
+				genErrMu.Unlock()
+				errorLogger.Error("Error replacing placeholders", "student_id", s.ID, "error", err.Error())
+				return
+			}
+
+			studentPDF, err := CompileLatexToPDF(updatedLatex)
+			if err != nil {
+				genErrMu.Lock()
+				if genErr == nil {
+					genErr = err
+				}
+				genErrMu.Unlock()
+				errorLogger.Error("Error generating PDF", "student_id", s.ID, "error", err.Error())
+				return
+			}
+
+			pdfPath := filepath.Join(common.TEMPORARY_PDF_PATH, fmt.Sprintf("student_%d.pdf", s.ID))
+			if err := os.WriteFile(pdfPath, studentPDF, common.FILE_PERMISSION); err != nil {
+				genErrMu.Lock()
+				if genErr == nil {
+					genErr = err
+				}
+				genErrMu.Unlock()
+				errorLogger.Error("Error saving PDF", "student_id", s.ID, "error", err.Error())
+				return
+			}
+
+			results[idx] = studentPDFResult{index: idx, pdfPath: pdfPath, studentID: s.ID}
+			logger.Debug("PDF vygenerované", "student_id", s.ID)
+		}(i, student)
+	}
+	wg.Wait()
+
+	if genErr != nil {
+		return "", genErr
+	}
+
+	// Phase 2: Merge PDFs sequentially in sorted order
+	var mainPDFPath string
+	var mainPDFSet bool
+
+	for _, result := range results {
+		if result.pdfPath == "" {
+			continue
 		}
-
-		logger.Debug("Found students for room", "room", room, "num_students", len(students))
-
-		// Generate PDFs concurrently for each student
-		for _, student := range students {
-			wg.Add(1)
-			go func(student models.Student) {
-				defer wg.Done()
-
-				studentStartTime := time.Now()
-
-				// Load LaTeX template with dynamic path based on option count
-				logger.Debug("Reading template file for student",
-					"student_id", student.ID,
-					"template_path", templatePath)
-
-				latexTemplate, err := os.ReadFile(templatePath)
-				if err != nil {
-					generationErrMutex.Lock()
-					if generationErr == nil {
-						generationErr = err
-					}
-					generationErrMutex.Unlock()
-					errorLogger.Error("Error reading LaTeX template for student",
-						"student_id", student.ID,
-						"error", err.Error(),
-						"template_path", templatePath)
-					return
-				}
-
-				logger.Debug("Successfully read template",
-					"student_id", student.ID,
-					"template_size_bytes", len(latexTemplate))
-
-				// Prepare the data to replace placeholders in the LaTeX template
-				data := buildTemplateData(student, exam)
-
-				// Replace placeholders in the LaTeX template with the student data
-				updatedLatex, err := ReplaceTemplatePlaceholders(latexTemplate, data)
-				if err != nil {
-					generationErrMutex.Lock()
-					if generationErr == nil {
-						generationErr = err
-					}
-					generationErrMutex.Unlock()
-					errorLogger.Error("Error replacing placeholders for student", "student_id", student.ID, "error", err.Error())
-					return
-				}
-
-				// DEBUG: Log template replacement results
-				logger.Debug("Template replacement completed",
-					"student_id", student.ID,
-					"original_template_size", len(latexTemplate),
-					"updated_latex_size", len(updatedLatex))
-
-				// Log a sample of the generated LaTeX to see if placeholders were replaced
-				if len(updatedLatex) > 200 {
-					logger.Debug("Generated LaTeX sample (first 200 chars):",
-						"student_id", student.ID,
-						"sample", string(updatedLatex[:200]))
-				} else {
-					logger.Debug("Generated LaTeX content:",
-						"student_id", student.ID,
-						"content", string(updatedLatex))
-				}
-
-				// Compile the LaTeX template into a PDF
-				studentPDF, err := CompileLatexToPDF(updatedLatex)
-				if err != nil {
-					generationErrMutex.Lock()
-					if generationErr == nil {
-						generationErr = err
-					}
-					generationErrMutex.Unlock()
-					errorLogger.Error("Error generating PDF for student", "student_id", student.ID, "error", err.Error())
-					return
-				}
-
-				// Save the generated PDF for the student
-				studentPDFPath := filepath.Join(common.TEMPORARY_PDF_PATH, fmt.Sprintf("student_%d.pdf", student.ID))
-				if err := os.WriteFile(studentPDFPath, studentPDF, common.FILE_PERMISSION); err != nil {
-					generationErrMutex.Lock()
-					if generationErr == nil {
-						generationErr = err
-					}
-					generationErrMutex.Unlock()
-					errorLogger.Error("Error saving PDF for student", "student_id", student.ID, "error", err.Error())
-					return
-				}
-
-				// Lock the PDF merge operation to ensure it happens sequentially
-				pdfMergeMutex.Lock()
-				defer pdfMergeMutex.Unlock()
-
-				// Set the first student PDF as the main PDF
-				if !mainPDFSet {
-					mainPDFPath = studentPDFPath
-					mainPDFSet = true
-					logger.Info("Set initial main PDF for student", "student_id", student.ID)
-				} else {
-					// Merge the new student PDF with the existing main PDF
-					mergedPDFPath := filepath.Join(common.TEMPORARY_PDF_PATH, "merged.pdf")
-					if err := MergePDFs(mainPDFPath, studentPDFPath, mergedPDFPath); err != nil {
-						generationErrMutex.Lock()
-						if generationErr == nil {
-							generationErr = err
-						}
-						generationErrMutex.Unlock()
-						errorLogger.Error("Error merging PDF for student", "student_id", student.ID, "error", err.Error())
-						return
-					}
-
-					// Rename the merged PDF to be the main PDF
-					if err := os.Rename(mergedPDFPath, mainPDFPath); err != nil {
-						generationErrMutex.Lock()
-						if generationErr == nil {
-							generationErr = err
-						}
-						generationErrMutex.Unlock()
-						errorLogger.Error("Error updating main PDF for student", "student_id", student.ID, "error", err.Error())
-						return
-					}
-
-					// Delete the temp student pdf
-					defer func() {
-						if err := files.DeleteFile(studentPDFPath); err != nil {
-							errorLogger.Error("Error removing temporary PDF for student", "student_id", student.ID, "error", err.Error())
-						}
-					}()
-
-				}
-
-				// Increment the processed PDF count and log it
-				processedCount++
-				studentDuration := time.Since(studentStartTime)
-				logger.Debug("Generovanie PDF",
-					"spracovaných", processedCount,
-					"celkovo", len(students),
-					"exam", exam.Title,
-					"id študenta", student.ID,
-					"dokončené za", studentDuration)
-			}(student)
+		if !mainPDFSet {
+			mainPDFPath = result.pdfPath
+			mainPDFSet = true
+		} else {
+			mergedPDFPath := filepath.Join(common.TEMPORARY_PDF_PATH, fmt.Sprintf("merged_%d.pdf", result.studentID))
+			if err := MergePDFs(mainPDFPath, result.pdfPath, mergedPDFPath); err != nil {
+				errorLogger.Error("Error merging PDF", "student_id", result.studentID, "error", err.Error())
+				_ = files.DeleteFile(result.pdfPath)
+				return "", err
+			}
+			if err := os.Rename(mergedPDFPath, mainPDFPath); err != nil {
+				errorLogger.Error("Error updating main PDF", "student_id", result.studentID, "error", err.Error())
+				return "", err
+			}
+			if err := files.DeleteFile(result.pdfPath); err != nil {
+				errorLogger.Error("Error removing temporary PDF", "student_id", result.studentID, "error", err.Error())
+			}
 		}
-
-		// Waiting for all goroutines
-		wg.Wait()
 	}
 
 	if !mainPDFSet {
-		if generationErr != nil {
-			return "", generationErr
-		}
 		return "", fmt.Errorf("pre test %d sa nepodarilo vygenerovať žiadne PDF", examID)
 	}
 

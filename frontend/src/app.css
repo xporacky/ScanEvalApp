@@ -383,6 +383,9 @@
 
 .modal-card {
     width: min(720px, 92vw);
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
     background: rgba(14, 22, 35, 0.95);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 18px;
@@ -408,6 +411,8 @@
     border-radius: 12px;
     background: rgba(255, 255, 255, 0.04);
     min-height: 80px;
+    overflow-y: auto;
+    flex: 1;
 }
 
 .answers-grid {
@@ -461,4 +466,70 @@
     .tabs {
         flex-wrap: wrap;
     }
+}
+
+/* Editable answers modal */
+.answers-edit-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.answer-edit-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 6px;
+    border-radius: 8px;
+}
+
+.answer-edit-row:nth-child(5n) {
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    margin-bottom: 4px;
+    padding-bottom: 8px;
+}
+
+.radio-opts {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.radio-opt {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    padding: 4px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.1);
+    font-size: 13px;
+    transition: background 0.15s;
+}
+
+.radio-opt:hover {
+    background: rgba(255,255,255,0.08);
+}
+
+.radio-opt input[type=radio] {
+    accent-color: #60a5fa;
+}
+
+.modal-actions {
+    margin-top: 16px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* Exams toolbar (legend button) */
+.exams-page {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.exams-toolbar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
 }

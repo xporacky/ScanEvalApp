@@ -43,15 +43,24 @@ func CreateExamWithCSV(db *gorm.DB, title, schoolYear, dateTime string, question
 	return csv.ImportStudentsFromCSV(db, csvContent, exam.ID)
 }
 
+func UpdateExamAnswers(db *gorm.DB, examID uint, answers []string) error {
+	answersStr := strings.Join(answers, "")
+	return db.Model(&models.Exam{}).Where("id = ?", examID).Update("questions", answersStr).Error
+}
+
 func isValidSchoolYear(s string) bool {
 	re := regexp.MustCompile(`^\d{4}/\d{2}$`)
 	return re.MatchString(s)
 }
 
 func parseDateTime(dateTime string) (time.Time, bool) {
-	parsedTime, err := time.Parse("02.01.2006 15:04", dateTime)
-	if err != nil {
-		return time.Time{}, false
+	// Skús formát len s dátumom (dd.MM.yyyy)
+	if t, err := time.Parse("02.01.2006", dateTime); err == nil {
+		return t, true
 	}
-	return parsedTime, true
+	// Fallback: starý formát s časom (dd.MM.yyyy HH:mm)
+	if t, err := time.Parse("02.01.2006 15:04", dateTime); err == nil {
+		return t, true
+	}
+	return time.Time{}, false
 }

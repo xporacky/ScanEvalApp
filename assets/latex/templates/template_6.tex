@@ -1,4 +1,4 @@
-\documentclass[12pt]{article}
+\documentclass[a4wide,12pt]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage[main=slovak,provide=*]{babel}
@@ -24,11 +24,6 @@
     \begin{tikzpicture}[remember picture,overlay]
         \node[anchor=west] at (-8.3,-0.1) {\includegraphics[width=2.2cm]{assets/latex/stu-fei-vector-logo.png}};
 
-        \node[anchor=west] at (-8.3,2.1) {\textbf{Variant testu:}};
-        \draw[thick] (-4.9,1.8) rectangle (-4.3,2.4);
-        \draw[thick] (-4.15,1.8) rectangle (-3.55,2.4);
-        \node at (-4.225,2.1) {\footnotesize {{.Variant}}};
-
         \node[anchor=west] at (2.0,2.1) {\textbf{ID:}};
         \draw[thick] (3.00,1.8) rectangle ++(0.6,0.6);
         \draw[thick] (3.72,1.8) rectangle ++(0.6,0.6);
@@ -49,9 +44,8 @@
         \node at (0,0.9) {\textbf{\Large {{.TestName}}}};
 
         \node at (0,-0.1) {%
-            \begin{tabular}{c c c}
+            \begin{tabular}{c c}
                 \textbf{Dátum: {{.Datum}}} &
-                \textbf{Čas: {{.Cas}}} &
                 \textbf{Miestnosť: {{.Miestnost}}}
             \end{tabular}
         };
@@ -75,33 +69,6 @@
     \setcounter{blocksNeeded}{\tempResult}%
 }
 
-\newcommand{\legendEmptyBox}[2]{%
-    \draw[gray, thick] (#1,#2) rectangle ++(0.45,0.45);
-}
-
-\newcommand{\legendCrossBox}[2]{%
-    \draw[gray, thick] (#1,#2) rectangle ++(0.45,0.45);
-    \draw[thick] (#1+0.02,#2+0.02) -- (#1+0.43,#2+0.43);
-    \draw[thick] (#1+0.02,#2+0.43) -- (#1+0.43,#2+0.02);
-}
-
-\newcommand{\legendCrossOutside}[2]{%
-    \draw[gray, thick] (#1,#2) rectangle ++(0.45,0.45);
-    \draw[thick] (#1+0.10,#2+0.20) -- (#1+0.50,#2+0.60);
-    \draw[thick] (#1+0.10,#2+0.60) -- (#1+0.50,#2+0.20);
-}
-
-\newcommand{\legendFilledBox}[2]{%
-    \draw[gray, thick] (#1,#2) rectangle ++(0.45,0.45);
-    \fill[black!85] (#1,#2) rectangle (#1+0.45,#2+0.45);
-}
-
-\newcommand{\legendCircledFilledBox}[2]{%
-    \draw[gray, thick] (#1,#2) rectangle ++(0.45,0.45);
-    \fill[black!85] (#1,#2) rectangle (#1+0.45,#2+0.45);
-    \draw[thick] (#1+0.225,#2+0.225) circle (0.31);
-}
-
 \newcommand{\generateBlock}[2]{%
     \setcounter{rowPosition}{1}
 
@@ -119,7 +86,7 @@
 
             \foreach \position in {1,2,3,4,5,6} {
                 \node[mygray] at ({\position * 2},\y) {\scalebox{2}{\textbf{$\times$}}};
-                \node[draw, rectangle, inner sep=5pt] at ({\position * 2}, \y) {};
+                \node[draw, rectangle, minimum size=0.45cm, inner sep=0pt] at ({\position * 2}, \y) {};
             }
 
             \ifnum\value{rowPosition}=5
@@ -136,37 +103,6 @@
             \stepcounter{rowCounter}
         }
 
-        \node[anchor=west] at (-1,-17.5) {\footnotesize\textbf{Legenda:}};
-
-        \node[anchor=west] at (-1,-18.2) {\footnotesize Správna odpoveď};
-        \legendEmptyBox{-0.45}{-19.1}
-        \legendEmptyBox{0.30}{-19.1}
-        \legendCrossBox{1.05}{-19.1}
-        \legendEmptyBox{1.80}{-19.1}
-
-        \node[anchor=west] at (3.5,-18.2) {\footnotesize Nesprávna odpoveď};
-        \legendCrossBox{4.05}{-19.1}
-        \legendEmptyBox{4.80}{-19.1}
-        \legendCrossBox{5.55}{-19.1}
-        \legendEmptyBox{6.30}{-19.1}
-
-        \node[anchor=west] at (8.0,-18.2) {\footnotesize Nesprávna odpoveď};
-        \legendEmptyBox{8.55}{-19.1}
-        \legendCrossOutside{9.30}{-19.1}
-        \legendEmptyBox{10.05}{-19.1}
-        \legendEmptyBox{10.80}{-19.1}
-
-        \node[anchor=west] at (-1,-20.2) {\footnotesize Oprava};
-        \legendCrossBox{-0.45}{-21.1}
-        \legendEmptyBox{0.30}{-21.1}
-        \legendFilledBox{1.05}{-21.1}
-        \legendEmptyBox{1.80}{-21.1}
-
-        \node[anchor=west] at (3.5,-20.2) {\footnotesize Spätná oprava};
-        \legendCrossBox{4.05}{-21.1}
-        \legendCrossBox{4.80}{-21.1}
-        \legendCircledFilledBox{5.55}{-21.1}
-        \legendCrossBox{6.30}{-21.1}
     \end{tikzpicture}%
 }
 

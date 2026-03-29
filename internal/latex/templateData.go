@@ -12,5 +12,4 @@ type TemplateData struct {
 	Bloky     int
 	QrCode    string
 	TestName  string
-	Variant   string
 }
