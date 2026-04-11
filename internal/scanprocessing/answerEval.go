@@ -5,6 +5,7 @@ import (
 	"ScanEvalApp/internal/files"
 	"ScanEvalApp/internal/logging"
 	"ScanEvalApp/internal/ocr"
+	"fmt"
 	"image"
 
 	"log/slog"
@@ -43,7 +44,11 @@ func answerSquareAreaBounds(choices int) (float64, float64) {
 func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int, numberOfChoices int) (int, []rune) {
 	logger := logging.GetLogger()
 	var studentAnswers []rune
-	croppedMat := CropMatAnswersOnly(mat)
+	croppedMat, err := CropMatAnswersOnly(mat)
+	if err != nil {
+		logger.Info("Ohraničujúci obdĺžnik nebol nájdený", slog.String("error", err.Error()))
+		return common.QUESTION_NUMBER_NOT_FOUND, nil
+	}
 	questionNumber := common.QUESTION_NUMBER_NOT_FOUND
 	for i := 0; i < NUMBER_OF_QUESTIONS_PER_PAGE; i++ {
 		studentAnswers = append(studentAnswers, GetAnswer(&croppedMat, i, numberOfChoices))
@@ -78,11 +83,20 @@ func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int, numberOfChoices int) 
 //
 // Returns:
 //   - gocv.Mat: A new Mat representing the cropped image region containing only the answers.
-func CropMatAnswersOnly(mat *gocv.Mat) gocv.Mat {
+func CropMatAnswersOnly(mat *gocv.Mat) (gocv.Mat, error) {
 	rect := FindRectangle(mat, BORDER_RECTANGLE_AREA_SIZE, -1)
-	rectSmaller := image.Rectangle{Min: image.Point{rect.Min.X + PADDING, rect.Min.Y + PADDING}, Max: image.Point{rect.Max.X - PADDING, rect.Max.Y - PADDING}}
+	if rect.Empty() {
+		return gocv.NewMat(), fmt.Errorf("ohranicujuci obdlznik nebol najdeny (prazdna strana?)")
+	}
+	rectSmaller := image.Rectangle{
+		Min: image.Point{rect.Min.X + PADDING, rect.Min.Y + PADDING},
+		Max: image.Point{rect.Max.X - PADDING, rect.Max.Y - PADDING},
+	}
+	if rectSmaller.Dx() <= 0 || rectSmaller.Dy() <= 0 {
+		return gocv.NewMat(), fmt.Errorf("ohranicujuci obdlznik je prilis maly")
+	}
 	croppedMat := mat.Region(rectSmaller)
-	return croppedMat
+	return croppedMat, nil
 }
 
 // FindRectangle detects and returns the bounding rectangle of a contour in the image.

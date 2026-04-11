@@ -22,7 +22,10 @@ func DetectAnswersOnSheet(mat *gocv.Mat, choices, questions int) ([]rune, error)
 	if choices < 1 || questions < 1 {
 		return nil, fmt.Errorf("choices a questions musia byť > 0")
 	}
-	cropped := CropMatAnswersOnly(mat) // použitá existujúca funkcia (vracia nový Mat výrezu)
+	cropped, err := CropMatAnswersOnly(mat)
+	if err != nil {
+		return nil, fmt.Errorf("prazdna alebo neplatna strana: %w", err)
+	}
 	results := make([]rune, 0, questions)
 
 	for i := 0; i < questions; i++ {
@@ -51,7 +54,6 @@ func getAnswerParametric(mat *gocv.Mat, rowIndex, choices, questions int) rune {
 			Max: image.Point{(mat.Cols() / (choices + 1)) * (j + 1), ((rowIndex + 1) * mat.Rows() / questions) - padding},
 		}
 		checkboxMat := mat.Region(checkbox)
-		//rect := FindRectangle(&checkboxMat, ANSWER_SQUARE_MIN_AREA_SIZE, ANSWER_SQUARE_MAX_AREA_SIZE)
 		minArea, maxArea := answerSquareAreaBounds(choices)
 		rect := FindRectangle(&checkboxMat, minArea, maxArea)
 

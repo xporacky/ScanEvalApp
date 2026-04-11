@@ -241,8 +241,8 @@ function renderStudents() {
           <span class="cell" data-label="Test">${student.examId}</span>
           <span class="cell" data-label="Score">${student.score}</span>
           <span class="cell action" data-label="Akcie">
-            <button class="btn" data-student-print="${student.id}">Tlačiť hárok</button>
-          
+            <button class="btn" data-student-print="${student.id}">Nový hárok</button>
+            ${student.pages ? `<button class="btn secondary" data-student-download="${student.id}">Vypracovaný hárok</button>` : ""}
           </span>
         </div>
       `,
