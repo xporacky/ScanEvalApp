@@ -75,7 +75,7 @@ func getAnswerParametric(mat *gocv.Mat, rowIndex, choices, questions int) rune {
 		}
 		rectMat := checkboxMat.Region(inner)
 		mean := rectMat.Mean()
-
+		//fmt.Println(mean.Val1)
 		if mean.Val1 < MEAN_INTENSITY_X_HIGHEST && mean.Val1 > MEAN_INTENSITY_X_LOWEST {
 			if state == StateEmpty {
 				answer = rune('a' + (j - 1))
@@ -87,6 +87,9 @@ func getAnswerParametric(mat *gocv.Mat, rowIndex, choices, questions int) rune {
 
 		rectMat.Close()
 		checkboxMat.Close()
+		/*if j == choices {
+			fmt.Println(string("dalsia otazka"))
+		}*/
 	}
 	return answer
 }

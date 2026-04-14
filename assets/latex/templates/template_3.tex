@@ -22,7 +22,7 @@
 
 \fancyhead[C]{%
     \begin{tikzpicture}[remember picture,overlay]
-        \node[anchor=west] at (-8.3,-0.1) {\includegraphics[width=2.2cm]{assets/latex/stu-fei-vector-logo.png}};
+        %\node[anchor=west] at (-8.3,-0.1) {\includegraphics[width=2.2cm]{assets/latex/stu-fei-vector-logo.png}};
 
         \node[anchor=west] at (2.0,2.1) {\textbf{ID:}};
         \draw[thick] (3.00,1.8) rectangle ++(0.6,0.6);
@@ -33,6 +33,7 @@
         \draw[thick] (7.32,1.8) rectangle ++(0.6,0.6);
         \draw[thick] (8.04,1.8) rectangle ++(0.6,0.6);
         \node at (6.18,2.1) {\Large /};
+
         \node at (3.3,2.1) {\footnotesize {{index .IDDigits 0}}};
         \node at (4.02,2.1) {\footnotesize {{index .IDDigits 1}}};
         \node at (4.74,2.1) {\footnotesize {{index .IDDigits 2}}};
@@ -41,16 +42,23 @@
         \node at (7.62,2.1) {\footnotesize {{index .IDDigits 5}}};
         \node at (8.34,2.1) {\footnotesize {{index .IDDigits 6}}};
 
-        \node at (0,0.9) {\textbf{\Large {{.TestName}}}};
 
-        \node at (0,-0.1) {%
-            \begin{tabular}{c c}
-                \textbf{Dátum: {{.Datum}}} &
-                \textbf{Miestnosť: {{.Miestnost}}}
-            \end{tabular}
-        };
+        \node[anchor=west] at (-8.5,2) {\textbf{Skupina:}};
+        \node[anchor=west] at (-9.0,0.25) {\textbf{Podskupina:}};
 
-        {{if .ShowName}}\node[anchor=west] at (3.0,1.4) {\footnotesize \textbf{Meno: {{.Meno}}}};{{end}}
+
+        \foreach \x/\label in {-5.0/A, -4.0/B, -3.0/C, -2.0/D, -1.0/E} {
+           \node at (\x,2.5) {\textbf{\label}};
+           \node[mygray] at (\x,1.75) {\scalebox{2}{\textbf{$\times$}}};
+           \node[draw, rectangle, minimum size=0.45cm, inner sep=0pt] at (\x,1.75) {};
+        }
+
+        \foreach \x/\label in {-5.0/1, -4.0/2, -3.0/3, -2.0/4, -1.0/5, 0.0/6, 1.0/7, 2.0/8} {
+            \node at (\x,0.7) {\textbf{\label}};
+            \node[mygray] at (\x,0.0) {\scalebox{2}{\textbf{$\times$}}};
+            \node[draw, rectangle, minimum size=0.45cm, inner sep=0pt] at (\x,0.0) {};
+        }
+
         \node[anchor=east] at (8.2,0.3) {
             \qrcode[height=1.5cm]{ {{.QrCode}} }
         };
