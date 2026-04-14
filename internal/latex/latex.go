@@ -36,6 +36,16 @@ func buildIDDigits(registrationNumber int) []string {
 	return digits
 }
 
+func buildQRCodePayload(student models.Student, exam models.Exam) string {
+	return latexEscape(fmt.Sprintf(
+		"ID:%d | MENO:%s %s | DATUM:%s",
+		student.RegistrationNumber,
+		student.Name,
+		student.Surname,
+		exam.Date.Format("02.01.2006"),
+	))
+}
+
 func buildTemplateData(student models.Student, exam models.Exam) TemplateData {
 	return TemplateData{
 		ID:        latexEscape(fmt.Sprintf("%d", student.RegistrationNumber)),
@@ -44,11 +54,23 @@ func buildTemplateData(student models.Student, exam models.Exam) TemplateData {
 		ShowName:  exam.ShowName,
 		Datum:     latexEscape(exam.Date.Format("02. 01. 2006")),
 		Miestnost: latexEscape(student.Room),
-		Cas:       "",
+		Cas:       latexEscape(exam.Date.Format("15:04")),
 		Bloky:     exam.QuestionCount,
-		QrCode:    fmt.Sprintf("%d", student.RegistrationNumber),
+		QrCode:    buildQRCodePayload(student, exam),
 		TestName:  latexEscape(exam.Title),
 	}
+}
+
+func formatLatexCompileError(stdout, stderr string) string {
+	if stderr != "" {
+		return stderr
+	}
+
+	if stdout != "" {
+		return stdout
+	}
+
+	return "pdflatex failed without output"
 }
 
 // CompileLatexToPDF compiles a LaTeX template into a PDF.
@@ -109,6 +131,7 @@ func CompileLatexToPDF(latexContent []byte) ([]byte, error) {
 	if err = cmd.Run(); err != nil {
 		latexStdout := stdout.String()
 		latexStderr := stderr.String()
+		combinedOutput := formatLatexCompileError(latexStdout, latexStderr)
 
 		errorLogger.Error("=== LaTeX COMPILATION FAILED ===",
 			"error", err.Error(),
@@ -133,7 +156,7 @@ func CompileLatexToPDF(latexContent []byte) ([]byte, error) {
 			}
 		}
 
-		return nil, fmt.Errorf("latex compilation failed: %s", latexStderr)
+		return nil, fmt.Errorf("latex compilation failed: %s", combinedOutput)
 	}
 
 	pdfPath := filepath.Join(outputDir, filepath.Base(texFile.Name())[:len(filepath.Base(texFile.Name()))-4]+".pdf")

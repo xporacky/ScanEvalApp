@@ -33,18 +33,18 @@
         \draw[thick] (7.32,2.3) rectangle ++(0.6,0.6);
         \draw[thick] (8.04,2.3) rectangle ++(0.6,0.6);
         \node at (6.18,2.6) {\Large /};
-        \node at (3.3,2.6) {\footnotesize {{index .IDDigits 0}}};
-        \node at (4.02,2.6) {\footnotesize {{index .IDDigits 1}}};
-        \node at (4.74,2.6) {\footnotesize {{index .IDDigits 2}}};
-        \node at (5.46,2.6) {\footnotesize {{index .IDDigits 3}}};
-        \node at (6.90,2.6) {\footnotesize {{index .IDDigits 4}}};
-        \node at (7.62,2.6) {\footnotesize {{index .IDDigits 5}}};
-        \node at (8.34,2.6) {\footnotesize {{index .IDDigits 6}}};
+        \node at (3.3,2.6) {\footnotesize 1};
+        \node at (4.02,2.6) {\footnotesize 2};
+        \node at (4.74,2.6) {\footnotesize 3};
+        \node at (5.46,2.6) {\footnotesize 4};
+        \node at (6.90,2.6) {\footnotesize 5};
+        \node at (7.62,2.6) {\footnotesize 6};
+        \node at (8.34,2.6) {\footnotesize 7};
 
         \node at (-4.0,2.6) {%
             \begin{tabular}{c c}
-                \textbf{Miestnosť: {{.Miestnost}}} &
-                \textbf{Čas: {{.Cas}}}
+                \textbf{Miestnosť: A101} &
+                \textbf{Čas: 08:00}
             \end{tabular}
         };
 
@@ -60,9 +60,9 @@
             \node[draw, rectangle, minimum size=0.45cm, inner sep=0pt] at (\x,-0.25) {};
         }
 
-        {{if .ShowName}}\node[anchor=west] at (3.0,1.4) {\footnotesize \textbf{Meno: {{.Meno}}}};{{end}}
+        \node[anchor=west] at (3.0,1.4) {\footnotesize \textbf{Meno: Test User}};
         \node[anchor=east] at (8.2,0.3) {
-            \qrcode[height=1.5cm]{ {{.QrCode}} }
+            \qrcode[height=1.5cm]{ 1234567 }
         };
 
         \draw[thick] (-9.2,-0.7) -- (9.2,-0.7);
@@ -132,6 +132,6 @@
 
 \begin{document}
 \begin{center}
-    \generateMultipleBlocks{ {{.Bloky}} }
+    \generateMultipleBlocks{ 15 }
 \end{center}
 \end{document}

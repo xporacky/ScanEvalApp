@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 
 	"ScanEvalApp/internal/logging"
@@ -19,6 +20,8 @@ import (
 	"gocv.io/x/gocv"
 	"gorm.io/gorm"
 )
+
+var qrIDPattern = regexp.MustCompile(`(?:^|[|;\s])ID\s*:\s*(\d+)`)
 
 // FindContours detects external contours in the provided image using edge detection and morphological operations.
 //
@@ -153,6 +156,23 @@ func ReadQR(mat *gocv.Mat) string {
 	return text
 }
 
+func extractRegistrationNumberFromQR(qrText string) (int, error) {
+	if qrText == "" {
+		return 0, fmt.Errorf("empty QR text")
+	}
+
+	if matches := qrIDPattern.FindStringSubmatch(qrText); len(matches) == 2 {
+		return strconv.Atoi(matches[1])
+	}
+
+	var id int
+	if _, err := fmt.Sscan(qrText, &id); err == nil {
+		return id, nil
+	}
+
+	return 0, fmt.Errorf("QR text does not contain ID field: %s", qrText)
+}
+
 // GetStudent attempts to find and return a student from the provided image (gocv.Mat)
 // using either a QR code or OCR to extract the student's ID or registration number.
 //
@@ -176,8 +196,7 @@ func GetStudent(mat *gocv.Mat, db *gorm.DB, examID uint) (*models.Student, error
 
 	qrText := ReadQR(mat)
 	if qrText != "" {
-		var id int
-		_, err := fmt.Sscan(qrText, &id)
+		id, err := extractRegistrationNumberFromQR(qrText)
 		if err != nil {
 			errorLogger.Error("Chyba pri konverzii QR textu na ID", slog.String("qrText", qrText), slog.String("error", err.Error()))
 			return nil, err

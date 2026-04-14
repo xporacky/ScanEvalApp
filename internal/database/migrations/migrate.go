@@ -2,6 +2,8 @@
 package migrations
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 
 	"ScanEvalApp/internal/database/models"
@@ -12,13 +14,33 @@ import (
 	"gorm.io/gorm"
 )
 
+const databaseFileName = "scan-eval-db.db"
+
+func resolveDatabasePath() (string, error) {
+	dbDir := filepath.Join("database")
+
+	if err := os.MkdirAll(dbDir, 0755); err != nil {
+		return "", err
+	}
+
+	return filepath.Abs(filepath.Join(dbDir, databaseFileName))
+}
+
 func MigrateDB() (*gorm.DB, error) {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
 	logger.Debug("Pripájam sa k databáze...")
 
-	db, err := gorm.Open(sqlite.Open("database/scan-eval-db.db"), &gorm.Config{})
+	dbPath, err := resolveDatabasePath()
+	if err != nil {
+		errorLogger.Error("Chyba pri príprave cesty k databáze", slog.Group("CRITICAL", slog.String("error", err.Error())))
+		return nil, err
+	}
+
+	logger.Debug("Používam databázu", "path", dbPath)
+
+	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
 	if err != nil {
 		errorLogger.Error("Chyba pri pripájaní k databáze", slog.Group("CRITICAL", slog.String("error", err.Error())))
 		return nil, err
