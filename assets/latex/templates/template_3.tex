@@ -13,7 +13,7 @@
 
 \definecolor{mygray}{rgb}{0.8, 0.8, 0.8}
 
-\setlength{\headheight}{110pt}
+\setlength{\headheight}{150pt}
 \addtolength{\topmargin}{-25pt}
 
 \pagestyle{fancy}
@@ -22,49 +22,57 @@
 
 \fancyhead[C]{%
     \begin{tikzpicture}[remember picture,overlay]
-        %\node[anchor=west] at (-8.3,-0.1) {\includegraphics[width=2.2cm]{assets/latex/stu-fei-vector-logo.png}};
+        \node[anchor=west] at (-8.3,-0.1) {\includegraphics[width=2.2cm]{assets/latex/stu-fei-vector-logo.png}};
 
-        \node[anchor=west] at (2.0,2.1) {\textbf{ID:}};
-        \draw[thick] (3.00,1.8) rectangle ++(0.6,0.6);
-        \draw[thick] (3.72,1.8) rectangle ++(0.6,0.6);
-        \draw[thick] (4.44,1.8) rectangle ++(0.6,0.6);
-        \draw[thick] (5.16,1.8) rectangle ++(0.6,0.6);
-        \draw[thick] (6.60,1.8) rectangle ++(0.6,0.6);
-        \draw[thick] (7.32,1.8) rectangle ++(0.6,0.6);
-        \draw[thick] (8.04,1.8) rectangle ++(0.6,0.6);
-        \node at (6.18,2.1) {\Large /};
+        \node[anchor=west] at (2.0,3.1) {\textbf{ID:}};
+        \draw[thick] (3.00,2.8) rectangle ++(0.6,0.6);
+        \draw[thick] (3.72,2.8) rectangle ++(0.6,0.6);
+        \draw[thick] (4.44,2.8) rectangle ++(0.6,0.6);
+        \draw[thick] (5.16,2.8) rectangle ++(0.6,0.6);
+        \draw[thick] (6.60,2.8) rectangle ++(0.6,0.6);
+        \draw[thick] (7.32,2.8) rectangle ++(0.6,0.6);
+        \draw[thick] (8.04,2.8) rectangle ++(0.6,0.6);
+        \node at (6.18,3.1) {\Large /};
 
-        \node at (3.3,2.1) {\footnotesize {{index .IDDigits 0}}};
-        \node at (4.02,2.1) {\footnotesize {{index .IDDigits 1}}};
-        \node at (4.74,2.1) {\footnotesize {{index .IDDigits 2}}};
-        \node at (5.46,2.1) {\footnotesize {{index .IDDigits 3}}};
-        \node at (6.90,2.1) {\footnotesize {{index .IDDigits 4}}};
-        \node at (7.62,2.1) {\footnotesize {{index .IDDigits 5}}};
-        \node at (8.34,2.1) {\footnotesize {{index .IDDigits 6}}};
-
-
-        \node[anchor=west] at (-8.5,2) {\textbf{Skupina:}};
-        \node[anchor=west] at (-9.0,0.25) {\textbf{Podskupina:}};
+        \node at (3.3,3.1) {\footnotesize {{index .IDDigits 0}}};
+        \node at (4.02,3.1) {\footnotesize {{index .IDDigits 1}}};
+        \node at (4.74,3.1) {\footnotesize {{index .IDDigits 2}}};
+        \node at (5.46,3.1) {\footnotesize {{index .IDDigits 3}}};
+        \node at (6.90,3.1) {\footnotesize {{index .IDDigits 4}}};
+        \node at (7.62,3.1) {\footnotesize {{index .IDDigits 5}}};
+        \node at (8.34,3.1) {\footnotesize {{index .IDDigits 6}}};
 
 
-        \foreach \x/\label in {-5.0/A, -4.0/B, -3.0/C, -2.0/D, -1.0/E} {
-           \node at (\x,2.5) {\textbf{\label}};
-           \node[mygray] at (\x,1.75) {\scalebox{2}{\textbf{$\times$}}};
-           \node[draw, rectangle, minimum size=0.45cm, inner sep=0pt] at (\x,1.75) {};
+        % \node[anchor=west] at (-8.5,2) {\textbf{Skupina:}};
+        % \node[anchor=west] at (-9.0,0.25) {\textbf{Podskupina:}};
+
+        \node at (0,-0.1) {%
+            \begin{tabular}{c c}
+                \textbf{Dátum: {{.Datum}}} &
+                \textbf{Miestnosť: {{.Miestnost}}}
+            \end{tabular}
+        };
+
+
+        \foreach \x/\label in {-8.0/A, -7.0/B, -6.0/C, -5.0/D, -4.0/E, -3.0/F, -2.0/G, -1.0/H} {
+           \node at (\x,3.0) {\textbf{\label}};
+           \node[mygray] at (\x,2.5) {\scalebox{2}{\textbf{$\times$}}};
+           \node[draw, rectangle, minimum size=0.45cm, inner sep=0pt] at (\x,2.5) {};
         }
 
-        \foreach \x/\label in {-5.0/1, -4.0/2, -3.0/3, -2.0/4, -1.0/5, 0.0/6, 1.0/7, 2.0/8} {
-            \node at (\x,0.7) {\textbf{\label}};
-            \node[mygray] at (\x,0.0) {\scalebox{2}{\textbf{$\times$}}};
-            \node[draw, rectangle, minimum size=0.45cm, inner sep=0pt] at (\x,0.0) {};
+        \foreach \x/\label in {-8.0/1, -7.0/2, -6.0/3, -5.0/4, -4.0/5} {
+            \node at (\x,1.75) {\textbf{\label}};
+            \node[mygray] at (\x,1.25) {\scalebox{2}{\textbf{$\times$}}};
+            \node[draw, rectangle, minimum size=0.45cm, inner sep=0pt] at (\x,1.25) {};
         }
 
-        \node[anchor=east] at (8.2,0.3) {
+        \node[anchor=east] at (8.2,0.8) {
             \qrcode[height=1.5cm]{ {{.QrCode}} }
         };
 
         \draw[thick] (-9.2,-0.7) -- (9.2,-0.7);
     \end{tikzpicture}%
+
 }
 
 \newcounter{rowCounter}

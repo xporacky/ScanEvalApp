@@ -24,31 +24,41 @@
     \begin{tikzpicture}[remember picture,overlay]
         \node[anchor=west] at (-8.3,-0.1) {\includegraphics[width=2.2cm]{assets/latex/stu-fei-vector-logo.png}};
 
-        \node[anchor=west] at (2.0,2.1) {\textbf{ID:}};
-        \draw[thick] (3.00,1.8) rectangle ++(0.6,0.6);
-        \draw[thick] (3.72,1.8) rectangle ++(0.6,0.6);
-        \draw[thick] (4.44,1.8) rectangle ++(0.6,0.6);
-        \draw[thick] (5.16,1.8) rectangle ++(0.6,0.6);
-        \draw[thick] (6.60,1.8) rectangle ++(0.6,0.6);
-        \draw[thick] (7.32,1.8) rectangle ++(0.6,0.6);
-        \draw[thick] (8.04,1.8) rectangle ++(0.6,0.6);
-        \node at (6.18,2.1) {\Large /};
-        \node at (3.3,2.1) {\footnotesize {{index .IDDigits 0}}};
-        \node at (4.02,2.1) {\footnotesize {{index .IDDigits 1}}};
-        \node at (4.74,2.1) {\footnotesize {{index .IDDigits 2}}};
-        \node at (5.46,2.1) {\footnotesize {{index .IDDigits 3}}};
-        \node at (6.90,2.1) {\footnotesize {{index .IDDigits 4}}};
-        \node at (7.62,2.1) {\footnotesize {{index .IDDigits 5}}};
-        \node at (8.34,2.1) {\footnotesize {{index .IDDigits 6}}};
+        \node[anchor=west] at (2.0,2.6) {\textbf{ID:}};
+        \draw[thick] (3.00,2.3) rectangle ++(0.6,0.6);
+        \draw[thick] (3.72,2.3) rectangle ++(0.6,0.6);
+        \draw[thick] (4.44,2.3) rectangle ++(0.6,0.6);
+        \draw[thick] (5.16,2.3) rectangle ++(0.6,0.6);
+        \draw[thick] (6.60,2.3) rectangle ++(0.6,0.6);
+        \draw[thick] (7.32,2.3) rectangle ++(0.6,0.6);
+        \draw[thick] (8.04,2.3) rectangle ++(0.6,0.6);
+        \node at (6.18,2.6) {\Large /};
+        \node at (3.3,2.6) {\footnotesize {{index .IDDigits 0}}};
+        \node at (4.02,2.6) {\footnotesize {{index .IDDigits 1}}};
+        \node at (4.74,2.6) {\footnotesize {{index .IDDigits 2}}};
+        \node at (5.46,2.6) {\footnotesize {{index .IDDigits 3}}};
+        \node at (6.90,2.6) {\footnotesize {{index .IDDigits 4}}};
+        \node at (7.62,2.6) {\footnotesize {{index .IDDigits 5}}};
+        \node at (8.34,2.6) {\footnotesize {{index .IDDigits 6}}};
 
-        \node at (0,0.9) {\textbf{\Large {{.TestName}}}};
-
-        \node at (0,-0.1) {%
+        \node at (-4.0,2.6) {%
             \begin{tabular}{c c}
-                \textbf{Dátum: {{.Datum}}} &
-                \textbf{Miestnosť: {{.Miestnost}}}
+                \textbf{Miestnosť: {{.Miestnost}}} &
+                \textbf{Dátum: {{.Datum}}}
             \end{tabular}
         };
+
+        \foreach \x/\label in {-3.5/A, -2.5/B, -1.5/C, -0.5/D, 0.5/E, 1.5/F, 2.5/G, 3.5/H} {
+           \node at (\x,1.5) {\textbf{\label}};
+           \node[mygray] at (\x,1) {\scalebox{2}{\textbf{$\times$}}};
+           \node[draw, rectangle, minimum size=0.45cm, inner sep=0pt] at (\x,1) {};
+        }
+
+        \foreach \x/\label in {-2.0/1, -1.0/2, 0/3, 1/4, 2/5} {
+            \node at (\x,0.25) {\textbf{\label}};
+            \node[mygray] at (\x,-0.25) {\scalebox{2}{\textbf{$\times$}}};
+            \node[draw, rectangle, minimum size=0.45cm, inner sep=0pt] at (\x,-0.25) {};
+        }
 
         {{if .ShowName}}\node[anchor=west] at (3.0,1.4) {\footnotesize \textbf{Meno: {{.Meno}}}};{{end}}
         \node[anchor=east] at (8.2,0.3) {
