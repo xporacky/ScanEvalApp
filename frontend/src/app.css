@@ -36,6 +36,72 @@
     font-size: 12px;
 }
 
+.badge-multi {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: #4a90e2;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    vertical-align: middle;
+    margin-left: 4px;
+}
+
+.sg-section {
+    margin-top: 24px;
+}
+
+.sg-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 8px;
+}
+
+.sg-title {
+    font-weight: 600;
+}
+
+.sg-hint {
+    font-size: 12px;
+    opacity: 0.6;
+    flex: 1;
+}
+
+.sg-labels {
+    display: grid;
+    grid-template-columns: 100px 1fr 60px 100px;
+    gap: 8px;
+    font-size: 11px;
+    opacity: 0.5;
+    padding: 0 2px;
+    margin-bottom: 4px;
+}
+
+.sg-row {
+    display: grid;
+    grid-template-columns: 100px 1fr 60px 100px;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.sg-name {
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.sg-indicator {
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.sg-valid { color: #4caf50; }
+.sg-invalid { color: #f44336; }
+
 .panel {
     background: rgba(14, 22, 35, 0.9);
     border: 1px solid rgba(255, 255, 255, 0.08);

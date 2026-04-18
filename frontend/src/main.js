@@ -3,6 +3,10 @@ import './app.css';
 
 import {
   CreateExamWithCSV,
+  CreateMultiDayExamWithCSV,
+  PrintMultiDayExamPDFs,
+  UpdateMultiDayAnswers,
+  ExportMultiDayResultsCSV,
   DeleteExam,
   ListExams,
   ListStudents,
@@ -51,6 +55,14 @@ const state = {
   uploadConfig: '',
   statsExamId: 0,
   statsSelected: {},
+  mdTitle: '',
+  mdSchoolYear: '',
+  mdQuestionCount: 10,
+  mdOptionCount: 5,
+  mdShowName: true,
+  mdCsvContent: '',
+  mdCsvName: '',
+  mdSubgroups: [{ name: '', answers: '' }],
 };
 
 const appEl = document.querySelector('#app');
@@ -68,6 +80,7 @@ function renderShell() {
       <nav class="tabs">
         <button class="tab" data-tab="exams">Písomky</button>
         <button class="tab" data-tab="create">Vytvoriť písomku</button>
+        <button class="tab" data-tab="multiday">Multi-termín</button>
         <button class="tab" data-tab="students">Študenti</button>
         <button class="tab" data-tab="upload">Vyhodnotiť písomku</button>
         <button class="tab" data-tab="settings">Nastavenia</button>
@@ -158,14 +171,17 @@ function renderExams() {
       .map(
         (exam) => `
         <div class="row">
-          <span class="cell title" data-label="Názov">${exam.title}</span>
+          <span class="cell title" data-label="Názov">${exam.title}${exam.isMultiDay ? ' <span class="badge-multi">multi</span>' : ''}</span>
           <span class="cell" data-label="Školský rok">${exam.schoolYear}</span>
           <span class="cell" data-label="Dátum">${formatDate(exam.date)}</span>
           <span class="cell" data-label="Otázky">${exam.questionCount}</span>
           <span class="cell" data-label="Možnosti">${exam.optionCount || '-'}</span>
           <span class="cell" data-label="Študenti">${exam.studentCount}</span>
           <span class="cell" data-label="Tlačiť">
-            <button class="btn" data-action="print" data-exam-id="${exam.id}">Tlačiť</button>
+            ${exam.isMultiDay
+              ? `<button class="btn" data-action="print-multiday" data-exam-id="${exam.id}">Tlačiť po dňoch</button>`
+              : `<button class="btn" data-action="print" data-exam-id="${exam.id}">Tlačiť</button>`
+            }
           </span>
           <span class="cell" data-label="Odpovede">
             <button class="btn" data-action="answers" data-exam-id="${exam.id}">Odpovede</button>
@@ -177,7 +193,10 @@ function renderExams() {
             <button class="btn" data-action="stats-pdf" data-exam-id="${exam.id}">Štatistika</button>
           </span>
           <span class="cell" data-label="CSV">
-            <button class="btn" data-action="csv" data-exam-id="${exam.id}">CSV</button>
+            ${exam.isMultiDay
+              ? `<button class="btn" data-action="csv-multiday" data-exam-id="${exam.id}">Výsledky CSV</button>`
+              : `<button class="btn" data-action="csv" data-exam-id="${exam.id}">CSV</button>`
+            }
           </span>
           <span class="cell" data-label="Zmazať">
             <button class="btn danger" data-action="delete" data-exam-id="${exam.id}">Zmazať</button>
@@ -696,6 +715,10 @@ function renderContent() {
     renderCreateExam();
     return;
   }
+  if (state.activeTab === 'multiday') {
+    renderMultiDay();
+    return;
+  }
   if (state.activeTab === 'students') {
     renderStudents();
     return;
@@ -707,6 +730,205 @@ function renderContent() {
   if (state.activeTab === 'settings') {
     renderSettings();
   }
+}
+
+function validAnswerChars(optionCount) {
+  return Array.from({ length: optionCount }, (_, i) => String.fromCharCode(65 + i)).join('');
+}
+
+function validateSubgroupAnswers(answers, questionCount, optionCount) {
+  if (answers.length !== questionCount) return false;
+  const valid = validAnswerChars(optionCount).toLowerCase();
+  return answers.toLowerCase().split('').every(c => valid.includes(c));
+}
+
+function renderSubgroupRows(questionCount, optionCount) {
+  return state.mdSubgroups.map((sg, idx) => {
+    const isValid = sg.answers.length > 0 && validateSubgroupAnswers(sg.answers, questionCount, optionCount);
+    const isEmpty = sg.answers.length === 0;
+    const indicator = isEmpty ? '' : (isValid ? '✓' : `✗ (${sg.answers.length}/${questionCount})`);
+    const indicatorClass = isEmpty ? '' : (isValid ? 'sg-valid' : 'sg-invalid');
+    return `
+      <div class="sg-row" data-sg-idx="${idx}">
+        <input class="sg-name" type="text" placeholder="napr. A1" value="${sg.name}" maxlength="4" />
+        <input class="sg-answers" type="text" placeholder="${validAnswerChars(optionCount).repeat(Math.ceil(questionCount / optionCount)).slice(0, questionCount)}" value="${sg.answers}" />
+        <span class="sg-indicator ${indicatorClass}">${indicator}</span>
+        <button type="button" class="btn danger sg-remove">Odstraniť</button>
+      </div>
+    `;
+  }).join('');
+}
+
+function bindSubgroupEvents(questionCount, optionCount) {
+  document.querySelectorAll('.sg-name').forEach((input, idx) => {
+    input.addEventListener('input', () => {
+      state.mdSubgroups[idx].name = input.value.toUpperCase();
+      input.value = state.mdSubgroups[idx].name;
+    });
+  });
+
+  document.querySelectorAll('.sg-answers').forEach((input, idx) => {
+    input.addEventListener('input', () => {
+      state.mdSubgroups[idx].answers = input.value.toUpperCase();
+      input.value = state.mdSubgroups[idx].answers;
+      const row = input.closest('.sg-row');
+      const span = row.querySelector('.sg-indicator');
+      const val = state.mdSubgroups[idx].answers;
+      if (!val) { span.textContent = ''; span.className = 'sg-indicator'; return; }
+      const ok = validateSubgroupAnswers(val, questionCount, optionCount);
+      span.textContent = ok ? '✓' : `✗ (${val.length}/${questionCount})`;
+      span.className = 'sg-indicator ' + (ok ? 'sg-valid' : 'sg-invalid');
+    });
+  });
+
+  document.querySelectorAll('.sg-remove').forEach((btn, idx) => {
+    btn.addEventListener('click', () => {
+      state.mdSubgroups.splice(idx, 1);
+      if (state.mdSubgroups.length === 0) state.mdSubgroups.push({ name: '', answers: '' });
+      document.getElementById('sg-container').innerHTML = renderSubgroupRows(questionCount, optionCount);
+      bindSubgroupEvents(questionCount, optionCount);
+    });
+  });
+}
+
+function renderMultiDay() {
+  const content = document.getElementById('content');
+  const qCount = state.mdQuestionCount;
+  const oCount = state.mdOptionCount;
+
+  content.innerHTML = `
+    <form id="multiday-form" class="form">
+      <div class="form-grid">
+        <label>
+          Nazov testu
+          <input id="md-title" type="text" value="${state.mdTitle}" required />
+        </label>
+        <label>
+          Skolsky rok (YYYY/YY)
+          <input id="md-school-year" type="text" placeholder="2024/25" value="${state.mdSchoolYear}" required />
+        </label>
+        <label>
+          Pocet otazok
+          <input id="md-question-count" type="number" min="1" value="${qCount}" required />
+        </label>
+        <label>
+          Pocet moznosti
+          <input id="md-option-count" type="number" min="3" max="8" value="${oCount}" required />
+        </label>
+        <label class="toggle-field">
+          Zobrazit meno
+          <span class="toggle-row">
+            <input id="md-show-name" type="checkbox" ${state.mdShowName ? 'checked' : ''} />
+            <span class="md-toggle-text">${state.mdShowName ? 'Ano' : 'Nie'}</span>
+          </span>
+        </label>
+        <label class="file">
+          CSV zo systemu (s datumom, casom, miestnostou)
+          <input id="md-csv-file" type="file" accept=".csv" />
+          <span class="file-name">${state.mdCsvName || 'Ziadny subor'}</span>
+        </label>
+      </div>
+
+      <div class="sg-section">
+        <div class="sg-header">
+          <span class="sg-title">Správne odpovede per podskupina</span>
+          <span class="sg-hint">Povolené znaky: ${validAnswerChars(oCount)} &nbsp;|&nbsp; Dĺžka: ${qCount} znakov</span>
+          <button type="button" id="sg-add" class="btn secondary">+ Pridať podskupinu</button>
+        </div>
+        <div class="sg-labels">
+          <span>Podskupina</span><span>Odpovede (${qCount} znakov)</span><span></span><span></span>
+        </div>
+        <div id="sg-container">
+          ${renderSubgroupRows(qCount, oCount)}
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="primary">Vytvorit multi-terminovy test</button>
+        <span id="md-status" class="status"></span>
+      </div>
+    </form>
+  `;
+
+  document.getElementById('md-title').addEventListener('input', (e) => { state.mdTitle = e.target.value; });
+  document.getElementById('md-school-year').addEventListener('input', (e) => { state.mdSchoolYear = e.target.value; });
+  document.getElementById('md-question-count').addEventListener('input', (e) => {
+    state.mdQuestionCount = Number(e.target.value) || 0;
+    renderMultiDay();
+  });
+  document.getElementById('md-option-count').addEventListener('input', (e) => {
+    state.mdOptionCount = Number(e.target.value) || 0;
+    renderMultiDay();
+  });
+  document.getElementById('md-show-name').addEventListener('change', (e) => {
+    state.mdShowName = e.target.checked;
+    const t = document.querySelector('.md-toggle-text');
+    if (t) t.textContent = state.mdShowName ? 'Ano' : 'Nie';
+  });
+
+  document.getElementById('md-csv-file').addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) { state.mdCsvContent = ''; state.mdCsvName = ''; return; }
+    state.mdCsvName = file.name;
+    state.mdCsvContent = await file.text();
+    document.querySelector('#md-csv-file + .file-name').textContent = file.name;
+  });
+
+  document.getElementById('sg-add').addEventListener('click', () => {
+    state.mdSubgroups.push({ name: '', answers: '' });
+    document.getElementById('sg-container').innerHTML = renderSubgroupRows(qCount, oCount);
+    bindSubgroupEvents(qCount, oCount);
+  });
+
+  bindSubgroupEvents(qCount, oCount);
+
+  document.getElementById('multiday-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const statusEl = document.getElementById('md-status');
+
+    const subgroupMap = {};
+    for (const sg of state.mdSubgroups) {
+      if (!sg.name.trim()) continue;
+      if (!validateSubgroupAnswers(sg.answers, qCount, oCount)) {
+        statusEl.textContent = `Podskupina "${sg.name}": neplatné odpovede (${sg.answers.length}/${qCount} znakov, povolené: ${validAnswerChars(oCount)}).`;
+        statusEl.className = 'status error';
+        return;
+      }
+      subgroupMap[sg.name.trim()] = sg.answers.toUpperCase();
+    }
+
+    statusEl.textContent = 'Ukladam...';
+    statusEl.className = 'status';
+
+    try {
+      await CreateMultiDayExamWithCSV(
+        state.mdTitle.trim(),
+        state.mdSchoolYear.trim(),
+        Number(state.mdQuestionCount),
+        Number(state.mdOptionCount),
+        Boolean(state.mdShowName),
+        state.mdCsvContent,
+        subgroupMap,
+      );
+      statusEl.textContent = 'Ulozene.';
+      statusEl.className = 'status success';
+      state.mdTitle = '';
+      state.mdSchoolYear = '';
+      state.mdCsvContent = '';
+      state.mdCsvName = '';
+      state.mdQuestionCount = 10;
+      state.mdOptionCount = 5;
+      state.mdShowName = true;
+      state.mdSubgroups = [{ name: '', answers: '' }];
+      await refreshData();
+      state.activeTab = 'exams';
+      renderContent();
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = 'Chyba: ' + (err?.message || err);
+      statusEl.className = 'status error';
+    }
+  });
 }
 
 function renderUpload() {
@@ -859,47 +1081,172 @@ function bindExamActions() {
         }
         return;
       }
-      if (action === 'answers') {
+      if (action === 'print-multiday') {
         try {
-          const exam = state.exams.find(e => e.id === examId);
-          const questionCount = exam ? exam.questionCount : 0;
-          const optionCount = exam ? (exam.optionCount || 5) : 5;
-          const answers = await GetExamAnswers(examId);
-          const currentAnswers = answers ? answers.split('') : [];
-          const options = Array.from({length: optionCount}, (_, i) => String.fromCharCode(65 + i));
-          let rows = '';
-          for (let q = 0; q < questionCount; q++) {
-            const cur = (currentAnswers[q] || '').toLowerCase();
-            const opts = options.map(opt =>
-              `<label class="radio-opt"><input type="radio" name="ans-q${q}" value="${opt.toLowerCase()}" ${cur === opt.toLowerCase() ? 'checked' : ''} />${opt}</label>`
-            ).join('');
-            rows += `<div class="answer-edit-row"><span class="answer-num">${q + 1}.</span><div class="radio-opts">${opts}</div></div>`;
+          const paths = await PrintMultiDayExamPDFs(examId);
+          if (paths && paths.length > 0) {
+            window.alert(`Vygenerovaných ${paths.length} PDF súborov v priečinku pdf_to_print.`);
+            await OpenPath(paths[0]);
           }
-          const modalContent = `
-            <div class="answers-edit-form">
-              <div class="answers-edit-grid">${rows}</div>
-              <div class="modal-actions">
-                <button id="save-answers-btn" class="btn primary">Uložiť odpovede</button>
-              </div>
-            </div>`;
-          showModal('Odpovede testu', modalContent);
-          document.getElementById('save-answers-btn').addEventListener('click', async () => {
-            const newAnswers = [];
-            for (let q = 0; q < questionCount; q++) {
-              const checked = document.querySelector(`input[name="ans-q${q}"]:checked`);
-              newAnswers.push(checked ? checked.value : '');
-            }
-            try {
-              await UpdateExamAnswers(examId, newAnswers);
-              hideModal();
-            } catch (err) {
-              console.error(err);
-              window.alert('Ukladanie odpovedi zlyhalo.');
-            }
-          });
         } catch (err) {
           console.error(err);
-          showModal('Odpovede testu', '<div class="error">Nacitavanie odpovedi zlyhalo.</div>');
+          window.alert('Tlač zlyhala. Skontroluj logs.');
+        }
+        return;
+      }
+      if (action === 'answers') {
+        const exam = state.exams.find(e => e.id === examId);
+        if (exam && exam.isMultiDay) {
+          // Multi-day: podskupinový editor
+          try {
+            const answersRaw = await GetExamAnswers(examId);
+            const qCount = exam.questionCount;
+            const oCount = exam.optionCount || 5;
+            let sgMap = {};
+            try { sgMap = answersRaw ? JSON.parse(answersRaw) : {}; } catch (_) {}
+
+            const renderSgModal = () => {
+              const entries = Object.entries(sgMap);
+              if (entries.length === 0) entries.push(['', '']);
+              const rows = entries.map(([name, ans], idx) => {
+                const isValid = ans.length > 0 && validateSubgroupAnswers(ans, qCount, oCount);
+                const isEmpty = ans.length === 0;
+                const ind = isEmpty ? '' : (isValid ? '✓' : `✗ ${ans.length}/${qCount}`);
+                const indClass = isEmpty ? '' : (isValid ? 'sg-valid' : 'sg-invalid');
+                return `
+                  <div class="sg-row" data-modal-idx="${idx}">
+                    <input class="sg-name" type="text" placeholder="A1" value="${name}" maxlength="4" />
+                    <input class="sg-answers" type="text" placeholder="${validAnswerChars(oCount).slice(0, qCount).padEnd(qCount, validAnswerChars(oCount)[0])}" value="${ans}" />
+                    <span class="sg-indicator ${indClass}">${ind}</span>
+                    <button type="button" class="btn danger sg-remove" data-modal-idx="${idx}">Odstraniť</button>
+                  </div>`;
+              }).join('');
+
+              showModal('Odpovede podskupín', `
+                <div class="answers-edit-form">
+                  <div class="sg-hint" style="margin-bottom:8px">Povolené: ${validAnswerChars(oCount)} &nbsp;|&nbsp; Dĺžka: ${qCount} znakov</div>
+                  <div class="sg-labels"><span>Podskupina</span><span>Odpovede</span><span></span><span></span></div>
+                  <div id="modal-sg-container">${rows}</div>
+                  <div class="form-actions" style="margin-top:12px">
+                    <button id="modal-sg-add" class="btn secondary">+ Pridať podskupinu</button>
+                    <button id="modal-sg-save" class="btn primary">Uložiť</button>
+                    <span id="modal-sg-status" class="status"></span>
+                  </div>
+                </div>`);
+
+              document.querySelectorAll('.sg-name').forEach((input) => {
+                input.addEventListener('input', () => { input.value = input.value.toUpperCase(); });
+              });
+              document.querySelectorAll('.sg-answers').forEach((input) => {
+                input.addEventListener('input', () => {
+                  input.value = input.value.toUpperCase();
+                  const row = input.closest('.sg-row');
+                  const span = row.querySelector('.sg-indicator');
+                  const ok = input.value.length > 0 && validateSubgroupAnswers(input.value, qCount, oCount);
+                  span.textContent = input.value.length === 0 ? '' : (ok ? '✓' : `✗ ${input.value.length}/${qCount}`);
+                  span.className = 'sg-indicator ' + (input.value.length === 0 ? '' : ok ? 'sg-valid' : 'sg-invalid');
+                });
+              });
+              document.querySelectorAll('.sg-remove').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                  const rows = document.querySelectorAll('.sg-row');
+                  if (rows.length === 1) return;
+                  btn.closest('.sg-row').remove();
+                });
+              });
+              document.getElementById('modal-sg-add').addEventListener('click', () => {
+                const container = document.getElementById('modal-sg-container');
+                const div = document.createElement('div');
+                div.className = 'sg-row';
+                div.innerHTML = `
+                  <input class="sg-name" type="text" placeholder="A1" maxlength="4" />
+                  <input class="sg-answers" type="text" placeholder="" />
+                  <span class="sg-indicator"></span>
+                  <button type="button" class="btn danger sg-remove">Odstraniť</button>`;
+                div.querySelector('.sg-name').addEventListener('input', (e) => { e.target.value = e.target.value.toUpperCase(); });
+                div.querySelector('.sg-answers').addEventListener('input', (e) => {
+                  e.target.value = e.target.value.toUpperCase();
+                  const span = div.querySelector('.sg-indicator');
+                  const ok = e.target.value.length > 0 && validateSubgroupAnswers(e.target.value, qCount, oCount);
+                  span.textContent = e.target.value.length === 0 ? '' : (ok ? '✓' : `✗ ${e.target.value.length}/${qCount}`);
+                  span.className = 'sg-indicator ' + (e.target.value.length === 0 ? '' : ok ? 'sg-valid' : 'sg-invalid');
+                });
+                div.querySelector('.sg-remove').addEventListener('click', () => {
+                  if (document.querySelectorAll('.sg-row').length > 1) div.remove();
+                });
+                container.appendChild(div);
+              });
+              document.getElementById('modal-sg-save').addEventListener('click', async () => {
+                const statusEl = document.getElementById('modal-sg-status');
+                const newMap = {};
+                let valid = true;
+                document.querySelectorAll('.sg-row').forEach((row) => {
+                  const name = row.querySelector('.sg-name').value.trim();
+                  const ans = row.querySelector('.sg-answers').value.trim().toUpperCase();
+                  if (!name) return;
+                  if (!validateSubgroupAnswers(ans, qCount, oCount)) {
+                    statusEl.textContent = `Podskupina "${name}": neplatné odpovede.`;
+                    statusEl.className = 'status error';
+                    valid = false;
+                  }
+                  newMap[name] = ans;
+                });
+                if (!valid) return;
+                try {
+                  await UpdateMultiDayAnswers(examId, newMap);
+                  hideModal();
+                } catch (err) {
+                  console.error(err);
+                  if (statusEl) statusEl.textContent = 'Ukladanie zlyhalo.';
+                }
+              });
+            };
+            renderSgModal();
+          } catch (err) {
+            console.error(err);
+            showModal('Odpovede testu', '<div class="error">Nacitavanie odpovedi zlyhalo.</div>');
+          }
+        } else {
+          // Štandardný exam: radio button editor
+          try {
+            const questionCount = exam ? exam.questionCount : 0;
+            const optionCount = exam ? (exam.optionCount || 5) : 5;
+            const answers = await GetExamAnswers(examId);
+            const currentAnswers = answers ? answers.split('') : [];
+            const options = Array.from({length: optionCount}, (_, i) => String.fromCharCode(65 + i));
+            let rows = '';
+            for (let q = 0; q < questionCount; q++) {
+              const cur = (currentAnswers[q] || '').toLowerCase();
+              const opts = options.map(opt =>
+                `<label class="radio-opt"><input type="radio" name="ans-q${q}" value="${opt.toLowerCase()}" ${cur === opt.toLowerCase() ? 'checked' : ''} />${opt}</label>`
+              ).join('');
+              rows += `<div class="answer-edit-row"><span class="answer-num">${q + 1}.</span><div class="radio-opts">${opts}</div></div>`;
+            }
+            showModal('Odpovede testu', `
+              <div class="answers-edit-form">
+                <div class="answers-edit-grid">${rows}</div>
+                <div class="modal-actions">
+                  <button id="save-answers-btn" class="btn primary">Uložiť odpovede</button>
+                </div>
+              </div>`);
+            document.getElementById('save-answers-btn').addEventListener('click', async () => {
+              const newAnswers = [];
+              for (let q = 0; q < questionCount; q++) {
+                const checked = document.querySelector(`input[name="ans-q${q}"]:checked`);
+                newAnswers.push(checked ? checked.value : '');
+              }
+              try {
+                await UpdateExamAnswers(examId, newAnswers);
+                hideModal();
+              } catch (err) {
+                console.error(err);
+                window.alert('Ukladanie odpovedi zlyhalo.');
+              }
+            });
+          } catch (err) {
+            console.error(err);
+            showModal('Odpovede testu', '<div class="error">Nacitavanie odpovedi zlyhalo.</div>');
+          }
         }
         return;
       }
@@ -925,12 +1272,20 @@ function bindExamActions() {
       if (action === 'csv') {
         try {
           const path = await ExportExamStudentsCSV(examId);
-          if (path) {
-            await OpenPath(path);
-          }
+          if (path) await OpenPath(path);
         } catch (err) {
           console.error(err);
           showModal('Export CSV', '<div class="error">Export studentov do CSV zlyhal.</div>');
+        }
+        return;
+      }
+      if (action === 'csv-multiday') {
+        try {
+          const path = await ExportMultiDayResultsCSV(examId);
+          if (path) await OpenPath(path);
+        } catch (err) {
+          console.error(err);
+          showModal('Export CSV', '<div class="error">Export vysledkov zlyhal.</div>');
         }
         return;
       }

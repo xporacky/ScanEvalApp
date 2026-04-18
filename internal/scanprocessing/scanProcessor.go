@@ -147,6 +147,11 @@ func ProcessPage(doc *fitz.Document, pageNumber int, exam *models.Exam, db *gorm
 	mat = MatToGrayscale(mat)
 	mat = FixImageRotation(mat)
 
+	// TODO: Načítaj skupinu (A-H) a podskupinu (1-5) z hlavičky hárkа.
+	// Výsledok ulož do student.Subgroup vo formáte napr. "A1".
+	// Správne odpovede pre danú podskupinu sa potom načítajú z exam.Questions (JSON mapa).
+	// Implementuje niekto iný.
+
 	mutexGetId.Lock()
 	student, err := GetStudent(&mat, db, exam.ID)
 	mutexGetId.Unlock()

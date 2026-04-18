@@ -18,4 +18,7 @@ type Student struct {
 	Answers            string
 	ExamID             uint `gorm:"not null;uniqueIndex:idx_students_exam_registration"`
 	Pages              string
+	ExamDate           time.Time `gorm:"default:null"`
+	ExamTime           string
+	Subgroup           string
 }

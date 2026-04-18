@@ -47,14 +47,22 @@ func buildQRCodePayload(student models.Student, exam models.Exam) string {
 }
 
 func buildTemplateData(student models.Student, exam models.Exam) TemplateData {
+	datum := exam.Date.Format("02. 01. 2006")
+	cas := exam.Date.Format("15:04")
+	if !student.ExamDate.IsZero() {
+		datum = student.ExamDate.Format("02. 01. 2006")
+	}
+	if student.ExamTime != "" {
+		cas = student.ExamTime
+	}
 	return TemplateData{
 		ID:        latexEscape(fmt.Sprintf("%d", student.RegistrationNumber)),
 		IDDigits:  buildIDDigits(student.RegistrationNumber),
 		Meno:      latexEscape(fmt.Sprintf("%s %s", student.Name, student.Surname)),
 		ShowName:  exam.ShowName,
-		Datum:     latexEscape(exam.Date.Format("02. 01. 2006")),
+		Datum:     latexEscape(datum),
 		Miestnost: latexEscape(student.Room),
-		Cas:       latexEscape(exam.Date.Format("15:04")),
+		Cas:       latexEscape(cas),
 		Bloky:     exam.QuestionCount,
 		QrCode:    buildQRCodePayload(student, exam),
 		TestName:  latexEscape(exam.Title),
@@ -221,6 +229,205 @@ func MergePDFs(pdf1Path, pdf2Path, outputPath string) error {
 	return nil
 }
 
+// generateStudentPDFs generates PDFs for the given students in parallel, merges them, and saves to outputPath.
+func generateStudentPDFs(students []models.Student, exam models.Exam, templatePath string, outputPath string) error {
+	errorLogger := logging.GetErrorLogger()
+	logger := logging.GetLogger()
+
+	latexTemplate, err := os.ReadFile(templatePath)
+	if err != nil {
+		errorLogger.Error("Error reading LaTeX template", "error", err.Error(), "template_path", templatePath)
+		return err
+	}
+
+	type studentPDFResult struct {
+		index   int
+		pdfPath string
+		id      uint
+		err     error
+	}
+
+	results := make([]studentPDFResult, len(students))
+	var wg sync.WaitGroup
+	var genErrMu sync.Mutex
+	var genErr error
+
+	for i, student := range students {
+		wg.Add(1)
+		go func(idx int, s models.Student) {
+			defer wg.Done()
+			data := buildTemplateData(s, exam)
+			updatedLatex, err := ReplaceTemplatePlaceholders(latexTemplate, data)
+			if err != nil {
+				genErrMu.Lock()
+				if genErr == nil {
+					genErr = err
+				}
+				genErrMu.Unlock()
+				return
+			}
+			studentPDF, err := CompileLatexToPDF(updatedLatex)
+			if err != nil {
+				genErrMu.Lock()
+				if genErr == nil {
+					genErr = err
+				}
+				genErrMu.Unlock()
+				return
+			}
+			pdfPath := filepath.Join(common.TEMPORARY_PDF_PATH, fmt.Sprintf("student_%d.pdf", s.ID))
+			if err := os.WriteFile(pdfPath, studentPDF, common.FILE_PERMISSION); err != nil {
+				genErrMu.Lock()
+				if genErr == nil {
+					genErr = err
+				}
+				genErrMu.Unlock()
+				return
+			}
+			results[idx] = studentPDFResult{index: idx, pdfPath: pdfPath, id: s.ID}
+			logger.Debug("PDF vygenerované", "student_id", s.ID)
+		}(i, student)
+	}
+	wg.Wait()
+
+	if genErr != nil {
+		return genErr
+	}
+
+	var mainPDFPath string
+	var mainPDFSet bool
+
+	for _, result := range results {
+		if result.pdfPath == "" {
+			continue
+		}
+		if !mainPDFSet {
+			mainPDFPath = result.pdfPath
+			mainPDFSet = true
+		} else {
+			mergedPDFPath := filepath.Join(common.TEMPORARY_PDF_PATH, fmt.Sprintf("merged_%d.pdf", result.id))
+			if err := MergePDFs(mainPDFPath, result.pdfPath, mergedPDFPath); err != nil {
+				errorLogger.Error("Error merging PDF", "student_id", result.id, "error", err.Error())
+				_ = files.DeleteFile(result.pdfPath)
+				return err
+			}
+			if err := os.Rename(mergedPDFPath, mainPDFPath); err != nil {
+				return err
+			}
+			if err := files.DeleteFile(result.pdfPath); err != nil {
+				errorLogger.Error("Error removing temporary PDF", "student_id", result.id, "error", err.Error())
+			}
+		}
+	}
+
+	if !mainPDFSet {
+		return fmt.Errorf("žiadne PDF pre skupinu")
+	}
+
+	if err := os.MkdirAll(filepath.Dir(outputPath), common.FILE_PERMISSION); err != nil {
+		return err
+	}
+
+	srcFile, err := os.Open(mainPDFPath)
+	if err != nil {
+		return err
+	}
+	defer srcFile.Close()
+
+	dstFile, err := os.Create(outputPath)
+	if err != nil {
+		return err
+	}
+	defer dstFile.Close()
+
+	if _, err := io.Copy(dstFile, srcFile); err != nil {
+		return err
+	}
+
+	return os.Remove(mainPDFPath)
+}
+
+// GenerateMultiDayPDFs generates one PDF per exam day sorted by ExamTime → Room → Surname.
+// Output files are placed in {savePath}/pdf_to_print/ directory.
+func GenerateMultiDayPDFs(db *gorm.DB, examID uint) ([]string, error) {
+	logger := logging.GetLogger()
+	errorLogger := logging.GetErrorLogger()
+
+	var exam models.Exam
+	if err := db.First(&exam, examID).Error; err != nil {
+		return nil, err
+	}
+
+	templatePath := common.GetTemplatePath(exam.OptionCount)
+	if _, err := os.Stat(templatePath); err != nil {
+		return nil, fmt.Errorf("template file does not exist: %s", templatePath)
+	}
+
+	var allStudents []models.Student
+	if err := db.Where("exam_id = ?", examID).Find(&allStudents).Error; err != nil {
+		return nil, err
+	}
+
+	// Zoskup podľa dátumu skúšky
+	dayMap := make(map[string][]models.Student)
+	for _, s := range allStudents {
+		key := s.ExamDate.Format("2006-01-02")
+		dayMap[key] = append(dayMap[key], s)
+	}
+
+	// Zoraď kľúče (dni) chronologicky
+	days := make([]string, 0, len(dayMap))
+	for k := range dayMap {
+		days = append(days, k)
+	}
+	sort.Strings(days)
+
+	dirPath, err := config.LoadLastPath()
+	if err != nil {
+		return nil, err
+	}
+	absDirPath, err := filepath.Abs(dirPath)
+	if err != nil {
+		return nil, err
+	}
+	printDir := filepath.Join(absDirPath, "pdf_to_print")
+	if err := os.MkdirAll(printDir, 0755); err != nil {
+		return nil, err
+	}
+
+	startTime := time.Now()
+	var outputPaths []string
+
+	for _, day := range days {
+		students := dayMap[day]
+
+		// Zoraď: ExamTime → Room → Surname
+		sort.Slice(students, func(i, j int) bool {
+			if students[i].ExamTime != students[j].ExamTime {
+				return students[i].ExamTime < students[j].ExamTime
+			}
+			if students[i].Room != students[j].Room {
+				return students[i].Room < students[j].Room
+			}
+			return students[i].Surname < students[j].Surname
+		})
+
+		safeTitle := common.SanitizeFilename(exam.Title)
+		outputPath := filepath.Join(printDir, fmt.Sprintf("%s_%s.pdf", safeTitle, day))
+
+		if err := generateStudentPDFs(students, exam, templatePath, outputPath); err != nil {
+			errorLogger.Error("Chyba pri generovaní PDF pre deň", "day", day, "error", err.Error())
+			return outputPaths, err
+		}
+
+		logger.Info("PDF pre deň vygenerované", "day", day, "path", outputPath)
+		outputPaths = append(outputPaths, outputPath)
+	}
+
+	logger.Info("Multi-day PDF generovanie dokončené", "days", len(days), "duration", time.Since(startTime))
+	return outputPaths, nil
+}
+
 // ParallelGeneratePDFs generates PDFs for students in parallel by processing each student in separate goroutines.
 func ParallelGeneratePDFs(db *gorm.DB, examID uint) (string, error) {
 	logger := logging.GetLogger()
@@ -362,116 +569,13 @@ func ParallelGeneratePDFs(db *gorm.DB, examID uint) (string, error) {
 		return allStudents[i].RegistrationNumber%1000 < allStudents[j].RegistrationNumber%1000
 	})
 
-	// Measure the total time for PDF generation and merging
 	startTime := time.Now()
 
-	// Phase 1: Generate all PDFs in parallel
-	type studentPDFResult struct {
-		index     int
-		pdfPath   string
-		studentID uint
-		err       error
-	}
-
-	results := make([]studentPDFResult, len(allStudents))
-	var wg sync.WaitGroup
-	var genErrMu sync.Mutex
-	var genErr error
-
-	latexTemplate, err := os.ReadFile(templatePath)
-	if err != nil {
-		errorLogger.Error("Error reading LaTeX template", "error", err.Error(), "template_path", templatePath)
-		return "", err
-	}
-
-	for i, student := range allStudents {
-		wg.Add(1)
-		go func(idx int, s models.Student) {
-			defer wg.Done()
-
-			data := buildTemplateData(s, exam)
-			updatedLatex, err := ReplaceTemplatePlaceholders(latexTemplate, data)
-			if err != nil {
-				genErrMu.Lock()
-				if genErr == nil {
-					genErr = err
-				}
-				genErrMu.Unlock()
-				errorLogger.Error("Error replacing placeholders", "student_id", s.ID, "error", err.Error())
-				return
-			}
-
-			studentPDF, err := CompileLatexToPDF(updatedLatex)
-			if err != nil {
-				genErrMu.Lock()
-				if genErr == nil {
-					genErr = err
-				}
-				genErrMu.Unlock()
-				errorLogger.Error("Error generating PDF", "student_id", s.ID, "error", err.Error())
-				return
-			}
-
-			pdfPath := filepath.Join(common.TEMPORARY_PDF_PATH, fmt.Sprintf("student_%d.pdf", s.ID))
-			if err := os.WriteFile(pdfPath, studentPDF, common.FILE_PERMISSION); err != nil {
-				genErrMu.Lock()
-				if genErr == nil {
-					genErr = err
-				}
-				genErrMu.Unlock()
-				errorLogger.Error("Error saving PDF", "student_id", s.ID, "error", err.Error())
-				return
-			}
-
-			results[idx] = studentPDFResult{index: idx, pdfPath: pdfPath, studentID: s.ID}
-			logger.Debug("PDF vygenerované", "student_id", s.ID)
-		}(i, student)
-	}
-	wg.Wait()
-
-	if genErr != nil {
-		return "", genErr
-	}
-
-	// Phase 2: Merge PDFs sequentially in sorted order
-	var mainPDFPath string
-	var mainPDFSet bool
-
-	for _, result := range results {
-		if result.pdfPath == "" {
-			continue
-		}
-		if !mainPDFSet {
-			mainPDFPath = result.pdfPath
-			mainPDFSet = true
-		} else {
-			mergedPDFPath := filepath.Join(common.TEMPORARY_PDF_PATH, fmt.Sprintf("merged_%d.pdf", result.studentID))
-			if err := MergePDFs(mainPDFPath, result.pdfPath, mergedPDFPath); err != nil {
-				errorLogger.Error("Error merging PDF", "student_id", result.studentID, "error", err.Error())
-				_ = files.DeleteFile(result.pdfPath)
-				return "", err
-			}
-			if err := os.Rename(mergedPDFPath, mainPDFPath); err != nil {
-				errorLogger.Error("Error updating main PDF", "student_id", result.studentID, "error", err.Error())
-				return "", err
-			}
-			if err := files.DeleteFile(result.pdfPath); err != nil {
-				errorLogger.Error("Error removing temporary PDF", "student_id", result.studentID, "error", err.Error())
-			}
-		}
-	}
-
-	if !mainPDFSet {
-		return "", fmt.Errorf("pre test %d sa nepodarilo vygenerovať žiadne PDF", examID)
-	}
-
-	// Create a final pdf
 	dirPath, err := config.LoadLastPath()
 	if err != nil {
 		errorLogger.Error("Chyba načítania configu", "error", err.Error())
 		return "", err
 	}
-
 	absDirPath, err := filepath.Abs(dirPath)
 	if err != nil {
 		errorLogger.Error("Chyba pri konverzii cesty", "error", err.Error())
@@ -481,31 +585,10 @@ func ParallelGeneratePDFs(db *gorm.DB, examID uint) (string, error) {
 	safeTitle := common.SanitizeFilename(exam.Title)
 	finalPDFPath := filepath.Join(absDirPath, fmt.Sprintf("%s%d.pdf", safeTitle, exam.ID))
 
-	srcFile, err := os.Open(mainPDFPath)
-	if err != nil {
-		errorLogger.Error("error opening source PDF", "error", err.Error())
-		return "", err
-	}
-	defer srcFile.Close()
-
-	dstFile, err := os.Create(finalPDFPath)
-	if err != nil {
-		errorLogger.Error("error creating destination PDF", "error", err.Error())
-		return "", err
-	}
-	defer dstFile.Close()
-
-	if _, err := io.Copy(dstFile, srcFile); err != nil {
-		errorLogger.Error("error copying PDF", "error", err.Error())
+	if err := generateStudentPDFs(allStudents, exam, templatePath, finalPDFPath); err != nil {
 		return "", err
 	}
 
-	// Files will be closed automatically via defer statements
-	if err := os.Remove(mainPDFPath); err != nil {
-		errorLogger.Error("error removing original PDF", "error", err.Error())
-		return "", err
-	}
-	// Measure the total time
 	duration := time.Since(startTime)
 	logger.Debug("Celkový čas generovania PDF", "duration", duration)
 
