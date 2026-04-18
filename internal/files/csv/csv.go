@@ -102,6 +102,8 @@ func ImportStudentsFromCSV(db *gorm.DB, csvContent string, examID uint) error {
 
 // parseSlovakDate parses dates in DD.MM.YYYY format with or without leading zeros.
 func parseSlovakDate(s string) (time.Time, error) {
+	// normalize: remove spaces around dots ("30. 01. 2007" → "30.01.2007")
+	s = strings.ReplaceAll(s, " ", "")
 	formats := []string{"02.01.2006", "2.01.2006", "02.1.2006", "2.1.2006"}
 	for _, f := range formats {
 		if t, err := time.Parse(f, s); err == nil {
