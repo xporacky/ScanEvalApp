@@ -14,6 +14,6 @@ save/
 ScanEvalApp_git/
 frontend/dist/
 frontend/node_modules/
-zoznam_po_miestnostiach.csv
+
 zoznam_po_miestnostiach.xlsx
 output_test/
