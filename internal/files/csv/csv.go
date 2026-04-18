@@ -100,6 +100,25 @@ func ImportStudentsFromCSV(db *gorm.DB, csvContent string, examID uint) error {
 	return nil
 }
 
+// parseSlovakDate parses dates in DD.MM.YYYY format with or without leading zeros.
+func parseSlovakDate(s string) (time.Time, error) {
+	formats := []string{"02.01.2006", "2.01.2006", "02.1.2006", "2.1.2006"}
+	for _, f := range formats {
+		if t, err := time.Parse(f, s); err == nil {
+			return t, nil
+		}
+	}
+	// manual fallback: split by "." and reconstruct as YYYY-MM-DD
+	parts := strings.Split(s, ".")
+	if len(parts) == 3 {
+		normalized := fmt.Sprintf("%s-%02s-%02s", parts[2], parts[1], parts[0])
+		if t, err := time.Parse("2006-01-02", normalized); err == nil {
+			return t, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("nepodporovaný formát dátumu: %q", s)
+}
+
 // ImportStudentsFromFullCSV parses the full 11-column export format (Por.;Priezvisko;Meno;Narodenie;Reg. č.;E-mail;Termín;Čas;Dátum;Miestnosť;Program)
 // and stores students with per-student ExamDate, ExamTime and Room.
 func ImportStudentsFromFullCSV(db *gorm.DB, csvContent string, examID uint) error {
@@ -135,13 +154,10 @@ func ImportStudentsFromFullCSV(db *gorm.DB, csvContent string, examID uint) erro
 		surname := strings.TrimSpace(row[1])
 
 		birthRaw := strings.TrimSpace(row[3])
-		birthDate, err := time.Parse("2.1.2006", birthRaw)
+		birthDate, err := parseSlovakDate(birthRaw)
 		if err != nil {
-			birthDate, err = time.Parse("02.01.2006", birthRaw)
-			if err != nil {
-				errorLogger.Error("Chyba pri parsovaní dátumu narodenia", slog.String("value", birthRaw), slog.String("error", err.Error()))
-				return err
-			}
+			errorLogger.Error("Chyba pri parsovaní dátumu narodenia", slog.String("value", birthRaw), slog.String("error", err.Error()))
+			return err
 		}
 
 		regRaw := strings.TrimSpace(row[4])
@@ -155,13 +171,10 @@ func ImportStudentsFromFullCSV(db *gorm.DB, csvContent string, examID uint) erro
 		examTimeStr := strings.TrimSpace(row[7])
 
 		datumRaw := strings.TrimSpace(row[8])
-		examDate, err := time.Parse("2.1.2006", datumRaw)
+		examDate, err := parseSlovakDate(datumRaw)
 		if err != nil {
-			examDate, err = time.Parse("02.01.2006", datumRaw)
-			if err != nil {
-				errorLogger.Error("Chyba pri parsovaní dátumu skúšky", slog.String("value", datumRaw), slog.String("error", err.Error()))
-				return err
-			}
+			errorLogger.Error("Chyba pri parsovaní dátumu skúšky", slog.String("value", datumRaw), slog.String("error", err.Error()))
+			return err
 		}
 
 		miestnostRaw := strings.TrimSpace(row[9])
