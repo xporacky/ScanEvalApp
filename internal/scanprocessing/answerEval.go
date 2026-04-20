@@ -49,6 +49,15 @@ func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int, numberOfChoices int) 
 		logger.Info("Ohraničujúci obdĺžnik nebol nájdený", slog.String("error", err.Error()))
 		return common.QUESTION_NUMBER_NOT_FOUND, nil
 	}
+
+	croppedHeader, err := CropGroupFromHeader(mat)
+	if err != nil {
+		logger.Info("Ohraničujúci obdĺžnik nebol nájdený", slog.String("error", err.Error()))
+		return common.QUESTION_NUMBER_NOT_FOUND, nil
+	}
+	//SaveMat("./assets/group-crop2.png", croppedHeader)
+	var group = GetGroupCode(&croppedHeader)
+	fmt.Println("Skupina:" + group)
 	questionNumber := common.QUESTION_NUMBER_NOT_FOUND
 	for i := 0; i < NUMBER_OF_QUESTIONS_PER_PAGE; i++ {
 		studentAnswers = append(studentAnswers, GetAnswer(&croppedMat, i, numberOfChoices))
@@ -96,6 +105,48 @@ func CropMatAnswersOnly(mat *gocv.Mat) (gocv.Mat, error) {
 		return gocv.NewMat(), fmt.Errorf("ohranicujuci obdlznik je prilis maly")
 	}
 	croppedMat := mat.Region(rectSmaller)
+	return croppedMat, nil
+}
+
+// Crops a rectangle from the header
+func CropGroupFromHeader(mat *gocv.Mat) (gocv.Mat, error) {
+	rect := FindRectangle(mat, BORDER_RECTANGLE_AREA_SIZE, -1)
+	if rect.Empty() {
+		return gocv.NewMat(), fmt.Errorf("hlavny obdlznik nebol najdeny")
+	}
+
+	// Vyrezeme pas nad hlavnym obdlznikom.
+	// Sirka ostane rovnaka ako hlavny obdlznik, vyska je len male pasmo nad nim.
+	headerRect := image.Rectangle{
+		Min: image.Point{
+			X: rect.Min.X + GROUP_SIDE_PADDING,
+			Y: rect.Min.Y - GROUP_HEADER_HEIGHT,
+		},
+		Max: image.Point{
+			X: rect.Max.X - GROUP_SIDE_PADDING,
+			Y: rect.Min.Y - GROUP_BOTTOM_PADDING,
+		},
+	}
+
+	// Ochrana proti vybehnutiu mimo obrazka
+	if headerRect.Min.X < 0 {
+		headerRect.Min.X = 0
+	}
+	if headerRect.Min.Y < 0 {
+		headerRect.Min.Y = 0
+	}
+	if headerRect.Max.X > mat.Cols() {
+		headerRect.Max.X = mat.Cols()
+	}
+	if headerRect.Max.Y > mat.Rows() {
+		headerRect.Max.Y = mat.Rows()
+	}
+
+	if headerRect.Dx() <= 0 || headerRect.Dy() <= 0 {
+		return gocv.NewMat(), fmt.Errorf("oblast headera je prilis mala alebo mimo obrazka")
+	}
+
+	croppedMat := mat.Region(headerRect)
 	return croppedMat, nil
 }
 
@@ -220,4 +271,102 @@ func GetAnswer(mat *gocv.Mat, i int, numberOfChoices int) rune {
 		defer rectMat.Close()
 	}
 	return answer
+}
+
+func GetGroupCode(headerMat *gocv.Mat) string {
+	topLabels := []string{"A", "B", "C", "D", "E", "F", "G", "H"}
+	bottomLabels := []string{"1", "2", "3", "4", "5"}
+
+	topXs := []float64{0.07, 0.19, 0.31, 0.43, 0.57, 0.69, 0.81, 0.93}
+	bottomXs := []float64{0.23, 0.36, 0.50, 0.64, 0.77}
+
+	topY := 0.34
+	bottomY := 0.78
+
+	boxW := int(0.09 * float64(headerMat.Cols()))
+	boxH := int(0.23 * float64(headerMat.Rows()))
+
+	topChoice := detectSingleMarkedBox(headerMat, topXs, topY, boxW, boxH, topLabels)
+	bottomChoice := detectSingleMarkedBox(headerMat, bottomXs, bottomY, boxW, boxH, bottomLabels)
+
+	if topChoice == "" || bottomChoice == "" {
+		return ""
+	}
+
+	return topChoice + bottomChoice
+}
+
+func detectSingleMarkedBox(
+	headerMat *gocv.Mat,
+	xCenters []float64,
+	yCenter float64,
+	boxW int,
+	boxH int,
+	labels []string,
+) string {
+	found := ""
+
+	for i, xRatio := range xCenters {
+		cx := int(xRatio * float64(headerMat.Cols()))
+		cy := int(yCenter * float64(headerMat.Rows()))
+
+		rect := image.Rect(
+			cx-boxW/2,
+			cy-boxH/2,
+			cx+boxW/2,
+			cy+boxH/2,
+		)
+
+		if rect.Min.X < 0 {
+			rect.Min.X = 0
+		}
+		if rect.Min.Y < 0 {
+			rect.Min.Y = 0
+		}
+		if rect.Max.X > headerMat.Cols() {
+			rect.Max.X = headerMat.Cols()
+		}
+		if rect.Max.Y > headerMat.Rows() {
+			rect.Max.Y = headerMat.Rows()
+		}
+		if rect.Dx() <= 0 || rect.Dy() <= 0 {
+			continue
+		}
+
+		cellMat := headerMat.Region(rect)
+
+		minArea, maxArea := answerSquareAreaBounds(8)
+		boxRect := FindRectangle(&cellMat, minArea, maxArea)
+		if boxRect.Empty() {
+			cellMat.Close()
+			continue
+		}
+
+		pad := CHECKBOX_PADDING
+		inner := image.Rect(
+			boxRect.Min.X+pad,
+			boxRect.Min.Y+pad,
+			boxRect.Max.X-pad,
+			boxRect.Max.Y-pad,
+		)
+		if inner.Dx() <= 0 || inner.Dy() <= 0 {
+			cellMat.Close()
+			continue
+		}
+
+		innerMat := cellMat.Region(inner)
+		mean := innerMat.Mean()
+
+		innerMat.Close()
+		cellMat.Close()
+
+		if mean.Val1 < MEAN_INTENSITY_X_HIGHEST && mean.Val1 > MEAN_INTENSITY_X_LOWEST {
+			if found != "" {
+				return ""
+			}
+			found = labels[i]
+		}
+	}
+
+	return found
 }
