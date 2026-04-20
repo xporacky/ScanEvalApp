@@ -43,7 +43,7 @@ func buildQRCodePayload(student models.Student, exam models.Exam) string {
 		student.Name,
 		student.Surname,
 		exam.Date.Format("02.01.2006"),
-		exam.Room
+		exam.Room,
 	))
 }
 

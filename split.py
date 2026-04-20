@@ -3,7 +3,7 @@ import os
 from collections import defaultdict
 from datetime import datetime
 
-INPUT_FILE = "zoznam_po_miestnostiach.csv"
+INPUT_FILE = "zoznam.csv"
 OUTPUT_DIR = "output_test"
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
