@@ -147,11 +147,6 @@ func ProcessPage(doc *fitz.Document, pageNumber int, exam *models.Exam, db *gorm
 	mat = MatToGrayscale(mat)
 	mat = FixImageRotation(mat)
 
-	// TODO: Načítaj skupinu (A-H) a podskupinu (1-5) z hlavičky hárkа.
-	// Výsledok ulož do student.Subgroup vo formáte napr. "A1".
-	// Správne odpovede pre danú podskupinu sa potom načítajú z exam.Questions (JSON mapa).
-	// Implementuje niekto iný.
-
 	mutexGetId.Lock()
 	student, err := GetStudent(&mat, db, exam.ID)
 	mutexGetId.Unlock()
@@ -160,6 +155,14 @@ func ProcessPage(doc *fitz.Document, pageNumber int, exam *models.Exam, db *gorm
 		errorLogger.Error("Chyba pri získavaní ID študenta z databázy", "PDF strana", pageNumber, "error", err.Error())
 		AddFailedPage(failedPages, exam.ID, pageNumber)
 		return
+	}
+
+	// TODO: Načítaj skupinu (A-H) a podskupinu (1-5) z hlavičky hárkа a nahraď "A1".
+	if exam.IsMultiDay && student.Subgroup == "" {
+		student.Subgroup = "A1"
+		if err := db.Model(student).Update("subgroup", "A1").Error; err != nil {
+			errorLogger.Error("Chyba pri ukladaní subgroup", "studentID", student.ID, "error", err.Error())
+		}
 	}
 
 	logger.Info("Našiel sa študent v databáze", "studentID", student.ID, "name", student.Name)
