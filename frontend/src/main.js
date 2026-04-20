@@ -256,7 +256,7 @@ function renderStudents() {
           <span class="cell" data-label="Priezvisko">${student.surname}</span>
           <span class="cell" data-label="Datum narodenia">${formatDate(student.birthDate)}</span>
           <span class="cell" data-label="Miestnost">${student.room}</span>
-          <span class="cell" data-label="Reg cislo">${student.registrationNumber}</span>
+          <span class="cell" data-label="Reg cislo">${String(student.registrationNumber).padStart(7, '0')}</span>
           <span class="cell" data-label="Test">${student.examId}</span>
           <span class="cell" data-label="Score">${student.score}</span>
           <span class="cell action" data-label="Akcie">

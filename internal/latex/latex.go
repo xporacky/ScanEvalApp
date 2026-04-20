@@ -38,12 +38,12 @@ func buildIDDigits(registrationNumber int) []string {
 
 func buildQRCodePayload(student models.Student, exam models.Exam) string {
 	return latexEscape(fmt.Sprintf(
-		"ID:%d | MENO:%s %s | DATUM:%s | MIESTNOST:%s",
+		"ID:%07d | MENO:%s %s | DATUM:%s | MIESTNOST:%s",
 		student.RegistrationNumber,
 		student.Name,
 		student.Surname,
 		exam.Date.Format("02.01.2006"),
-		exam.Room,
+		student.Room,
 	))
 }
 
