@@ -38,11 +38,12 @@ func buildIDDigits(registrationNumber int) []string {
 
 func buildQRCodePayload(student models.Student, exam models.Exam) string {
 	return latexEscape(fmt.Sprintf(
-		"ID:%d | MENO:%s %s | DATUM:%s",
+		"ID:%d | MENO:%s %s | DATUM:%s | MIESTNOST:%s",
 		student.RegistrationNumber,
 		student.Name,
 		student.Surname,
 		exam.Date.Format("02.01.2006"),
+		exam.Room
 	))
 }
 
@@ -347,8 +348,9 @@ func generateStudentPDFs(students []models.Student, exam models.Exam, templatePa
 	return os.Remove(mainPDFPath)
 }
 
-// GenerateMultiDayPDFs generates one PDF per exam day sorted by ExamTime → Room → Surname.
-// Output files are placed in {savePath}/pdf_to_print/ directory.
+// GenerateMultiDayPDFs generates one PDF per unique date+time+room combination.
+// Output files are placed in {savePath}/pdf_output/ directory.
+// Filename format: datum_cas_miestnost.pdf (e.g. 2026-04-20_08-00_A101.pdf)
 func GenerateMultiDayPDFs(db *gorm.DB, examID uint) ([]string, error) {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
@@ -368,19 +370,19 @@ func GenerateMultiDayPDFs(db *gorm.DB, examID uint) ([]string, error) {
 		return nil, err
 	}
 
-	// Zoskup podľa dátumu skúšky
-	dayMap := make(map[string][]models.Student)
+	// Zoskup podľa kombinácie dátum+čas+miestnosť
+	groupMap := make(map[string][]models.Student)
 	for _, s := range allStudents {
-		key := s.ExamDate.Format("2006-01-02")
-		dayMap[key] = append(dayMap[key], s)
+		key := fmt.Sprintf("%s_%s_%s", s.ExamDate.Format("2006-01-02"), s.ExamTime, s.Room)
+		groupMap[key] = append(groupMap[key], s)
 	}
 
-	// Zoraď kľúče (dni) chronologicky
-	days := make([]string, 0, len(dayMap))
-	for k := range dayMap {
-		days = append(days, k)
+	// Zoraď kľúče: dátum → čas → miestnosť
+	groups := make([]string, 0, len(groupMap))
+	for k := range groupMap {
+		groups = append(groups, k)
 	}
-	sort.Strings(days)
+	sort.Strings(groups)
 
 	dirPath, err := config.LoadLastPath()
 	if err != nil {
@@ -390,7 +392,7 @@ func GenerateMultiDayPDFs(db *gorm.DB, examID uint) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	printDir := filepath.Join(absDirPath, "pdf_to_print")
+	printDir := filepath.Join(absDirPath, "pdf_output")
 	if err := os.MkdirAll(printDir, 0755); err != nil {
 		return nil, err
 	}
@@ -398,33 +400,28 @@ func GenerateMultiDayPDFs(db *gorm.DB, examID uint) ([]string, error) {
 	startTime := time.Now()
 	var outputPaths []string
 
-	for _, day := range days {
-		students := dayMap[day]
+	for _, groupKey := range groups {
+		students := groupMap[groupKey]
 
-		// Zoraď: ExamTime → Room → Surname
+		// Zoraď vnútri skupiny podľa priezviska
 		sort.Slice(students, func(i, j int) bool {
-			if students[i].ExamTime != students[j].ExamTime {
-				return students[i].ExamTime < students[j].ExamTime
-			}
-			if students[i].Room != students[j].Room {
-				return students[i].Room < students[j].Room
-			}
 			return students[i].Surname < students[j].Surname
 		})
 
-		safeTitle := common.SanitizeFilename(exam.Title)
-		outputPath := filepath.Join(printDir, fmt.Sprintf("%s_%s.pdf", safeTitle, day))
+		// Názov súboru: datum_cas_miestnost.pdf (nahraď ':' za '-' pre bezpečnosť)
+		safeKey := common.SanitizeFilename(groupKey)
+		outputPath := filepath.Join(printDir, fmt.Sprintf("%s.pdf", safeKey))
 
 		if err := generateStudentPDFs(students, exam, templatePath, outputPath); err != nil {
-			errorLogger.Error("Chyba pri generovaní PDF pre deň", "day", day, "error", err.Error())
+			errorLogger.Error("Chyba pri generovaní PDF pre skupinu", "group", groupKey, "error", err.Error())
 			return outputPaths, err
 		}
 
-		logger.Info("PDF pre deň vygenerované", "day", day, "path", outputPath)
+		logger.Info("PDF pre skupinu vygenerované", "group", groupKey, "path", outputPath)
 		outputPaths = append(outputPaths, outputPath)
 	}
 
-	logger.Info("Multi-day PDF generovanie dokončené", "days", len(days), "duration", time.Since(startTime))
+	logger.Info("Multi-day PDF generovanie dokončené", "groups", len(groups), "duration", time.Since(startTime))
 	return outputPaths, nil
 }
 
