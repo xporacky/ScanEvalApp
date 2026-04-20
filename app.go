@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -18,7 +21,6 @@ import (
 	"ScanEvalApp/internal/files/pdf"
 	"ScanEvalApp/internal/latex"
 	"ScanEvalApp/internal/logging"
-	"ScanEvalApp/internal/scanprocessing"
 	"ScanEvalApp/internal/services"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -452,12 +454,8 @@ func (a *App) EvaluateExam(examID uint, pdfPath, configName string) error {
 	}
 
 	go func() {
+		errorLogger := logging.GetErrorLogger()
 		runtime.EventsEmit(a.ctx, "evaluation_progress", "Spustam vyhodnotenie...")
-
-		if err := scanprocessing.LoadConfig(configName); err != nil {
-			runtime.EventsEmit(a.ctx, "evaluation_error", err.Error())
-			return
-		}
 
 		exam, err := repository.GetExam(a.db, examID)
 		if err != nil {
@@ -465,24 +463,95 @@ func (a *App) EvaluateExam(examID uint, pdfPath, configName string) error {
 			return
 		}
 
-		progressChan := make(chan string, 100)
-		var counter int
+		if err := repository.ClearStudentForExam(a.db, examID); err != nil {
+			runtime.EventsEmit(a.ctx, "evaluation_error", err.Error())
+			return
+		}
+
+		// Copy scan PDF to temp dir so SlicePdfForStudent can find it later
+		if err := os.MkdirAll(common.GLOBAL_TEMP_SCAN, 0755); err != nil {
+			runtime.EventsEmit(a.ctx, "evaluation_error", err.Error())
+			return
+		}
+		safeTitle := common.SanitizeFilename(exam.Title)
+		destPath := filepath.Join(common.GLOBAL_TEMP_SCAN, fmt.Sprintf("scan_%s_%d.pdf", safeTitle, exam.ID))
+		if err := copyFile(pdfPath, destPath); err != nil {
+			runtime.EventsEmit(a.ctx, "evaluation_error", err.Error())
+			return
+		}
+
+		configPath := filepath.Join("configs", configName+".json")
+		cmd := exec.Command("python3", "./scan.py",
+			pdfPath,
+			configPath,
+			fmt.Sprintf("%d", exam.QuestionCount),
+			fmt.Sprintf("%d", exam.OptionCount),
+		)
+
+		stdout, err := cmd.StdoutPipe()
+		if err != nil {
+			runtime.EventsEmit(a.ctx, "evaluation_error", err.Error())
+			return
+		}
+		if err := cmd.Start(); err != nil {
+			runtime.EventsEmit(a.ctx, "evaluation_error", fmt.Sprintf("python3 nie je dostupný: %s", err.Error()))
+			return
+		}
+
 		hadFailures := false
+		var failedPages []int
 
-		go func() {
-			for msg := range progressChan {
-				runtime.EventsEmit(a.ctx, "evaluation_progress", msg)
+		scanner := bufio.NewScanner(stdout)
+		for scanner.Scan() {
+			var msg map[string]interface{}
+			if err := json.Unmarshal([]byte(scanner.Text()), &msg); err != nil {
+				continue
 			}
-		}()
+			switch msg["type"] {
+			case "progress":
+				runtime.EventsEmit(a.ctx, "evaluation_progress", msg["message"])
+			case "result":
+				regNum   := int(msg["registration_number"].(float64))
+				qNumber  := int(msg["question_number"].(float64))
+				answers  := []rune(msg["answers"].(string))
+				pageNum  := int(msg["page"].(float64))
 
-		scanprocessing.ProcessPDF(pdfPath, exam, a.db, progressChan, &counter, &hadFailures)
-		close(progressChan)
+				student, err := repository.GetStudentByRegistrationNumber(a.db, uint(regNum), examID)
+				if err != nil {
+					errorLogger.Error("Študent nenájdený", "regNum", regNum, "error", err.Error())
+					hadFailures = true
+					failedPages = append(failedPages, pageNum)
+					continue
+				}
+				if exam.IsMultiDay && student.Subgroup == "" {
+					student.Subgroup = "A1"
+					a.db.Model(student).Update("subgroup", "A1")
+				}
+				if err := repository.UpdateStudentAnswers(a.db, student.ID, examID, qNumber, answers, pageNum+1); err != nil {
+					errorLogger.Error("Chyba pri ukladaní odpovedí", "studentID", student.ID, "error", err.Error())
+					hadFailures = true
+					failedPages = append(failedPages, pageNum)
+				}
+			case "error":
+				if p, ok := msg["page"].(float64); ok && int(p) >= 0 {
+					hadFailures = true
+					failedPages = append(failedPages, int(p))
+				}
+				errorLogger.Error("Chyba skenovania strany", "page", msg["page"], "message", msg["message"])
+			}
+		}
+		cmd.Wait()
+
+		if len(failedPages) > 0 {
+			if err := pdf.ExportFailedPagesToPDF(safeTitle, exam.ID, failedPages, pdfPath); err != nil {
+				errorLogger.Error("Nepodarilo sa exportovať chybné strany", "error", err.Error())
+			}
+		}
 
 		failedPath := ""
 		if hadFailures {
 			if dirPath, err := config.LoadLastPath(); err == nil {
 				if absDirPath, err := filepath.Abs(dirPath); err == nil {
-					safeTitle := common.SanitizeFilename(exam.Title)
 					failedPath = filepath.Join(absDirPath, fmt.Sprintf("%s%d_failed_pages.pdf", safeTitle, exam.ID))
 				}
 			}
@@ -496,6 +565,21 @@ func (a *App) EvaluateExam(examID uint, pdfPath, configName string) error {
 	}()
 
 	return nil
+}
+
+func copyFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+	_, err = io.Copy(out, in)
+	return err
 }
 
 func (a *App) PickPDF() (string, error) {
