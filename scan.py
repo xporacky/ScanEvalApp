@@ -129,17 +129,27 @@ def fix_rotation(gray: np.ndarray) -> np.ndarray:
 def page_to_gray(doc, page_num: int) -> np.ndarray:
     """Extract page as grayscale numpy array at native scan resolution."""
     page = doc[page_num]
-    # Try to extract embedded image (scanned PDFs store image at native DPI)
     imgs = page.get_images(full=True)
     if imgs:
         xref = imgs[0][0]
+        # Try cv2 first (works for JPEG, PNG)
         raw = doc.extract_image(xref)
         arr = np.frombuffer(raw["image"], dtype=np.uint8)
         img = cv2.imdecode(arr, cv2.IMREAD_GRAYSCALE)
         if img is not None:
             return img
-    # Fallback: render at 200 DPI
-    pix = page.get_pixmap(dpi=200)
+        # Fallback: PyMuPDF Pixmap handles JBIG2, CCITT and other formats
+        # at native scan resolution
+        try:
+            pix = fitz.Pixmap(doc, xref)
+            if pix.colorspace and pix.colorspace != fitz.csGRAY:
+                pix = fitz.Pixmap(fitz.csGRAY, pix)
+            arr = np.frombuffer(pix.samples, dtype=np.uint8)
+            return arr.reshape(pix.height, pix.width)
+        except Exception:
+            pass
+    # Last resort: render at 300 DPI (ensures checkbox areas >= 1800 px²)
+    pix = page.get_pixmap(dpi=300)
     arr = np.frombuffer(pix.samples, dtype=np.uint8)
     img = arr.reshape(pix.height, pix.width, pix.n)
     if pix.n == 4:

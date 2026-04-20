@@ -481,7 +481,7 @@ func (a *App) EvaluateExam(examID uint, pdfPath, configName string) error {
 		}
 
 		configPath := filepath.Join("configs", configName+".json")
-		cmd := exec.Command("python3", "./scan.py",
+		cmd := exec.Command(os.ExpandEnv("$HOME")+"/.scaneval-venv/bin/python3", "./scan.py",
 			pdfPath,
 			configPath,
 			fmt.Sprintf("%d", exam.QuestionCount),
