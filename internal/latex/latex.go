@@ -37,12 +37,16 @@ func buildIDDigits(registrationNumber int) []string {
 }
 
 func buildQRCodePayload(student models.Student, exam models.Exam) string {
+	datum := exam.Date
+	if !student.ExamDate.IsZero() {
+		datum = student.ExamDate
+	}
 	return latexEscape(fmt.Sprintf(
 		"ID:%07d | MENO:%s %s | DATUM:%s | MIESTNOST:%s",
 		student.RegistrationNumber,
 		student.Name,
 		student.Surname,
-		exam.Date.Format("02.01.2006"),
+		datum.Format("02.01.2006"),
 		student.Room,
 	))
 }
@@ -403,9 +407,13 @@ func GenerateMultiDayPDFs(db *gorm.DB, examID uint) ([]string, error) {
 	for _, groupKey := range groups {
 		students := groupMap[groupKey]
 
-		// Zoraď vnútri skupiny podľa priezviska
+		// Zoraď vnútri skupiny podľa ID: prvá štvorica → celé ID
 		sort.Slice(students, func(i, j int) bool {
-			return students[i].Surname < students[j].Surname
+			pi, pj := students[i].RegistrationNumber/1000, students[j].RegistrationNumber/1000
+			if pi != pj {
+				return pi < pj
+			}
+			return students[i].RegistrationNumber < students[j].RegistrationNumber
 		})
 
 		// Názov súboru: datum_cas_miestnost.pdf (nahraď ':' za '-' pre bezpečnosť)
