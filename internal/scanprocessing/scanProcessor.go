@@ -22,6 +22,7 @@ var wg sync.WaitGroup
 var mutexUpdate sync.Mutex
 var mutexGetId sync.Mutex
 var counterMutex sync.Mutex
+var mutexDoc sync.Mutex
 
 type FailedPages struct {
 	mu   sync.Mutex
@@ -136,7 +137,9 @@ func ProcessPage(doc *fitz.Document, pageNumber int, exam *models.Exam, db *gorm
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
+	mutexDoc.Lock()
 	img, err := doc.Image(pageNumber)
+	mutexDoc.Unlock()
 	if err != nil {
 		errorLogger.Error("Chyba pri extrahovaní obrázka z PDF stránky", slog.Int("page", pageNumber), slog.String("error", err.Error()))
 		AddFailedPage(failedPages, exam.ID, pageNumber)
