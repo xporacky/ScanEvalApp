@@ -189,12 +189,15 @@ func extractRegistrationNumberFromQR(qrText string) (int, error) {
 // Returns:
 //   - *models.Student: The student object retrieved from the database, or nil if no student is found.
 //   - error: An error if there was an issue reading the QR code, performing OCR, or querying the database.
-func GetStudent(mat *gocv.Mat, db *gorm.DB, examID uint) (*models.Student, error) {
+func GetStudent(mat *gocv.Mat, db *gorm.DB, examID uint, preQRText string) (*models.Student, error) {
 
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
-	qrText := ReadQR(mat)
+	qrText := preQRText
+	if qrText == "" {
+		qrText = ReadQR(mat)
+	}
 	if qrText != "" {
 		id, err := extractRegistrationNumberFromQR(qrText)
 		if err != nil {

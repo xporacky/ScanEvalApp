@@ -148,6 +148,7 @@ func ProcessPage(doc *fitz.Document, pageNumber int, exam *models.Exam, db *gorm
 	mat := ImageToMat(img)
 	defer mat.Close()
 	mat = MatToGrayscale(mat)
+	preQRText := ReadQR(&mat)
 	mat = FixImageRotation(mat)
 
 	// TODO: Načítaj skupinu (A-H) a podskupinu (1-5) z hlavičky hárkа.
@@ -156,7 +157,7 @@ func ProcessPage(doc *fitz.Document, pageNumber int, exam *models.Exam, db *gorm
 	// Implementuje niekto iný.
 
 	mutexGetId.Lock()
-	student, err := GetStudent(&mat, db, exam.ID)
+	student, err := GetStudent(&mat, db, exam.ID, preQRText)
 	mutexGetId.Unlock()
 
 	if err != nil {
