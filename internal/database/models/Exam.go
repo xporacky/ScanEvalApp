@@ -15,6 +15,7 @@ type Exam struct {
 	QuestionCount int       `gorm:"not null"`
 	Questions     string    // Použitie mapy s typom char
 	Students      []Student `gorm:"foreignKey:ExamID"` // Zoznam študentov
-	OptionCount   int       //value from 3-8
-	ShowName      bool      `gorm:"not null"`
+	OptionCount   int  //value from 3-8
+	ShowName      bool `gorm:"not null"`
+	IsMultiDay    bool
 }

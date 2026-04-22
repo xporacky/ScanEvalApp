@@ -158,6 +158,21 @@ func ProcessPage(doc *fitz.Document, pageNumber int, exam *models.Exam, db *gorm
 	}
 
 	logger.Info("Našiel sa študent v databáze", "studentID", student.ID, "name", student.Name)
+
+	// Detekcia skupiny/podskupiny z hlavičky (len pre multiday testy)
+	if exam.IsMultiDay && student.Subgroup == "" {
+		if groupCode := DetectGroupFromHeader(&mat); groupCode != "" {
+			if err := repository.UpdateStudentSubgroup(db, student.ID, exam.ID, groupCode); err != nil {
+				errorLogger.Error("Chyba pri ukladaní skupiny študenta", "studentID", student.ID, "groupCode", groupCode, "error", err.Error())
+			} else {
+				logger.Info("Priradená skupina študentovi", "studentID", student.ID, "groupCode", groupCode)
+				student.Subgroup = groupCode
+			}
+		} else {
+			errorLogger.Error("Nepodarilo sa rozpoznať skupinu z hlavičky", "PDF strana", pageNumber+1, "studentID", student.ID)
+		}
+	}
+
 	//questionNumber, answers := EvaluateAnswers(&mat, exam.QuestionCount)
 	choices := exam.OptionCount
 	if choices == 0 {

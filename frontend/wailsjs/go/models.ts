@@ -29,6 +29,7 @@ export namespace main {
 	    questionCount: number;
 	    optionCount: number;
 	    studentCount: number;
+	    isMultiDay: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new ExamSummary(source);
@@ -43,6 +44,7 @@ export namespace main {
 	        this.questionCount = source["questionCount"];
 	        this.optionCount = source["optionCount"];
 	        this.studentCount = source["studentCount"];
+	        this.isMultiDay = source["isMultiDay"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

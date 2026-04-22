@@ -58,6 +58,7 @@ type ExamSummary struct {
 	QuestionCount int       `json:"questionCount"`
 	OptionCount   int       `json:"optionCount"`
 	StudentCount  int       `json:"studentCount"`
+	IsMultiDay    bool      `json:"isMultiDay"`
 }
 
 type ExamTemplate struct {
@@ -94,6 +95,7 @@ func (a *App) ListExams() ([]ExamSummary, error) {
 			QuestionCount: exam.QuestionCount,
 			OptionCount:   exam.OptionCount,
 			StudentCount:  len(exam.Students),
+			IsMultiDay:    exam.IsMultiDay,
 		})
 	}
 	return summaries, nil
@@ -180,6 +182,42 @@ func (a *App) CreateExamWithCSV(title, schoolYear, dateTime string, questionCoun
 	}
 
 	return services.CreateExamWithCSV(a.db, title, schoolYear, dateTime, questionCount, optionCount, answers, csvContent, showName)
+}
+
+func (a *App) CreateMultiDayExamWithCSV(title, schoolYear string, questionCount, optionCount int, showName bool, csvContent string, subgroupAnswers map[string]string) error {
+	if a.dbErr != nil {
+		return a.dbErr
+	}
+	if a.db == nil {
+		return fmt.Errorf("database not initialized")
+	}
+	if title == "" || schoolYear == "" {
+		return fmt.Errorf("invalid input")
+	}
+	return services.CreateMultiDayExamWithCSV(a.db, title, schoolYear, questionCount, optionCount, showName, csvContent, subgroupAnswers)
+}
+
+func (a *App) UpdateMultiDayAnswers(examID uint, subgroupAnswers map[string]string) error {
+	if a.dbErr != nil {
+		return a.dbErr
+	}
+	if a.db == nil {
+		return fmt.Errorf("database not initialized")
+	}
+	if examID == 0 {
+		return fmt.Errorf("invalid exam id")
+	}
+	return services.UpdateMultiDayAnswers(a.db, examID, subgroupAnswers)
+}
+
+func (a *App) PrintMultiDayExamPDFs(examID uint) ([]string, error) {
+	if a.dbErr != nil {
+		return nil, a.dbErr
+	}
+	if a.db == nil {
+		return nil, fmt.Errorf("database not initialized")
+	}
+	return latex.GenerateMultiDayPDFs(a.db, examID)
 }
 
 func (a *App) DeleteExam(examID uint) error {
@@ -334,6 +372,16 @@ func (a *App) DownloadStudentSheet(studentID uint) (string, error) {
 	}
 
 	return pdf.SlicePdfForStudent(a.db, studentID)
+}
+
+func (a *App) ExportMultiDayResultsCSV(examID uint) (string, error) {
+	if a.dbErr != nil {
+		return "", a.dbErr
+	}
+	if a.db == nil {
+		return "", fmt.Errorf("database not initialized")
+	}
+	return csv.ExportMultiDayResultsCSV(a.db, examID)
 }
 
 func (a *App) ExportExamStudentsCSV(examID uint) (string, error) {

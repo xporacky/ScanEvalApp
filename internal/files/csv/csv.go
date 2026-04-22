@@ -7,11 +7,13 @@ import (
 	"ScanEvalApp/internal/database/repository"
 	"ScanEvalApp/internal/logging"
 	"encoding/csv"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -98,6 +100,124 @@ func ImportStudentsFromCSV(db *gorm.DB, csvContent string, examID uint) error {
 	return nil
 }
 
+// parseSlovakDate parses dates in DD.MM.YYYY format with or without leading zeros.
+func parseSlovakDate(s string) (time.Time, error) {
+	// normalize: remove spaces around dots ("30. 01. 2007" → "30.01.2007")
+	s = strings.ReplaceAll(s, " ", "")
+	formats := []string{"02.01.2006", "2.01.2006", "02.1.2006", "2.1.2006"}
+	for _, f := range formats {
+		if t, err := time.Parse(f, s); err == nil {
+			return t, nil
+		}
+	}
+	// manual fallback: split by "." and reconstruct as YYYY-MM-DD
+	parts := strings.Split(s, ".")
+	if len(parts) == 3 {
+		normalized := fmt.Sprintf("%s-%02s-%02s", parts[2], parts[1], parts[0])
+		if t, err := time.Parse("2006-01-02", normalized); err == nil {
+			return t, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("nepodporovaný formát dátumu: %q", s)
+}
+
+// ImportStudentsFromFullCSV parses the full 11-column export format (Por.;Priezvisko;Meno;Narodenie;Reg. č.;E-mail;Termín;Čas;Dátum;Miestnosť;Program)
+// and stores students with per-student ExamDate, ExamTime and Room.
+func ImportStudentsFromFullCSV(db *gorm.DB, csvContent string, examID uint) error {
+	exam, err := repository.GetExam(db, examID)
+	if err != nil {
+		return fmt.Errorf("chyba pri načítaní testu: %w", err)
+	}
+
+	logger := logging.GetLogger()
+	errorLogger := logging.GetErrorLogger()
+
+	reader := csv.NewReader(strings.NewReader(csvContent))
+	reader.Comma = ';'
+	reader.LazyQuotes = true
+	rows, err := reader.ReadAll()
+	if err != nil {
+		errorLogger.Error("Chyba pri čítaní full CSV súboru", slog.String("error", err.Error()))
+		return err
+	}
+
+	imported := 0
+	for i, row := range rows {
+		if i == 0 {
+			continue
+		}
+		if len(row) < 10 {
+			errorLogger.Error("Krátky riadok v CSV, preskakujem", slog.Int("row", i))
+			continue
+		}
+
+		// Stĺpce: 0=Por. 1=Priezvisko 2=Meno 3=Narodenie 4=Reg.č. 5=E-mail 6=Termín 7=Čas 8=Dátum 9=Miestnosť 10=Program
+		name := strings.TrimSpace(row[2])
+		surname := strings.TrimSpace(row[1])
+
+		birthRaw := strings.TrimSpace(row[3])
+		birthDate, err := parseSlovakDate(birthRaw)
+		if err != nil {
+			errorLogger.Error("Chyba pri parsovaní dátumu narodenia", slog.String("value", birthRaw), slog.String("error", err.Error()))
+			return err
+		}
+
+		regRaw := strings.TrimSpace(row[4])
+		regStr := strings.ReplaceAll(regRaw, "/", "")
+		registrationNumber, err := strconv.Atoi(regStr)
+		if err != nil {
+			errorLogger.Error("Chyba pri parsovaní reg. čísla", slog.String("value", regRaw), slog.String("error", err.Error()))
+			return err
+		}
+
+		examTimeStr := strings.TrimSpace(row[7])
+
+		datumRaw := strings.TrimSpace(row[8])
+		examDate, err := parseSlovakDate(datumRaw)
+		if err != nil {
+			errorLogger.Error("Chyba pri parsovaní dátumu skúšky", slog.String("value", datumRaw), slog.String("error", err.Error()))
+			return err
+		}
+
+		miestnostRaw := strings.TrimSpace(row[9])
+		room := strings.ToUpper(miestnostRaw)
+		if len(room) > 5 {
+			room = room[:5]
+		}
+
+		student := models.Student{
+			Name:               name,
+			Surname:            surname,
+			BirthDate:          birthDate,
+			RegistrationNumber: registrationNumber,
+			Room:               room,
+			ExamDate:           examDate,
+			ExamTime:           examTimeStr,
+			ExamID:             examID,
+			Answers:            strings.Repeat("0", exam.QuestionCount),
+		}
+
+		_, err = repository.GetStudentByRegistrationNumber(db, uint(registrationNumber), examID)
+		if err == nil {
+			logger.Info("Študent už je v teste, preskakujem", slog.Int("registrationNumber", registrationNumber))
+			continue
+		}
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			errorLogger.Error("Chyba pri overení existencie študenta", slog.String("error", err.Error()))
+			return err
+		}
+
+		if err := repository.CreateStudent(db, &student); err != nil {
+			errorLogger.Error("Chyba pri ukladaní študenta", slog.String("name", student.Name), slog.String("error", err.Error()))
+			return err
+		}
+		imported++
+	}
+
+	logger.Info("Full CSV import dokončený", slog.Int("imported", imported))
+	return nil
+}
+
 // ExportStudentsToCSV exports all students associated with the given exam
 // into a CSV file.
 func ExportStudentsToCSV(db *gorm.DB, exam models.Exam) (string, error) {
@@ -163,6 +283,102 @@ func ExportStudentsToCSV(db *gorm.DB, exam models.Exam) (string, error) {
 	}
 
 	logger.Info("Export študentov do CSV úspešný", slog.String("fileName", fileName), slog.Int("studentCount", len(students)))
+
+	return fileName, nil
+}
+
+// ExportMultiDayResultsCSV exports all students of a multi-day exam into one CSV.
+// Columns: Meno, Priezvisko, Dátum, Čas, Miestnosť, Podskupina, Skóre, Odpovede študenta, Správne odpovede
+func ExportMultiDayResultsCSV(db *gorm.DB, examID uint) (string, error) {
+	errorLogger := logging.GetErrorLogger()
+
+	var exam models.Exam
+	if err := db.Preload("Students").First(&exam, examID).Error; err != nil {
+		return "", err
+	}
+
+	// Deserializuj správne odpovede (JSON mapa alebo plain string)
+	answersMap := map[string]string{}
+	q := strings.TrimSpace(exam.Questions)
+	if strings.HasPrefix(q, "{") {
+		_ = json.Unmarshal([]byte(q), &answersMap)
+	} else if q != "" {
+		answersMap[""] = q
+	}
+
+	dirPath, err := config.LoadLastPath()
+	if err != nil {
+		return "", err
+	}
+	absDirPath, err := filepath.Abs(dirPath)
+	if err != nil {
+		return "", err
+	}
+
+	safeTitle := common.SanitizeFilename(exam.Title)
+	fileName := filepath.Join(absDirPath, fmt.Sprintf("%s_ID%d_vysledky.csv", safeTitle, exam.ID))
+
+	file, err := os.Create(fileName)
+	if err != nil {
+		errorLogger.Error("Chyba pri vytváraní CSV", slog.String("error", err.Error()))
+		return "", err
+	}
+	defer file.Close()
+	file.Write([]byte{0xEF, 0xBB, 0xBF})
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	header := []string{"Meno", "Priezvisko", "Dátum skúšky", "Čas", "Miestnosť", "Podskupina", "Skóre", "Odpovede študenta", "Správne odpovede"}
+	if err := writer.Write(header); err != nil {
+		return "", err
+	}
+
+	// Zoraď: Dátum → Čas → Miestnosť → Priezvisko
+	students := exam.Students
+	sort.Slice(students, func(i, j int) bool {
+		di, dj := students[i].ExamDate, students[j].ExamDate
+		if !di.Equal(dj) {
+			return di.Before(dj)
+		}
+		if students[i].ExamTime != students[j].ExamTime {
+			return students[i].ExamTime < students[j].ExamTime
+		}
+		if students[i].Room != students[j].Room {
+			return students[i].Room < students[j].Room
+		}
+		return students[i].Surname < students[j].Surname
+	})
+
+	for _, s := range students {
+		correctAns := answersMap[s.Subgroup]
+		if correctAns == "" && len(answersMap) == 1 {
+			for _, v := range answersMap {
+				correctAns = v
+			}
+		}
+
+		dateStr := ""
+		if !s.ExamDate.IsZero() {
+			dateStr = s.ExamDate.Format("02.01.2006")
+		}
+
+		record := []string{
+			s.Name,
+			s.Surname,
+			dateStr,
+			s.ExamTime,
+			s.Room,
+			s.Subgroup,
+			strconv.Itoa(s.Score),
+			s.Answers,
+			correctAns,
+		}
+		if err := writer.Write(record); err != nil {
+			errorLogger.Error("Chyba pri zápise riadku", slog.String("error", err.Error()))
+			return "", err
+		}
+	}
 
 	return fileName, nil
 }

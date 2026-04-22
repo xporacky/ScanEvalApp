@@ -11,9 +11,13 @@ const CHECKBOX_PADDING = 5
 const BORDER_RECTANGLE_AREA_SIZE = 1000000
 
 // Group checkbox paddings
-const GROUP_HEADER_HEIGHT = 500
-const GROUP_SIDE_PADDING = 450
-const GROUP_BOTTOM_PADDING = 100
+const GROUP_HEADER_HEIGHT = 350
+const GROUP_SIDE_PADDING = 470
+const GROUP_BOTTOM_PADDING = 250
+
+const SUBGROUP_HEADER_HEIGHT = 210
+const SUBGROUP_SIDE_PADDING = 635
+const SUBGROUP_BOTTOM_PADDING = 120
 
 // Checkbox area thresholds for 0.45cm boxes scanned at 300 DPI:
 // 0.45cm * (300/2.54) ≈ 53px per side → area ≈ 2825 px²

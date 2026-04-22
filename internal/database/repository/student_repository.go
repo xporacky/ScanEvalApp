@@ -2,6 +2,7 @@ package repository
 
 import (
 	"ScanEvalApp/internal/database/models"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -143,9 +144,36 @@ func GetStudentsQuery(db *gorm.DB, query string) ([]models.Student, error) {
 	return students, nil
 }
 
+// resolveCorrectAnswers returns the correct answer string for the given student.
+// For multi-day exams (Questions is JSON), it looks up by student.Subgroup.
+// If subgroup is not yet set (header not scanned), returns nil — scoring is skipped.
+func resolveCorrectAnswers(exam *models.Exam, student *models.Student) []rune {
+	if strings.HasPrefix(strings.TrimSpace(exam.Questions), "{") {
+		var answersMap map[string]string
+		if err := json.Unmarshal([]byte(exam.Questions), &answersMap); err == nil {
+			if student.Subgroup == "" {
+				// TODO: Subgroup not yet set — will be filled once header scanning is implemented
+				return nil
+			}
+			if ans, ok := answersMap[student.Subgroup]; ok {
+				return []rune(ans)
+			}
+		}
+		return nil
+	}
+	return []rune(exam.Questions)
+}
+
+func UpdateStudentSubgroup(db *gorm.DB, studentId uint, examId uint, subgroup string) error {
+	return db.Model(&models.Student{}).
+		Where("id = ? AND exam_id = ?", studentId, examId).
+		Update("subgroup", subgroup).Error
+}
+
 func UpdateStudentAnswers(db *gorm.DB, studentId uint, examId uint, questionNumber int, answers []rune, pageNumber int) error {
+	logger := logging.GetLogger()
+
 	student, err := GetStudentById(db, studentId, examId)
-	//student, err := GetStudentByRegistrationNumber(db, studentId, examId)
 	if err != nil {
 		return err
 	}
@@ -153,7 +181,7 @@ func UpdateStudentAnswers(db *gorm.DB, studentId uint, examId uint, questionNumb
 	if err != nil {
 		return err
 	}
-	correctAnswers := []rune(exam.Questions)
+
 	studentAnswers := []rune(student.Answers)
 	for i, answer := range answers {
 		studentAnswers[(questionNumber-len(answers))+i+1] = answer
@@ -161,11 +189,17 @@ func UpdateStudentAnswers(db *gorm.DB, studentId uint, examId uint, questionNumb
 	student.Answers = string(studentAnswers)
 
 	pageNumberStr := strconv.Itoa(pageNumber)
-
 	if student.Pages == "" {
 		student.Pages = pageNumberStr
 	} else {
 		student.Pages += "-" + pageNumberStr
+	}
+
+	correctAnswers := resolveCorrectAnswers(exam, student)
+	if correctAnswers == nil {
+		logger.Info("Preskakujem skórovanie — správne odpovede nie sú dostupné", "studentID", studentId)
+		UpdateStudent(db, student)
+		return nil
 	}
 
 	startIndex := (questionNumber - len(answers)) + 1
@@ -173,10 +207,10 @@ func UpdateStudentAnswers(db *gorm.DB, studentId uint, examId uint, questionNumb
 
 	score := 0
 	for i := startIndex; i <= endIndex; i++ {
-		studentChar := unicode.ToLower(studentAnswers[i])
-		correctChar := unicode.ToLower(correctAnswers[i])
-
-		if studentChar == correctChar {
+		if i >= len(correctAnswers) {
+			break
+		}
+		if unicode.ToLower(studentAnswers[i]) == unicode.ToLower(correctAnswers[i]) {
 			score++
 		}
 	}

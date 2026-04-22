@@ -49,15 +49,30 @@ func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int, numberOfChoices int) 
 		logger.Info("Ohraničujúci obdĺžnik nebol nájdený", slog.String("error", err.Error()))
 		return common.QUESTION_NUMBER_NOT_FOUND, nil
 	}
+	/*
+		croppedUpperHeader, err := CropGroupFromHeader(mat)
+		if err != nil {
+			logger.Info("Ohraničujúci obdĺžnik nebol nájdený", slog.String("error", err.Error()))
+			return common.QUESTION_NUMBER_NOT_FOUND, nil
+		}
+		defer croppedUpperHeader.Close()
+		group := GetGroupCode(&croppedUpperHeader)
 
-	croppedHeader, err := CropGroupFromHeader(mat)
-	if err != nil {
-		logger.Info("Ohraničujúci obdĺžnik nebol nájdený", slog.String("error", err.Error()))
-		return common.QUESTION_NUMBER_NOT_FOUND, nil
-	}
-	//SaveMat("./assets/group-crop2.png", croppedHeader)
-	var group = GetGroupCode(&croppedHeader)
-	fmt.Println("Skupina:" + group)
+		croppedLowerHeader, err := CropSubGroupFromHeader(mat)
+		if err != nil {
+			logger.Info("Ohraničujúci obdĺžnik nebol nájdený", slog.String("error", err.Error()))
+			return common.QUESTION_NUMBER_NOT_FOUND, nil
+		}
+		defer croppedLowerHeader.Close()
+		subGroup := GetSubGroupCode(&croppedLowerHeader)
+
+		if group == 'x' || subGroup == -1 {
+			logger.Info("Nebola najdena skupina alebo podskupina", slog.Any("group", string(group)), slog.Int("subGroup", subGroup))
+			return common.QUESTION_NUMBER_NOT_FOUND, nil
+		}
+		groupCode := fmt.Sprintf("%c%d", group, subGroup)
+		fmt.Println(groupCode)
+	*/
 	questionNumber := common.QUESTION_NUMBER_NOT_FOUND
 	for i := 0; i < NUMBER_OF_QUESTIONS_PER_PAGE; i++ {
 		studentAnswers = append(studentAnswers, GetAnswer(&croppedMat, i, numberOfChoices))
@@ -79,6 +94,43 @@ func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int, numberOfChoices int) 
 		return common.QUESTION_NUMBER_NOT_FOUND, nil
 	}
 	return questionNumber - 1, studentAnswers
+}
+
+// DetectGroupFromHeader reads the group (A-H) and subgroup (1-5) checkboxes from the
+// header of the scanned sheet and returns a combined code like "A1", "B3", etc.
+// Returns an empty string if detection fails or the result is ambiguous.
+func DetectGroupFromHeader(mat *gocv.Mat) string {
+	logger := logging.GetLogger()
+
+	croppedUpper, err := CropGroupFromHeader(mat)
+	if err != nil {
+		logger.Info("Nepodarilo sa oreznúť oblasť skupiny", slog.String("error", err.Error()))
+		return ""
+	}
+	defer croppedUpper.Close()
+
+	group := GetGroupCode(&croppedUpper)
+	if group == 'x' {
+		logger.Info("Skupinový kód nebol rozpoznaný")
+		return ""
+	}
+
+	croppedLower, err := CropSubGroupFromHeader(mat)
+	if err != nil {
+		logger.Info("Nepodarilo sa oreznúť oblasť podskupiny", slog.String("error", err.Error()))
+		return ""
+	}
+	defer croppedLower.Close()
+
+	subGroup := GetSubGroupCode(&croppedLower)
+	if subGroup == -1 {
+		logger.Info("Podskupinový kód nebol rozpoznaný")
+		return ""
+	}
+
+	groupCode := fmt.Sprintf("%c%d", group-('a'-'A'), subGroup)
+	logger.Info("Rozpoznaná skupina/podskupina", slog.String("groupCode", groupCode))
+	return groupCode
 }
 
 // CropMatAnswersOnly extracts the region of the image that contains only the answers.
@@ -147,6 +199,49 @@ func CropGroupFromHeader(mat *gocv.Mat) (gocv.Mat, error) {
 	}
 
 	croppedMat := mat.Region(headerRect)
+	//SaveMat("./assets/group-crop.png", croppedMat)
+	return croppedMat, nil
+}
+
+func CropSubGroupFromHeader(mat *gocv.Mat) (gocv.Mat, error) {
+	rect := FindRectangle(mat, BORDER_RECTANGLE_AREA_SIZE, -1)
+	if rect.Empty() {
+		return gocv.NewMat(), fmt.Errorf("hlavny obdlznik nebol najdeny")
+	}
+
+	// Vyrezeme pas nad hlavnym obdlznikom.
+	// Sirka ostane rovnaka ako hlavny obdlznik, vyska je len male pasmo nad nim.
+	headerRect := image.Rectangle{
+		Min: image.Point{
+			X: rect.Min.X + SUBGROUP_SIDE_PADDING,
+			Y: rect.Min.Y - SUBGROUP_HEADER_HEIGHT,
+		},
+		Max: image.Point{
+			X: rect.Max.X - SUBGROUP_SIDE_PADDING,
+			Y: rect.Min.Y - SUBGROUP_BOTTOM_PADDING,
+		},
+	}
+
+	// Ochrana proti vybehnutiu mimo obrazka
+	if headerRect.Min.X < 0 {
+		headerRect.Min.X = 0
+	}
+	if headerRect.Min.Y < 0 {
+		headerRect.Min.Y = 0
+	}
+	if headerRect.Max.X > mat.Cols() {
+		headerRect.Max.X = mat.Cols()
+	}
+	if headerRect.Max.Y > mat.Rows() {
+		headerRect.Max.Y = mat.Rows()
+	}
+
+	if headerRect.Dx() <= 0 || headerRect.Dy() <= 0 {
+		return gocv.NewMat(), fmt.Errorf("oblast headera je prilis mala alebo mimo obrazka")
+	}
+
+	croppedMat := mat.Region(headerRect)
+	//SaveMat("./assets/group-crop2.png", croppedMat)
 	return croppedMat, nil
 }
 
@@ -200,6 +295,8 @@ func GetQuestionNumber(mat *gocv.Mat, i int, numberOfChoices int) int {
 	errorLogger := logging.GetErrorLogger()
 	rect := image.Rectangle{Min: image.Point{PADDING, PADDING + (i * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE)}, Max: image.Point{(mat.Cols() / (numberOfChoices + 1)) - PADDING, ((i + 1) * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE) - PADDING}}
 	questionMat := mat.Region(rect)
+	path := fmt.Sprintf("./assets/nemberMat_%d.png", i)
+	SaveMat(path, questionMat)
 	defer questionMat.Close()
 	SaveMat(TEMP_IMAGE_PATH, questionMat)
 	questionNum, err := ocr.ExtractQuestionNumber(TEMP_IMAGE_PATH)
@@ -247,6 +344,7 @@ func GetAnswer(mat *gocv.Mat, i int, numberOfChoices int) rune {
 		minArea, maxArea := answerSquareAreaBounds(numberOfChoices)
 		rect := FindRectangle(&checkboxMat, minArea, maxArea)
 		if rect.Empty() {
+			checkboxMat.Close()
 			if state == StateCircleFound {
 				return rune('x')
 			}
@@ -255,9 +353,15 @@ func GetAnswer(mat *gocv.Mat, i int, numberOfChoices int) rune {
 			continue
 		}
 		checkboxWithoutBorder := image.Rectangle{Min: image.Point{rect.Min.X + pad, rect.Min.Y + pad}, Max: image.Point{rect.Max.X - pad, rect.Max.Y - pad}}
+		if checkboxWithoutBorder.Dx() <= 0 || checkboxWithoutBorder.Dy() <= 0 {
+			checkboxMat.Close()
+			continue
+		}
 		rectMat := checkboxMat.Region(checkboxWithoutBorder)
 		meanIntensity := rectMat.Mean()
 		if meanIntensity.Val1 < MEAN_INTENSITY_X_HIGHEST && meanIntensity.Val1 > MEAN_INTENSITY_X_LOWEST {
+			rectMat.Close()
+			checkboxMat.Close()
 			if state == StateEmpty {
 				answer = rune('a' + (j - 1))
 				state = StateXFound
@@ -267,106 +371,130 @@ func GetAnswer(mat *gocv.Mat, i int, numberOfChoices int) rune {
 			}
 		}
 		//fmt.Println(meanIntensity.Val1)
-		defer checkboxMat.Close()
-		defer rectMat.Close()
+		rectMat.Close()
+		checkboxMat.Close()
 	}
 	return answer
 }
 
-func GetGroupCode(headerMat *gocv.Mat) string {
-	topLabels := []string{"A", "B", "C", "D", "E", "F", "G", "H"}
-	bottomLabels := []string{"1", "2", "3", "4", "5"}
+func GetGroupCode(headerMat *gocv.Mat) rune {
+	state := StateEmpty
+	answer := rune('x')
+	numberOfGroups := 8
+	pad := checkboxPaddingForChoices(numberOfGroups)
+	for j := 0; j < numberOfGroups; j++ {
+		checkbox := image.Rectangle{
+			Min: image.Point{
+				X: j * headerMat.Cols() / numberOfGroups,
+				Y: 0,
+			},
+			Max: image.Point{
+				X: (j + 1) * headerMat.Cols() / numberOfGroups,
+				Y: headerMat.Rows(),
+			},
+		}
 
-	topXs := []float64{0.07, 0.19, 0.31, 0.43, 0.57, 0.69, 0.81, 0.93}
-	bottomXs := []float64{0.23, 0.36, 0.50, 0.64, 0.77}
+		checkboxMat := headerMat.Region(checkbox)
+		minArea, maxArea := answerSquareAreaBounds(numberOfGroups)
+		rect := FindRectangle(&checkboxMat, minArea, maxArea)
+		if rect.Empty() {
+			checkboxMat.Close()
+			if state == StateCircleFound {
+				return rune('x')
+			}
+			answer = rune('a' + j)
+			state = StateCircleFound
+			continue
+		}
+		checkboxWithoutBorder := image.Rectangle{Min: image.Point{rect.Min.X + pad, rect.Min.Y + pad}, Max: image.Point{rect.Max.X - pad, rect.Max.Y - pad}}
+		if checkboxWithoutBorder.Dx() <= 0 || checkboxWithoutBorder.Dy() <= 0 {
+			checkboxMat.Close()
+			continue
+		}
+		rectMat := checkboxMat.Region(checkboxWithoutBorder)
+		meanIntensity := rectMat.Mean()
+		if meanIntensity.Val1 < MEAN_INTENSITY_X_HIGHEST && meanIntensity.Val1 > MEAN_INTENSITY_X_LOWEST {
+			rectMat.Close()
+			checkboxMat.Close()
+			if state == StateEmpty {
+				answer = rune('a' + j)
+				state = StateXFound
+				continue
+			} else if state == StateXFound {
+				answer = rune('x')
+			}
+		}
 
-	topY := 0.34
-	bottomY := 0.78
+		/*path := fmt.Sprintf("./assets/group_part_%d.png", i)
+		SaveMat(path, checkboxMat)*/
 
-	boxW := int(0.09 * float64(headerMat.Cols()))
-	boxH := int(0.23 * float64(headerMat.Rows()))
-
-	topChoice := detectSingleMarkedBox(headerMat, topXs, topY, boxW, boxH, topLabels)
-	bottomChoice := detectSingleMarkedBox(headerMat, bottomXs, bottomY, boxW, boxH, bottomLabels)
-
-	if topChoice == "" || bottomChoice == "" {
-		return ""
+		rectMat.Close()
+		checkboxMat.Close()
 	}
-
-	return topChoice + bottomChoice
+	return answer
 }
 
-func detectSingleMarkedBox(
-	headerMat *gocv.Mat,
-	xCenters []float64,
-	yCenter float64,
-	boxW int,
-	boxH int,
-	labels []string,
-) string {
-	found := ""
+func GetSubGroupCode(headerMat *gocv.Mat) int {
+	state := StateEmpty
+	answer := -1
+	numberOfSubgroups := 5
+	pad := CHECKBOX_PADDING
 
-	for i, xRatio := range xCenters {
-		cx := int(xRatio * float64(headerMat.Cols()))
-		cy := int(yCenter * float64(headerMat.Rows()))
-
-		rect := image.Rect(
-			cx-boxW/2,
-			cy-boxH/2,
-			cx+boxW/2,
-			cy+boxH/2,
-		)
-
-		if rect.Min.X < 0 {
-			rect.Min.X = 0
-		}
-		if rect.Min.Y < 0 {
-			rect.Min.Y = 0
-		}
-		if rect.Max.X > headerMat.Cols() {
-			rect.Max.X = headerMat.Cols()
-		}
-		if rect.Max.Y > headerMat.Rows() {
-			rect.Max.Y = headerMat.Rows()
-		}
-		if rect.Dx() <= 0 || rect.Dy() <= 0 {
-			continue
+	for j := 0; j < numberOfSubgroups; j++ {
+		checkbox := image.Rectangle{
+			Min: image.Point{
+				X: j * headerMat.Cols() / numberOfSubgroups,
+				Y: 0,
+			},
+			Max: image.Point{
+				X: (j + 1) * headerMat.Cols() / numberOfSubgroups,
+				Y: headerMat.Rows(),
+			},
 		}
 
-		cellMat := headerMat.Region(rect)
+		checkboxMat := headerMat.Region(checkbox)
 
-		minArea, maxArea := answerSquareAreaBounds(8)
-		boxRect := FindRectangle(&cellMat, minArea, maxArea)
-		if boxRect.Empty() {
-			cellMat.Close()
-			continue
-		}
-
-		pad := CHECKBOX_PADDING
-		inner := image.Rect(
-			boxRect.Min.X+pad,
-			boxRect.Min.Y+pad,
-			boxRect.Max.X-pad,
-			boxRect.Max.Y-pad,
-		)
-		if inner.Dx() <= 0 || inner.Dy() <= 0 {
-			cellMat.Close()
-			continue
-		}
-
-		innerMat := cellMat.Region(inner)
-		mean := innerMat.Mean()
-
-		innerMat.Close()
-		cellMat.Close()
-
-		if mean.Val1 < MEAN_INTENSITY_X_HIGHEST && mean.Val1 > MEAN_INTENSITY_X_LOWEST {
-			if found != "" {
-				return ""
+		minArea, maxArea := answerSquareAreaBounds(numberOfSubgroups)
+		rect := FindRectangle(&checkboxMat, minArea, maxArea)
+		if rect.Empty() {
+			checkboxMat.Close()
+			if state == StateCircleFound {
+				return -1
 			}
-			found = labels[i]
+			answer = j + 1
+			state = StateCircleFound
+			continue
 		}
+
+		checkboxWithoutBorder := image.Rectangle{
+			Min: image.Point{rect.Min.X + pad, rect.Min.Y + pad},
+			Max: image.Point{rect.Max.X - pad, rect.Max.Y - pad},
+		}
+
+		if checkboxWithoutBorder.Dx() <= 0 || checkboxWithoutBorder.Dy() <= 0 {
+			checkboxMat.Close()
+			continue
+		}
+
+		rectMat := checkboxMat.Region(checkboxWithoutBorder)
+		meanIntensity := rectMat.Mean()
+
+		if meanIntensity.Val1 < MEAN_INTENSITY_X_HIGHEST && meanIntensity.Val1 > MEAN_INTENSITY_X_LOWEST {
+			rectMat.Close()
+			checkboxMat.Close()
+
+			if state == StateEmpty {
+				answer = j + 1
+				state = StateXFound
+				continue
+			} else if state == StateXFound {
+				return -1
+			}
+		}
+
+		rectMat.Close()
+		checkboxMat.Close()
 	}
 
-	return found
+	return answer
 }

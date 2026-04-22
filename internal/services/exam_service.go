@@ -1,6 +1,7 @@
 package services
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
@@ -41,6 +42,56 @@ func CreateExamWithCSV(db *gorm.DB, title, schoolYear, dateTime string, question
 	}
 
 	return csv.ImportStudentsFromCSV(db, csvContent, exam.ID)
+}
+
+func CreateMultiDayExamWithCSV(db *gorm.DB, title, schoolYear string, questionCount, optionCount int, showName bool, csvContent string, subgroupAnswers map[string]string) error {
+	if !isValidSchoolYear(schoolYear) {
+		return fmt.Errorf("invalid school year")
+	}
+	if questionCount <= 0 {
+		return fmt.Errorf("invalid question count")
+	}
+
+	questionsJSON, err := serializeSubgroupAnswers(subgroupAnswers)
+	if err != nil {
+		return fmt.Errorf("chyba pri serializácii odpovedí: %w", err)
+	}
+
+	exam := models.Exam{
+		Title:         title,
+		SchoolYear:    schoolYear,
+		Date:          time.Now(),
+		QuestionCount: questionCount,
+		OptionCount:   optionCount,
+		ShowName:      showName,
+		IsMultiDay:    true,
+		Questions:     questionsJSON,
+	}
+
+	if err := repository.CreateExam(db, &exam); err != nil {
+		return err
+	}
+
+	return csv.ImportStudentsFromFullCSV(db, csvContent, exam.ID)
+}
+
+func UpdateMultiDayAnswers(db *gorm.DB, examID uint, subgroupAnswers map[string]string) error {
+	questionsJSON, err := serializeSubgroupAnswers(subgroupAnswers)
+	if err != nil {
+		return fmt.Errorf("chyba pri serializácii odpovedí: %w", err)
+	}
+	return db.Model(&models.Exam{}).Where("id = ?", examID).Update("questions", questionsJSON).Error
+}
+
+func serializeSubgroupAnswers(subgroupAnswers map[string]string) (string, error) {
+	if len(subgroupAnswers) == 0 {
+		return "", nil
+	}
+	b, err := json.Marshal(subgroupAnswers)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
 }
 
 func UpdateExamAnswers(db *gorm.DB, examID uint, answers []string) error {
