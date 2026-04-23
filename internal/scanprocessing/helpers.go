@@ -34,7 +34,7 @@ func extractIDByBoxOCR(mat *gocv.Mat) (int, error) {
 	logger := logging.GetLogger()
 
 	scale := float64(mat.Cols()) * (1.0 - 2.0*20.32/210.0) / 18.4
-	centerX := float64(mat.Cols()) / 2.0
+	centerX := float64(mat.Cols())/2.0 + float64(mat.Cols())*ID_CENTER_X_OFFSET_RATIO
 	separatorY := float64(mat.Cols()) * ID_SEPARATOR_Y_RATIO
 
 	toPixelX := func(x float64) int { return int(centerX + x*scale) }

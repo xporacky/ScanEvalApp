@@ -19,6 +19,10 @@ const ID_REGION_LEFT_PERCENT = 55
 // Decrease to shift crops UP, increase to shift DOWN.
 const ID_SEPARATOR_Y_RATIO = 0.24
 
+// ID_CENTER_X_OFFSET_RATIO: horizontal offset added to page center before tikz→pixel conversion.
+// Fraction of mat.Cols() — e.g. 0.02 ≈ 4mm right on A4. Increase to shift crops RIGHT.
+const ID_CENTER_X_OFFSET_RATIO = 0.0
+
 // Group checkbox paddings
 const GROUP_HEADER_HEIGHT = 350
 const GROUP_SIDE_PADDING = 470
