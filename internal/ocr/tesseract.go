@@ -15,6 +15,7 @@ import (
 // PSM_SINGLE_LINE specifies Tesseract's Page Segmentation Mode 7,
 // treating the image as a single line of text.
 const PSM_SINGLE_LINE = "7"
+const PSM_SINGLE_CHAR = "10"
 
 // PSM_UNIFORM_BLOCK specifies Tesseract's Page Segmentation Mode 6,
 // treating the image as a single uniform block of text.
@@ -177,6 +178,12 @@ func ExtractID(path string) (int, error) {
 
 	errorLogger.Error("No ID found in the input image", slog.String("path", path))
 	return 0, errors.New("no id found in the input image")
+}
+
+// OcrSingleChar reads a single digit character from a tightly cropped image.
+// Uses PSM 10 (single character mode) with digit-only whitelist.
+func OcrSingleChar(imagePath string) (string, error) {
+	return ocrImageDigitsOnly(imagePath, PSM_SINGLE_CHAR)
 }
 
 // ExtractQuestionNumber performs OCR on the specified image path to extract and parse a question number.

@@ -16,12 +16,75 @@ import (
 
 	"ScanEvalApp/internal/logging"
 	"log/slog"
+	"strings"
 
 	"gocv.io/x/gocv"
 	"gorm.io/gorm"
 )
 
 var qrIDPattern = regexp.MustCompile(`(?:^|[|;\s])ID\s*:\s*(\d+)`)
+
+// extractIDByBoxOCR reads the 7 ID digits one box at a time using PSM 10 (single char).
+// Box positions come from template_6.tex tikz coordinates.
+// Coordinate math (A4, 0.8in margins, tikz range -9.2..9.2):
+//   scale    = mat.Cols() * (1 - 2*20.32/210) / 18.4   [px per tikz unit]
+//   pixelX   = mat.Cols()/2 + tikzX * scale
+//   pixelY   = separatorY - (tikzY + 0.7) * scale       [separator line at tikz y=-0.7, ~28% down from top]
+func extractIDByBoxOCR(mat *gocv.Mat) (int, error) {
+	logger := logging.GetLogger()
+
+	scale := float64(mat.Cols()) * (1.0 - 2.0*20.32/210.0) / 18.4
+	centerX := float64(mat.Cols()) / 2.0
+	// separator at tikz y=-0.7 is ~28% from top of A4 page (derived from headheight=110pt, topmargin adjusted by -25pt)
+	separatorY := float64(mat.Cols()) * 0.28
+
+	toPixelX := func(x float64) int { return int(centerX + x*scale) }
+	toPixelY := func(y float64) int { return int(separatorY - (y+0.7)*scale) }
+
+	// Box positions from template_6.tex: \draw[thick] (X,2.8) rectangle ++(0.6,0.6)
+	boxXPositions := []float64{3.50, 4.22, 4.94, 5.66, 7.10, 7.82, 8.54}
+	boxTop := toPixelY(3.4)
+	boxBottom := toPixelY(2.8)
+	// Crop 4px inside each border so the thick rectangle lines don't confuse OCR
+	const borderPad = 4
+
+	digits := ""
+	for i, bx := range boxXPositions {
+		region := image.Rectangle{
+			Min: image.Point{toPixelX(bx) + borderPad, boxTop + borderPad},
+			Max: image.Point{toPixelX(bx+0.6) - borderPad, boxBottom - borderPad},
+		}
+		if region.Min.X < 0 || region.Min.Y < 0 || region.Max.X > mat.Cols() || region.Max.Y > mat.Rows() {
+			return 0, fmt.Errorf("digit box %d out of image bounds: %v", i, region)
+		}
+
+		digitMat := mat.Region(region)
+		tmpPath := fmt.Sprintf("./assets/tmp/id-digit-%d.png", i)
+		SaveMat(tmpPath, digitMat)
+		digitMat.Close()
+
+		raw, err := ocr.OcrSingleChar(tmpPath)
+		files.DeleteFile(tmpPath)
+		if err != nil {
+			return 0, fmt.Errorf("OCR failed for digit box %d: %w", i, err)
+		}
+
+		d := strings.TrimSpace(raw)
+		logger.Info("ID box OCR", slog.Int("box", i), slog.String("digit", d))
+		digits += d
+	}
+
+	logger.Info("ID box OCR combined", slog.String("digits", digits))
+	if len(digits) != 7 {
+		return 0, fmt.Errorf("expected 7 digits from boxes, got %q", digits)
+	}
+	var id int
+	_, err := fmt.Sscan(digits, &id)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse ID %q: %w", digits, err)
+	}
+	return id, nil
+}
 
 // FindContours detects external contours in the provided image using edge detection and morphological operations.
 //
@@ -206,20 +269,26 @@ func GetStudent(mat *gocv.Mat, db *gorm.DB, examID uint) (*models.Student, error
 		return repository.GetStudentByRegistrationNumber(db, uint(id), examID)
 
 	}
-	logger.Warn("QR kód nebol nájdený, pokúšame sa získať registrationNumber zo záhlavia")
+	logger.Warn("QR kód nebol nájdený, pokúšame sa získať ID z boxov v hlavičke")
 
-	idLeft := mat.Cols() * ID_REGION_LEFT_PERCENT / 100
-	rect := image.Rectangle{Min: image.Point{idLeft, PADDING}, Max: image.Point{mat.Cols() - PADDING, (mat.Rows() / 4) - PADDING}}
-	headerMat := mat.Region(rect)
-	defer headerMat.Close()
-	SaveMat(TEMP_HEADER_IMAGE_PATH, headerMat)
-	registrationNumber, err := ocr.ExtractID(TEMP_HEADER_IMAGE_PATH)
-	files.DeleteFile(TEMP_HEADER_IMAGE_PATH)
+	// Primary fallback: crop each ID digit box individually (PSM 10, single char).
+	registrationNumber, err := extractIDByBoxOCR(mat)
 	if err != nil {
-		errorLogger.Error("Chyba pri extrakcii registrationNumber zo záhlavia obrázku", slog.String("error", err.Error()))
-		return nil, err
+		logger.Warn("Box OCR fallback zlyhal, skúšam header OCR", slog.String("error", err.Error()))
+		// Secondary fallback: crop right portion of header and run full OCR.
+		idLeft := mat.Cols() * ID_REGION_LEFT_PERCENT / 100
+		rect := image.Rectangle{Min: image.Point{idLeft, PADDING}, Max: image.Point{mat.Cols() - PADDING, (mat.Rows() / 4) - PADDING}}
+		headerMat := mat.Region(rect)
+		defer headerMat.Close()
+		SaveMat(TEMP_HEADER_IMAGE_PATH, headerMat)
+		registrationNumber, err = ocr.ExtractID(TEMP_HEADER_IMAGE_PATH)
+		files.DeleteFile(TEMP_HEADER_IMAGE_PATH)
+		if err != nil {
+			errorLogger.Error("Chyba pri extrakcii registrationNumber zo záhlavia obrázku", slog.String("error", err.Error()))
+			return nil, err
+		}
 	}
-	logger.Info("Registracne cislo bolo najdene z hlavicky", slog.Int("registrationNumber", registrationNumber))
+	logger.Info("Registracne cislo bolo najdene", slog.Int("registrationNumber", registrationNumber))
 	return repository.GetStudentByRegistrationNumber(db, uint(registrationNumber), examID)
 }
 
