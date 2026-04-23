@@ -100,11 +100,13 @@ func parseIDFromOCRText(text string) (int, bool) {
 }
 
 func ExtractID(path string) (int, error) {
+	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 	dt, err := OcrImage(path, PSM_UNIFORM_BLOCK)
 	if err != nil {
 		return 0, err
 	}
+	logger.Info("OCR raw text (PSM_UNIFORM_BLOCK)", slog.String("text", dt))
 	if id, ok := parseIDFromOCRText(dt); ok {
 		return id, nil
 	}
@@ -112,6 +114,7 @@ func ExtractID(path string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	logger.Info("OCR raw text (PSM_DEFAULT)", slog.String("text", dt))
 	if id, ok := parseIDFromOCRText(dt); ok {
 		return id, nil
 	}
