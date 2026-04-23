@@ -10,6 +10,10 @@ const CHECKBOX_AREA_PADDING = -5
 const CHECKBOX_PADDING = 5
 const BORDER_RECTANGLE_AREA_SIZE = 1000000
 
+// ID region starts at ~65% from left (tikz x=3.5 out of -9.2..9.2 range, 300 DPI A4).
+// Using 55% to also capture the "ID:" label for OCR fallback.
+const ID_REGION_LEFT_PERCENT = 55
+
 // Group checkbox paddings
 const GROUP_HEADER_HEIGHT = 350
 const GROUP_SIDE_PADDING = 470

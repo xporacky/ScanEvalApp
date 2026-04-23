@@ -208,7 +208,8 @@ func GetStudent(mat *gocv.Mat, db *gorm.DB, examID uint) (*models.Student, error
 	}
 	logger.Warn("QR kód nebol nájdený, pokúšame sa získať registrationNumber zo záhlavia")
 
-	rect := image.Rectangle{Min: image.Point{PADDING, PADDING}, Max: image.Point{mat.Cols() - PADDING, (mat.Rows() / 4) - PADDING}}
+	idLeft := mat.Cols() * ID_REGION_LEFT_PERCENT / 100
+	rect := image.Rectangle{Min: image.Point{idLeft, PADDING}, Max: image.Point{mat.Cols() - PADDING, (mat.Rows() / 4) - PADDING}}
 	headerMat := mat.Region(rect)
 	defer headerMat.Close()
 	SaveMat(TEMP_HEADER_IMAGE_PATH, headerMat)
