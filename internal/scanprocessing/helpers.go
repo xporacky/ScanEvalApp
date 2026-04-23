@@ -79,13 +79,20 @@ func extractIDByBoxOCR(mat *gocv.Mat) (int, error) {
 	}
 
 	logger.Info("ID box OCR combined", slog.String("digits", digits))
-	if len(digits) != 7 {
-		return 0, fmt.Errorf("expected 7 digits from boxes, got %q", digits)
+	// Strip any "/" that OCR may produce (it's in the whitelist for the full-header fallback).
+	clean := strings.Map(func(r rune) rune {
+		if r >= '0' && r <= '9' {
+			return r
+		}
+		return -1
+	}, digits)
+	logger.Info("ID box OCR cleaned", slog.String("clean", clean))
+	if len(clean) == 0 {
+		return 0, fmt.Errorf("no digits extracted from boxes, raw: %q", digits)
 	}
-	var id int
-	_, err := fmt.Sscan(digits, &id)
+	id, err := strconv.Atoi(clean)
 	if err != nil {
-		return 0, fmt.Errorf("failed to parse ID %q: %w", digits, err)
+		return 0, fmt.Errorf("failed to parse ID %q: %w", clean, err)
 	}
 	return id, nil
 }
