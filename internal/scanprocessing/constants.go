@@ -14,6 +14,11 @@ const BORDER_RECTANGLE_AREA_SIZE = 1000000
 // Using 55% to also capture the "ID:" label for OCR fallback.
 const ID_REGION_LEFT_PERCENT = 55
 
+// ID_SEPARATOR_Y_RATIO: estimated position of the header separator line (tikz y=-0.7)
+// as a fraction of mat.Cols() — tunable if box crops land too high or too low.
+// Decrease to shift crops UP, increase to shift DOWN.
+const ID_SEPARATOR_Y_RATIO = 0.24
+
 // Group checkbox paddings
 const GROUP_HEADER_HEIGHT = 350
 const GROUP_SIDE_PADDING = 470

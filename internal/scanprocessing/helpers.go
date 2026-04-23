@@ -35,8 +35,7 @@ func extractIDByBoxOCR(mat *gocv.Mat) (int, error) {
 
 	scale := float64(mat.Cols()) * (1.0 - 2.0*20.32/210.0) / 18.4
 	centerX := float64(mat.Cols()) / 2.0
-	// separator at tikz y=-0.7 is ~28% from top of A4 page (derived from headheight=110pt, topmargin adjusted by -25pt)
-	separatorY := float64(mat.Cols()) * 0.28
+	separatorY := float64(mat.Cols()) * ID_SEPARATOR_Y_RATIO
 
 	toPixelX := func(x float64) int { return int(centerX + x*scale) }
 	toPixelY := func(y float64) int { return int(separatorY - (y+0.7)*scale) }
