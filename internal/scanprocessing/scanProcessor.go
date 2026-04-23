@@ -13,12 +13,12 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/gen2brain/go-fitz"
 	"gorm.io/gorm"
 )
 
-var wg sync.WaitGroup
 var mutexUpdate sync.Mutex
 var mutexGetId sync.Mutex
 var counterMutex sync.Mutex
@@ -83,10 +83,21 @@ func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan ch
 		errorLogger.Error("Chyba pri načítaní PDF súboru", slog.String("file", scanPath), slog.String("error", err.Error()))
 		panic(err)
 	}
+	var wg sync.WaitGroup
+	var docMutex sync.Mutex
+	numWorkers := runtime.NumCPU()
+	if numWorkers > 6 {
+		numWorkers = 6
+	}
+	sem := make(chan struct{}, numWorkers)
 	totalPages := doc.NumPage()
 	for pageNumber := 0; pageNumber < totalPages; pageNumber++ {
 		wg.Add(1)
-		go ProcessPage(doc, pageNumber, exam, db, progressChan, totalPages, counter, failedPages)
+		sem <- struct{}{}
+		go func(pn int) {
+			defer func() { <-sem }()
+			ProcessPage(&wg, &docMutex, doc, pn, exam, db, progressChan, totalPages, counter, failedPages)
+		}(pageNumber)
 	}
 	wg.Wait()
 
@@ -131,12 +142,20 @@ func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan ch
 //     ensure that concurrent access to shared resources is safe.
 //   - The global `failedPagesMap` is updated in a thread-safe manner when a page fails processing.
 //   - Exporting of failed pages is handled later in `ProcessPDF`, not here.
-func ProcessPage(doc *fitz.Document, pageNumber int, exam *models.Exam, db *gorm.DB, progressChan chan string, totalPages int, counter *int, failedPages *FailedPages) {
+func ProcessPage(wg *sync.WaitGroup, docMutex *sync.Mutex, doc *fitz.Document, pageNumber int, exam *models.Exam, db *gorm.DB, progressChan chan string, totalPages int, counter *int, failedPages *FailedPages) {
 	defer wg.Done()
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
+	defer func() {
+		if r := recover(); r != nil {
+			errorLogger.Error("Panic v ProcessPage - strana preskočená", "strana", pageNumber+1, "recover", fmt.Sprint(r))
+			AddFailedPage(failedPages, exam.ID, pageNumber)
+		}
+	}()
 
+	docMutex.Lock()
 	img, err := doc.Image(pageNumber)
+	docMutex.Unlock()
 	if err != nil {
 		errorLogger.Error("Chyba pri extrahovaní obrázka z PDF stránky", slog.Int("page", pageNumber), slog.String("error", err.Error()))
 		AddFailedPage(failedPages, exam.ID, pageNumber)

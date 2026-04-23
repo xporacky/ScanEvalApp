@@ -126,7 +126,7 @@ func SaveMat(path string, mat gocv.Mat) {
 	err := files.DeleteFile(path)
 	if err != nil {
 		errorLogger.Error("Chyba pri odstraňovaní existujúceho súboru", slog.String("path", path), slog.String("error", err.Error()))
-		panic(err)
+		return
 	}
 	if gocv.IMWrite(path, mat) {
 		logger.Info("Úspešne uložený obrázok", slog.String("path", path))

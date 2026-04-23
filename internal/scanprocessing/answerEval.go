@@ -7,6 +7,7 @@ import (
 	"ScanEvalApp/internal/ocr"
 	"fmt"
 	"image"
+	"os"
 
 	"log/slog"
 
@@ -295,12 +296,19 @@ func GetQuestionNumber(mat *gocv.Mat, i int, numberOfChoices int) int {
 	errorLogger := logging.GetErrorLogger()
 	rect := image.Rectangle{Min: image.Point{PADDING, PADDING + (i * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE)}, Max: image.Point{(mat.Cols() / (numberOfChoices + 1)) - PADDING, ((i + 1) * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE) - PADDING}}
 	questionMat := mat.Region(rect)
-	path := fmt.Sprintf("./assets/nemberMat_%d.png", i)
-	SaveMat(path, questionMat)
 	defer questionMat.Close()
-	SaveMat(TEMP_IMAGE_PATH, questionMat)
-	questionNum, err := ocr.ExtractQuestionNumber(TEMP_IMAGE_PATH)
-	files.DeleteFile(TEMP_IMAGE_PATH)
+
+	tmpFile, err := os.CreateTemp("./assets/tmp", "ocr-q-*.png")
+	if err != nil {
+		errorLogger.Error("Nepodarilo sa vytvoriť dočasný súbor pre OCR", slog.String("error", err.Error()))
+		return -1
+	}
+	tmpPath := tmpFile.Name()
+	tmpFile.Close()
+
+	SaveMat(tmpPath, questionMat)
+	questionNum, err := ocr.ExtractQuestionNumber(tmpPath)
+	files.DeleteFile(tmpPath)
 
 	if err != nil {
 		errorLogger.Error("Chyba pri extrakcii čísla otázky",
@@ -370,7 +378,7 @@ func GetAnswer(mat *gocv.Mat, i int, numberOfChoices int) rune {
 				answer = rune('x')
 			}
 		}
-		//fmt.Println(meanIntensity.Val1)
+		fmt.Println("checkbox", j, "intensity:", meanIntensity.Val1)
 		rectMat.Close()
 		checkboxMat.Close()
 	}
