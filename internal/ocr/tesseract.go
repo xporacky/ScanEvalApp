@@ -57,6 +57,24 @@ func OcrImage(imagePath string, psm string) (string, error) {
 	return string(out), nil
 }
 
+func ocrImageDigitsOnly(imagePath string, psm string) (string, error) {
+	errorLogger := logging.GetErrorLogger()
+
+	imagePath, err := filepath.Abs(imagePath)
+	if err != nil {
+		errorLogger.Error("Chyba pri získavaní absolútnej cesty k obrázku", slog.String("error", err.Error()))
+		return "", err
+	}
+	cmd := exec.Command("tesseract", imagePath, "stdout", "--psm", psm,
+		"-c", "tessedit_char_whitelist=0123456789/")
+	out, err := cmd.Output()
+	if err != nil {
+		errorLogger.Error("Error during OCR process for image", slog.String("imagePath", imagePath), slog.String("error", err.Error()))
+		return "", err
+	}
+	return string(out), nil
+}
+
 // ExtractID extracts a numeric ID from an image by performing OCR.
 //
 // It first attempts OCR using a uniform block page segmentation mode to locate a pattern "ID: <number>".
@@ -72,10 +90,26 @@ func OcrImage(imagePath string, psm string) (string, error) {
 //
 // Notes:
 //   - Logs detailed errors for troubleshooting if extraction or parsing fails.
-// parseIDFromOCRText extracts the registration number from OCR output.
-// The ID is printed as individual digits in separate boxes (format dddd/ddd),
-// so OCR may produce "ID: 1 2 3 4 / 5 6 7" — we capture everything after "ID:"
-// and strip non-digits to reconstruct the full number.
+// parseIDSlashFormat extracts a registration number from whitelist-only OCR output.
+// With tessedit_char_whitelist=0123456789/, Tesseract maps box-enclosed digits correctly
+// and we can search directly for the dddd/ddd pattern.
+func parseIDSlashFormat(text string) (int, bool) {
+	re := regexp.MustCompile(`(\d{4}/\d{3})`)
+	match := re.FindStringSubmatch(text)
+	if len(match) < 2 {
+		return 0, false
+	}
+	digitsOnly := strings.ReplaceAll(match[1], "/", "")
+	var id int
+	_, err := fmt.Sscan(digitsOnly, &id)
+	if err != nil {
+		return 0, false
+	}
+	return id, true
+}
+
+// parseIDFromOCRText extracts the registration number from noisy OCR output.
+// Fallback for when whitelist OCR fails — looks for "ID:" label and strips non-digits.
 func parseIDFromOCRText(text string) (int, bool) {
 	re := regexp.MustCompile(`ID:\s*([\d\s/]+)`)
 	match := re.FindStringSubmatch(text)
@@ -102,7 +136,28 @@ func parseIDFromOCRText(text string) (int, bool) {
 func ExtractID(path string) (int, error) {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
-	dt, err := OcrImage(path, PSM_UNIFORM_BLOCK)
+
+	// Primary: whitelist-only OCR forces digit mapping, then match dddd/ddd pattern.
+	dt, err := ocrImageDigitsOnly(path, PSM_UNIFORM_BLOCK)
+	if err != nil {
+		return 0, err
+	}
+	logger.Info("OCR digits-only raw text (PSM_UNIFORM_BLOCK)", slog.String("text", dt))
+	if id, ok := parseIDSlashFormat(dt); ok {
+		return id, nil
+	}
+
+	dt, err = ocrImageDigitsOnly(path, PSM_DEFAULT)
+	if err != nil {
+		return 0, err
+	}
+	logger.Info("OCR digits-only raw text (PSM_DEFAULT)", slog.String("text", dt))
+	if id, ok := parseIDSlashFormat(dt); ok {
+		return id, nil
+	}
+
+	// Fallback: full OCR with "ID:" label search.
+	dt, err = OcrImage(path, PSM_UNIFORM_BLOCK)
 	if err != nil {
 		return 0, err
 	}
@@ -110,6 +165,7 @@ func ExtractID(path string) (int, error) {
 	if id, ok := parseIDFromOCRText(dt); ok {
 		return id, nil
 	}
+
 	dt, err = OcrImage(path, PSM_DEFAULT)
 	if err != nil {
 		return 0, err
@@ -118,6 +174,7 @@ func ExtractID(path string) (int, error) {
 	if id, ok := parseIDFromOCRText(dt); ok {
 		return id, nil
 	}
+
 	errorLogger.Error("No ID found in the input image", slog.String("path", path))
 	return 0, errors.New("no id found in the input image")
 }
