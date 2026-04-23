@@ -47,11 +47,16 @@ func extractIDByBoxOCR(mat *gocv.Mat) (int, error) {
 	// Crop 4px inside each border so the thick rectangle lines don't confuse OCR
 	const borderPad = 4
 
+	slashGapPx := int(float64(mat.Cols()) * ID_SLASH_GAP_OFFSET_RATIO)
 	digits := ""
 	for i, bx := range boxXPositions {
+		extraX := 0
+		if i >= 4 { // boxes after the slash separator
+			extraX = slashGapPx
+		}
 		region := image.Rectangle{
-			Min: image.Point{toPixelX(bx) + borderPad, boxTop + borderPad},
-			Max: image.Point{toPixelX(bx+0.6) - borderPad, boxBottom - borderPad},
+			Min: image.Point{toPixelX(bx) + borderPad + extraX, boxTop + borderPad},
+			Max: image.Point{toPixelX(bx+0.6) - borderPad + extraX, boxBottom - borderPad},
 		}
 		if region.Min.X < 0 || region.Min.Y < 0 || region.Max.X > mat.Cols() || region.Max.Y > mat.Rows() {
 			return 0, fmt.Errorf("digit box %d out of image bounds: %v", i, region)
