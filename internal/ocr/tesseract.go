@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strings"
 )
 
 // PSM_SINGLE_LINE specifies Tesseract's Page Segmentation Mode 7,
@@ -71,32 +72,51 @@ func OcrImage(imagePath string, psm string) (string, error) {
 //
 // Notes:
 //   - Logs detailed errors for troubleshooting if extraction or parsing fails.
+// parseIDFromOCRText extracts the registration number from OCR output.
+// The ID is printed as individual digits in separate boxes (format dddd/ddd),
+// so OCR may produce "ID: 1 2 3 4 / 5 6 7" — we capture everything after "ID:"
+// and strip non-digits to reconstruct the full number.
+func parseIDFromOCRText(text string) (int, bool) {
+	re := regexp.MustCompile(`ID:\s*([\d\s/]+)`)
+	match := re.FindStringSubmatch(text)
+	if len(match) < 2 {
+		return 0, false
+	}
+	digitsOnly := strings.Map(func(r rune) rune {
+		if r >= '0' && r <= '9' {
+			return r
+		}
+		return -1
+	}, match[1])
+	if digitsOnly == "" {
+		return 0, false
+	}
+	var id int
+	_, err := fmt.Sscan(digitsOnly, &id)
+	if err != nil {
+		return 0, false
+	}
+	return id, true
+}
+
 func ExtractID(path string) (int, error) {
 	errorLogger := logging.GetErrorLogger()
 	dt, err := OcrImage(path, PSM_UNIFORM_BLOCK)
 	if err != nil {
 		return 0, err
 	}
-	re := regexp.MustCompile(`ID:\s*(\d+)`)
-	match := re.FindStringSubmatch(dt)
-	if len(match) < 2 {
-		dt, err := OcrImage(path, PSM_DEFAULT)
-		if err != nil {
-			return 0, err
-		}
-		match = re.FindStringSubmatch(dt)
-		if len(match) < 2 {
-			errorLogger.Error("No ID found in the input image", slog.String("path", path))
-			return 0, errors.New("no id found in the input image")
-		}
+	if id, ok := parseIDFromOCRText(dt); ok {
+		return id, nil
 	}
-	var id int
-	_, err = fmt.Sscan(match[1], &id)
+	dt, err = OcrImage(path, PSM_DEFAULT)
 	if err != nil {
-		errorLogger.Error("Failed to convert ID to integer", slog.String("error", err.Error()))
 		return 0, err
 	}
-	return id, nil
+	if id, ok := parseIDFromOCRText(dt); ok {
+		return id, nil
+	}
+	errorLogger.Error("No ID found in the input image", slog.String("path", path))
+	return 0, errors.New("no id found in the input image")
 }
 
 // ExtractQuestionNumber performs OCR on the specified image path to extract and parse a question number.
