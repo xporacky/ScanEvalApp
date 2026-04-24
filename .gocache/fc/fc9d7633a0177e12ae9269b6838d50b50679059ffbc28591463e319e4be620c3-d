@@ -1,0 +1,6 @@
+./answerEval.go
+./constants.go
+./helpers.go
+./imageRotationFixer.go
+./parametric_eval.go
+./scanProcessor.go

@@ -1,0 +1,5 @@
+./createExam.go
+./exams.go
+./settings.go
+./students.go
+./upload.go

@@ -1,0 +1,15 @@
+./button.go
+./checkable.go
+./checkbox.go
+./decorations.go
+./doc.go
+./editor.go
+./label.go
+./list.go
+./loader.go
+./progressbar.go
+./progresscircle.go
+./radiobutton.go
+./slider.go
+./switch.go
+./theme.go

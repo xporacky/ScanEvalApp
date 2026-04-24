@@ -1,0 +1,78 @@
+html {
+    background-color: #101927;
+    color: #eef3fb;
+}
+
+body {
+    margin: 0;
+    color: #eef3fb;
+    font-family: "Nunito", "Segoe UI", "Helvetica Neue", sans-serif;
+    background:
+        radial-gradient(circle at 20% 20%, rgba(65, 130, 255, 0.18), transparent 45%),
+        radial-gradient(circle at 80% 10%, rgba(255, 145, 0, 0.12), transparent 40%),
+        linear-gradient(160deg, #0f1a2a 0%, #132338 55%, #0f1a2a 100%);
+    min-height: 100vh;
+}
+
+@font-face {
+    font-family: "Nunito";
+    font-style: normal;
+    font-weight: 400;
+    src: local(""),
+    url("assets/fonts/nunito-v16-latin-regular.woff2") format("woff2");
+}
+
+#app {
+    min-height: 100vh;
+}
+
+/* Version grid styles */
+.version-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.version-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.version-row strong {
+  width: 2rem;
+}
+.version-cell {
+  width: 3rem;
+  padding: 0.5rem;
+  text-align: center;
+  border: 1px solid var(--border, #ddd);
+  border-radius: 6px;
+  background: #f9f9f9;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.version-cell.filled {
+  background: #2c3e66;
+  color: white;
+  border-color: #1e2a44;
+}
+.version-cell:hover {
+  background: #4a6fa5;
+  color: white;
+}
+.version-editor h3 {
+  margin-top: 0;
+}
+.answers-edit-grid {
+  max-height: 400px;
+  overflow-y: auto;
+  margin: 1rem 0;
+}
+.badge {
+  background: #ff9800;
+  color: white;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 12px;
+  margin-left: 8px;
+}
