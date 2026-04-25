@@ -27,9 +27,10 @@ var qrIDPattern = regexp.MustCompile(`(?:^|[|;\s])ID\s*:\s*(\d+)`)
 // extractIDByBoxOCR reads the 7 ID digits one box at a time using PSM 10 (single char).
 // Box positions come from template_6.tex tikz coordinates.
 // Coordinate math (A4, 0.8in margins, tikz range -9.2..9.2):
-//   scale    = mat.Cols() * (1 - 2*20.32/210) / 18.4   [px per tikz unit]
-//   pixelX   = mat.Cols()/2 + tikzX * scale
-//   pixelY   = separatorY - (tikzY + 0.7) * scale       [separator line at tikz y=-0.7, ~28% down from top]
+//
+//	scale    = mat.Cols() * (1 - 2*20.32/210) / 18.4   [px per tikz unit]
+//	pixelX   = mat.Cols()/2 + tikzX * scale
+//	pixelY   = separatorY - (tikzY + 0.7) * scale       [separator line at tikz y=-0.7, ~28% down from top]
 func extractIDByBoxOCR(mat *gocv.Mat) (int, error) {
 	logger := logging.GetLogger()
 
@@ -68,7 +69,7 @@ func extractIDByBoxOCR(mat *gocv.Mat) (int, error) {
 		digitMat.Close()
 
 		raw, err := ocr.OcrSingleChar(tmpPath)
-		files.DeleteFile(tmpPath)
+		//files.DeleteFile(tmpPath)
 		if err != nil {
 			return 0, fmt.Errorf("OCR failed for digit box %d: %w", i, err)
 		}

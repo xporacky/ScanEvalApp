@@ -17,16 +17,16 @@ const ID_REGION_LEFT_PERCENT = 55
 // ID_SEPARATOR_Y_RATIO: estimated position of the header separator line (tikz y=-0.7)
 // as a fraction of mat.Cols() — tunable if box crops land too high or too low.
 // Decrease to shift crops UP, increase to shift DOWN.
-const ID_SEPARATOR_Y_RATIO = 0.24
+const ID_SEPARATOR_Y_RATIO = 0.19
 
 // ID_CENTER_X_OFFSET_RATIO: horizontal offset added to page center before tikz→pixel conversion.
 // Fraction of mat.Cols() — e.g. 0.02 ≈ 4mm right on A4. Increase to shift crops RIGHT.
-const ID_CENTER_X_OFFSET_RATIO = 0.0
+const ID_CENTER_X_OFFSET_RATIO = 0.01
 
 // ID_SLASH_GAP_OFFSET_RATIO: extra rightward offset applied only to boxes 5-7 (after the slash separator).
 // Compensates if the second group of digits is printed slightly further right than the tikz coords predict.
 // Fraction of mat.Cols() — e.g. 0.01 ≈ 2mm on A4.
-const ID_SLASH_GAP_OFFSET_RATIO = 0.0
+const ID_SLASH_GAP_OFFSET_RATIO = 0.01
 
 // Group checkbox paddings
 const GROUP_HEADER_HEIGHT = 350
