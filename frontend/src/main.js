@@ -64,6 +64,7 @@ const state = {
   mdCsvContent: '',
   mdCsvName: '',
   mdSubgroups: [{ name: '', answers: '' }],
+  mdCheckboxMode: true,
 };
 
 const appEl = document.querySelector('#app');
@@ -786,16 +787,50 @@ function validateSubgroupAnswers(answers, questionCount, optionCount) {
   return answers.toLowerCase().split('').every(c => valid.includes(c));
 }
 
+// Converts a string of answers (e.g. "AABCE") to per-question checkbox arrays
+function answersToCheckboxes(answers, questionCount, optionCount) {
+  const result = [];
+  for (let i = 0; i < questionCount; i++) {
+    result.push(i < answers.length ? answers[i].toUpperCase() : '');
+  }
+  return result;
+}
+
+// Converts per-question checkbox selections back to answer string
+function checkboxesToAnswers(checkboxes) {
+  return checkboxes.map(c => c || '').join('').toUpperCase();
+}
+
+function renderSubgroupCheckboxes(sg, idx, questionCount, optionCount) {
+  const choices = Array.from({ length: optionCount }, (_, i) => String.fromCharCode(65 + i));
+  const cbs = sg.checkboxAnswers || answersToCheckboxes(sg.answers, questionCount, optionCount);
+  const rows = Array.from({ length: questionCount }, (_, q) => {
+    const cells = choices.map(ch => {
+      const checked = cbs[q] === ch ? 'checked' : '';
+      return `<label class="sg-cb-label"><input type="radio" name="sg-${idx}-q${q}" value="${ch}" ${checked} />${ch}</label>`;
+    }).join('');
+    return `<div class="sg-cb-row"><span class="sg-cb-qnum">${q + 1}.</span>${cells}</div>`;
+  }).join('');
+  return `<div class="sg-cb-grid">${rows}</div>`;
+}
+
 function renderSubgroupRows(questionCount, optionCount) {
+  const cbMode = state.mdCheckboxMode;
   return state.mdSubgroups.map((sg, idx) => {
+    if (!sg.checkboxAnswers) {
+      sg.checkboxAnswers = answersToCheckboxes(sg.answers, questionCount, optionCount);
+    }
     const isValid = sg.answers.length > 0 && validateSubgroupAnswers(sg.answers, questionCount, optionCount);
     const isEmpty = sg.answers.length === 0;
     const indicator = isEmpty ? '' : (isValid ? '✓' : `✗ (${sg.answers.length}/${questionCount})`);
     const indicatorClass = isEmpty ? '' : (isValid ? 'sg-valid' : 'sg-invalid');
+    const answerInput = cbMode
+      ? renderSubgroupCheckboxes(sg, idx, questionCount, optionCount)
+      : `<input class="sg-answers" type="text" placeholder="${validAnswerChars(optionCount).repeat(Math.ceil(questionCount / optionCount)).slice(0, questionCount)}" value="${sg.answers}" />`;
     return `
-      <div class="sg-row" data-sg-idx="${idx}">
+      <div class="sg-row-inline" data-sg-idx="${idx}">
         <input class="sg-name" type="text" placeholder="napr. A1" value="${sg.name}" maxlength="4" />
-        <input class="sg-answers" type="text" placeholder="${validAnswerChars(optionCount).repeat(Math.ceil(questionCount / optionCount)).slice(0, questionCount)}" value="${sg.answers}" />
+        <div class="sg-inline-answers">${answerInput}</div>
         <span class="sg-indicator ${indicatorClass}">${indicator}</span>
         <button type="button" class="btn danger sg-remove">Odstraniť</button>
       </div>
@@ -811,19 +846,57 @@ function bindSubgroupEvents(questionCount, optionCount) {
     });
   });
 
-  document.querySelectorAll('.sg-answers').forEach((input, idx) => {
-    input.addEventListener('input', () => {
-      state.mdSubgroups[idx].answers = input.value.toUpperCase();
-      input.value = state.mdSubgroups[idx].answers;
-      const row = input.closest('.sg-row');
-      const span = row.querySelector('.sg-indicator');
-      const val = state.mdSubgroups[idx].answers;
-      if (!val) { span.textContent = ''; span.className = 'sg-indicator'; return; }
-      const ok = validateSubgroupAnswers(val, questionCount, optionCount);
-      span.textContent = ok ? '✓' : `✗ (${val.length}/${questionCount})`;
-      span.className = 'sg-indicator ' + (ok ? 'sg-valid' : 'sg-invalid');
+  if (state.mdCheckboxMode) {
+    document.querySelectorAll('.sg-row-inline').forEach((row, idx) => {
+      row.querySelectorAll('input[type="radio"]').forEach((radio) => {
+        // Track "was already checked before click" for deselect support
+        radio.addEventListener('mousedown', () => {
+          radio.dataset.wasChecked = radio.checked ? '1' : '0';
+        });
+        radio.addEventListener('click', () => {
+          const qMatch = radio.name.match(/q(\d+)$/);
+          if (!qMatch) return;
+          const q = parseInt(qMatch[1]);
+          if (!state.mdSubgroups[idx].checkboxAnswers) {
+            state.mdSubgroups[idx].checkboxAnswers = answersToCheckboxes(state.mdSubgroups[idx].answers, questionCount, optionCount);
+          }
+          if (radio.dataset.wasChecked === '1') {
+            // Deselect: browser keeps it checked for radios, so manually uncheck
+            radio.checked = false;
+            state.mdSubgroups[idx].checkboxAnswers[q] = '';
+          } else {
+            // Browser already checked it
+            state.mdSubgroups[idx].checkboxAnswers[q] = radio.value;
+          }
+          state.mdSubgroups[idx].answers = checkboxesToAnswers(state.mdSubgroups[idx].checkboxAnswers);
+          const span = row.querySelector('.sg-indicator');
+          if (span) {
+            const val = state.mdSubgroups[idx].answers;
+            const trimmed = val.replace(/ /g, '');
+            if (!trimmed) { span.textContent = ''; span.className = 'sg-indicator'; return; }
+            const ok = validateSubgroupAnswers(val, questionCount, optionCount);
+            span.textContent = ok ? '✓' : `✗ (${val.length}/${questionCount})`;
+            span.className = 'sg-indicator ' + (ok ? 'sg-valid' : 'sg-invalid');
+          }
+        });
+      });
     });
-  });
+  } else {
+    document.querySelectorAll('.sg-answers').forEach((input, idx) => {
+      input.addEventListener('input', () => {
+        state.mdSubgroups[idx].answers = input.value.toUpperCase();
+        input.value = state.mdSubgroups[idx].answers;
+        state.mdSubgroups[idx].checkboxAnswers = answersToCheckboxes(state.mdSubgroups[idx].answers, questionCount, optionCount);
+        const row = input.closest('.sg-row-inline');
+        const span = row.querySelector('.sg-indicator');
+        const val = state.mdSubgroups[idx].answers;
+        if (!val) { span.textContent = ''; span.className = 'sg-indicator'; return; }
+        const ok = validateSubgroupAnswers(val, questionCount, optionCount);
+        span.textContent = ok ? '✓' : `✗ (${val.length}/${questionCount})`;
+        span.className = 'sg-indicator ' + (ok ? 'sg-valid' : 'sg-invalid');
+      });
+    });
+  }
 
   document.querySelectorAll('.sg-remove').forEach((btn, idx) => {
     btn.addEventListener('click', () => {
@@ -834,6 +907,7 @@ function bindSubgroupEvents(questionCount, optionCount) {
     });
   });
 }
+
 
 function renderMultiDay() {
   const content = document.getElementById('content');
@@ -877,11 +951,16 @@ function renderMultiDay() {
         <div class="sg-header">
           <span class="sg-title">Správne odpovede per podskupina</span>
           <span class="sg-hint">Povolené znaky: ${validAnswerChars(oCount)} &nbsp;|&nbsp; Dĺžka: ${qCount} znakov</span>
+          <label class="toggle-field sg-mode-toggle">
+            Checkboxy
+            <span class="toggle-row">
+              <input id="sg-checkbox-mode" type="checkbox" ${state.mdCheckboxMode ? 'checked' : ''} />
+              <span class="md-toggle-text">${state.mdCheckboxMode ? 'Zap' : 'Vyp'}</span>
+            </span>
+          </label>
           <button type="button" id="sg-add" class="btn secondary">+ Pridať podskupinu</button>
         </div>
-        <div class="sg-labels">
-          <span>Podskupina</span><span>Odpovede (${qCount} znakov)</span><span></span><span></span>
-        </div>
+        ${state.mdCheckboxMode ? '' : `<div class="sg-labels"><span>Podskupina</span><span>Odpovede (${qCount} znakov)</span><span></span><span></span></div>`}
         <div id="sg-container">
           ${renderSubgroupRows(qCount, oCount)}
         </div>
@@ -918,6 +997,35 @@ function renderMultiDay() {
     document.querySelector('#md-csv-file + .file-name').textContent = file.name;
   });
 
+  document.getElementById('sg-checkbox-mode').addEventListener('change', (e) => {
+    // Sync text↔checkboxes before switching mode
+    if (!e.target.checked) {
+      // switching TO text mode: checkboxAnswers → answers already up to date
+    } else {
+      // switching TO checkbox mode: ensure checkboxAnswers matches current answers
+      state.mdSubgroups.forEach(sg => {
+        sg.checkboxAnswers = answersToCheckboxes(sg.answers, qCount, oCount);
+      });
+    }
+    state.mdCheckboxMode = e.target.checked;
+    const t = e.target.nextElementSibling;
+    if (t) t.textContent = state.mdCheckboxMode ? 'Zap' : 'Vyp';
+    document.getElementById('sg-container').innerHTML = renderSubgroupRows(qCount, oCount);
+    const labelsEl = document.querySelector('.sg-labels');
+    if (state.mdCheckboxMode) {
+      if (labelsEl) labelsEl.remove();
+    } else {
+      if (!labelsEl) {
+        const container = document.getElementById('sg-container');
+        const div = document.createElement('div');
+        div.className = 'sg-labels';
+        div.innerHTML = `<span>Podskupina</span><span>Odpovede (${qCount} znakov)</span><span></span><span></span>`;
+        container.parentNode.insertBefore(div, container);
+      }
+    }
+    bindSubgroupEvents(qCount, oCount);
+  });
+
   document.getElementById('sg-add').addEventListener('click', () => {
     state.mdSubgroups.push({ name: '', answers: '' });
     document.getElementById('sg-container').innerHTML = renderSubgroupRows(qCount, oCount);
@@ -933,7 +1041,8 @@ function renderMultiDay() {
     const subgroupMap = {};
     for (const sg of state.mdSubgroups) {
       if (!sg.name.trim()) continue;
-      if (!validateSubgroupAnswers(sg.answers, qCount, oCount)) {
+      // Allow empty answers (teacher may fill them in later)
+      if (sg.answers.length > 0 && !validateSubgroupAnswers(sg.answers, qCount, oCount)) {
         statusEl.textContent = `Podskupina "${sg.name}": neplatné odpovede (${sg.answers.length}/${qCount} znakov, povolené: ${validAnswerChars(oCount)}).`;
         statusEl.className = 'status error';
         return;
@@ -1150,27 +1259,113 @@ function bindExamActions() {
             try { sgMap = answersRaw ? JSON.parse(answersRaw) : {}; } catch (_) {}
 
             const renderSgModal = () => {
-              const entries = Object.entries(sgMap);
-              if (entries.length === 0) entries.push(['', '']);
-              const rows = entries.map(([name, ans], idx) => {
-                const isValid = ans.length > 0 && validateSubgroupAnswers(ans, qCount, oCount);
-                const isEmpty = ans.length === 0;
-                const ind = isEmpty ? '' : (isValid ? '✓' : `✗ ${ans.length}/${qCount}`);
+              // Local state for the modal
+              const sgEntries = Object.entries(sgMap).map(([name, ans]) => ({
+                name,
+                answers: ans,
+                cbAnswers: answersToCheckboxes(ans, qCount, oCount),
+              }));
+              if (sgEntries.length === 0) sgEntries.push({ name: '', answers: '', cbAnswers: Array(qCount).fill('') });
+
+              let sgModalCbMode = true;
+
+              const renderModalRows = () => sgEntries.map((sg, idx) => {
+                const isValid = sg.answers.length > 0 && validateSubgroupAnswers(sg.answers, qCount, oCount);
+                const isEmpty = sg.answers.length === 0;
+                const ind = isEmpty ? '' : (isValid ? '✓' : `✗ ${sg.answers.replace(/ /g,'').length}/${qCount}`);
                 const indClass = isEmpty ? '' : (isValid ? 'sg-valid' : 'sg-invalid');
+                const choices = Array.from({ length: oCount }, (_, i) => String.fromCharCode(65 + i));
+                const answerInput = sgModalCbMode
+                  ? `<div class="sg-cb-grid">${Array.from({ length: qCount }, (_, q) => {
+                      const cells = choices.map(ch => {
+                        const checked = sg.cbAnswers[q] === ch ? 'checked' : '';
+                        return `<label class="sg-cb-label"><input type="radio" name="modal-sg-${idx}-q${q}" value="${ch}" ${checked} />${ch}</label>`;
+                      }).join('');
+                      return `<div class="sg-cb-row"><span class="sg-cb-qnum">${q + 1}.</span>${cells}</div>`;
+                    }).join('')}</div>`
+                  : `<input class="sg-answers" type="text" placeholder="${validAnswerChars(oCount).repeat(Math.ceil(qCount / oCount)).slice(0, qCount)}" value="${sg.answers}" />`;
                 return `
-                  <div class="sg-row" data-modal-idx="${idx}">
-                    <input class="sg-name" type="text" placeholder="A1" value="${name}" maxlength="4" />
-                    <input class="sg-answers" type="text" placeholder="${validAnswerChars(oCount).slice(0, qCount).padEnd(qCount, validAnswerChars(oCount)[0])}" value="${ans}" />
+                  <div class="sg-row-inline" data-modal-idx="${idx}">
+                    <input class="sg-name" type="text" placeholder="A1" value="${sg.name}" maxlength="4" />
+                    <div class="sg-inline-answers">${answerInput}</div>
                     <span class="sg-indicator ${indClass}">${ind}</span>
                     <button type="button" class="btn danger sg-remove" data-modal-idx="${idx}">Odstraniť</button>
                   </div>`;
               }).join('');
 
+              const updateIndicator = (row, val) => {
+                const span = row.querySelector('.sg-indicator');
+                if (!span) return;
+                const trimmed = val.replace(/ /g, '');
+                if (!trimmed) { span.textContent = ''; span.className = 'sg-indicator'; return; }
+                const ok = validateSubgroupAnswers(val, qCount, oCount);
+                span.textContent = ok ? '✓' : `✗ ${trimmed.length}/${qCount}`;
+                span.className = 'sg-indicator ' + (ok ? 'sg-valid' : 'sg-invalid');
+              };
+
+              const bindModalEvents = () => {
+                document.querySelectorAll('#modal-sg-container .sg-name').forEach((input, idx) => {
+                  input.addEventListener('input', () => {
+                    input.value = input.value.toUpperCase();
+                    sgEntries[idx].name = input.value;
+                  });
+                });
+
+                if (sgModalCbMode) {
+                  document.querySelectorAll('#modal-sg-container .sg-row-inline').forEach((row, idx) => {
+                    row.querySelectorAll('input[type="radio"]').forEach((radio) => {
+                      radio.addEventListener('mousedown', () => {
+                        radio.dataset.wasChecked = radio.checked ? '1' : '0';
+                      });
+                      radio.addEventListener('click', () => {
+                        const qMatch = radio.name.match(/q(\d+)$/);
+                        if (!qMatch) return;
+                        const q = parseInt(qMatch[1]);
+                        if (radio.dataset.wasChecked === '1') {
+                          radio.checked = false;
+                          sgEntries[idx].cbAnswers[q] = '';
+                        } else {
+                          sgEntries[idx].cbAnswers[q] = radio.value;
+                        }
+                        sgEntries[idx].answers = checkboxesToAnswers(sgEntries[idx].cbAnswers);
+                        updateIndicator(row, sgEntries[idx].answers);
+                      });
+                    });
+                  });
+                } else {
+                  document.querySelectorAll('#modal-sg-container .sg-answers').forEach((input, idx) => {
+                    input.addEventListener('input', () => {
+                      input.value = input.value.toUpperCase();
+                      sgEntries[idx].answers = input.value;
+                      sgEntries[idx].cbAnswers = answersToCheckboxes(input.value, qCount, oCount);
+                      updateIndicator(input.closest('.sg-row-inline'), input.value);
+                    });
+                  });
+                }
+
+                document.querySelectorAll('#modal-sg-container .sg-remove').forEach((btn, idx) => {
+                  btn.addEventListener('click', () => {
+                    if (sgEntries.length <= 1) return;
+                    sgEntries.splice(idx, 1);
+                    document.getElementById('modal-sg-container').innerHTML = renderModalRows();
+                    bindModalEvents();
+                  });
+                });
+              };
+
               showModal('Odpovede podskupín', `
                 <div class="answers-edit-form">
-                  <div class="sg-hint" style="margin-bottom:8px">Povolené: ${validAnswerChars(oCount)} &nbsp;|&nbsp; Dĺžka: ${qCount} znakov</div>
-                  <div class="sg-labels"><span>Podskupina</span><span>Odpovede</span><span></span><span></span></div>
-                  <div id="modal-sg-container">${rows}</div>
+                  <div class="sg-modal-top-row">
+                    <div class="sg-hint">Povolené: ${validAnswerChars(oCount)} &nbsp;|&nbsp; Dĺžka: ${qCount} znakov</div>
+                    <label class="toggle-field sg-mode-toggle">
+                      Checkboxy
+                      <span class="toggle-row">
+                        <input id="sg-modal-cb-mode" type="checkbox" ${sgModalCbMode ? 'checked' : ''} />
+                        <span class="md-toggle-text">${sgModalCbMode ? 'Zap' : 'Vyp'}</span>
+                      </span>
+                    </label>
+                  </div>
+                  <div id="modal-sg-container">${renderModalRows()}</div>
                   <div class="form-actions" style="margin-top:12px">
                     <button id="modal-sg-add" class="btn secondary">+ Pridať podskupinu</button>
                     <button id="modal-sg-save" class="btn primary">Uložiť</button>
@@ -1178,57 +1373,34 @@ function bindExamActions() {
                   </div>
                 </div>`);
 
-              document.querySelectorAll('.sg-name').forEach((input) => {
-                input.addEventListener('input', () => { input.value = input.value.toUpperCase(); });
-              });
-              document.querySelectorAll('.sg-answers').forEach((input) => {
-                input.addEventListener('input', () => {
-                  input.value = input.value.toUpperCase();
-                  const row = input.closest('.sg-row');
-                  const span = row.querySelector('.sg-indicator');
-                  const ok = input.value.length > 0 && validateSubgroupAnswers(input.value, qCount, oCount);
-                  span.textContent = input.value.length === 0 ? '' : (ok ? '✓' : `✗ ${input.value.length}/${qCount}`);
-                  span.className = 'sg-indicator ' + (input.value.length === 0 ? '' : ok ? 'sg-valid' : 'sg-invalid');
-                });
-              });
-              document.querySelectorAll('.sg-remove').forEach((btn) => {
-                btn.addEventListener('click', () => {
-                  const rows = document.querySelectorAll('.sg-row');
-                  if (rows.length === 1) return;
-                  btn.closest('.sg-row').remove();
-                });
-              });
+              // Bind once-only listeners (on elements outside #modal-sg-container)
               document.getElementById('modal-sg-add').addEventListener('click', () => {
-                const container = document.getElementById('modal-sg-container');
-                const div = document.createElement('div');
-                div.className = 'sg-row';
-                div.innerHTML = `
-                  <input class="sg-name" type="text" placeholder="A1" maxlength="4" />
-                  <input class="sg-answers" type="text" placeholder="" />
-                  <span class="sg-indicator"></span>
-                  <button type="button" class="btn danger sg-remove">Odstraniť</button>`;
-                div.querySelector('.sg-name').addEventListener('input', (e) => { e.target.value = e.target.value.toUpperCase(); });
-                div.querySelector('.sg-answers').addEventListener('input', (e) => {
-                  e.target.value = e.target.value.toUpperCase();
-                  const span = div.querySelector('.sg-indicator');
-                  const ok = e.target.value.length > 0 && validateSubgroupAnswers(e.target.value, qCount, oCount);
-                  span.textContent = e.target.value.length === 0 ? '' : (ok ? '✓' : `✗ ${e.target.value.length}/${qCount}`);
-                  span.className = 'sg-indicator ' + (e.target.value.length === 0 ? '' : ok ? 'sg-valid' : 'sg-invalid');
-                });
-                div.querySelector('.sg-remove').addEventListener('click', () => {
-                  if (document.querySelectorAll('.sg-row').length > 1) div.remove();
-                });
-                container.appendChild(div);
+                sgEntries.push({ name: '', answers: '', cbAnswers: Array(qCount).fill('') });
+                document.getElementById('modal-sg-container').innerHTML = renderModalRows();
+                bindModalEvents();
               });
+
+              document.getElementById('sg-modal-cb-mode').addEventListener('change', (e) => {
+                if (e.target.checked) {
+                  sgEntries.forEach(sg => { sg.cbAnswers = answersToCheckboxes(sg.answers, qCount, oCount); });
+                }
+                sgModalCbMode = e.target.checked;
+                const t = e.target.nextElementSibling;
+                if (t) t.textContent = sgModalCbMode ? 'Zap' : 'Vyp';
+                document.getElementById('modal-sg-container').innerHTML = renderModalRows();
+                bindModalEvents();
+              });
+
               document.getElementById('modal-sg-save').addEventListener('click', async () => {
                 const statusEl = document.getElementById('modal-sg-status');
                 const newMap = {};
                 let valid = true;
-                document.querySelectorAll('.sg-row').forEach((row) => {
-                  const name = row.querySelector('.sg-name').value.trim();
-                  const ans = row.querySelector('.sg-answers').value.trim().toUpperCase();
+                sgEntries.forEach((sg) => {
+                  const name = sg.name.trim();
+                  const ans = sg.answers.trim().toUpperCase();
                   if (!name) return;
-                  if (!validateSubgroupAnswers(ans, qCount, oCount)) {
+                  // Allow empty answers
+                  if (ans.length > 0 && !validateSubgroupAnswers(ans, qCount, oCount)) {
                     statusEl.textContent = `Podskupina "${name}": neplatné odpovede.`;
                     statusEl.className = 'status error';
                     valid = false;
@@ -1244,6 +1416,8 @@ function bindExamActions() {
                   if (statusEl) statusEl.textContent = 'Ukladanie zlyhalo.';
                 }
               });
+
+              bindModalEvents();
             };
             renderSgModal();
           } catch (err) {

@@ -88,6 +88,123 @@
     margin-bottom: 6px;
 }
 
+.sg-row-inline {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding: 8px 10px;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+}
+
+.sg-row-inline .sg-name {
+    width: 80px;
+    flex-shrink: 0;
+}
+
+.sg-inline-answers {
+    flex: 1;
+    min-width: 0;
+}
+
+.sg-inline-answers .sg-answers {
+    width: 100%;
+}
+
+.sg-row-inline .sg-indicator {
+    flex-shrink: 0;
+    align-self: center;
+}
+
+.sg-row-inline .sg-remove {
+    flex-shrink: 0;
+    align-self: center;
+}
+
+.sg-row-full {
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+}
+
+.sg-row-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.sg-row-header .sg-name {
+    width: 90px;
+    flex-shrink: 0;
+}
+
+.sg-row-header .sg-remove {
+    margin-left: auto;
+}
+
+.sg-row-body {}
+
+.sg-cb-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sg-cb-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+}
+
+.sg-cb-qnum {
+    width: 28px;
+    text-align: right;
+    opacity: 0.5;
+    flex-shrink: 0;
+}
+
+.sg-cb-label {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.1);
+    min-width: 38px;
+    justify-content: center;
+    transition: background 0.15s;
+}
+
+.sg-cb-label:has(input:checked) {
+    background: rgba(59, 130, 246, 0.35);
+    border-color: #3b82f6;
+}
+
+.sg-cb-label input[type="radio"] {
+    display: none;
+}
+
+.sg-mode-toggle {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.sg-modal-top-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    gap: 12px;
+}
+
 .sg-name {
     font-weight: 600;
     text-transform: uppercase;

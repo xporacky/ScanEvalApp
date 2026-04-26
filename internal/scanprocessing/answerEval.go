@@ -200,7 +200,7 @@ func CropGroupFromHeader(mat *gocv.Mat) (gocv.Mat, error) {
 	}
 
 	croppedMat := mat.Region(headerRect)
-	//SaveMat("./assets/group-crop.png", croppedMat)
+	SaveMat("./assets/tmp/group-crop.png", croppedMat)
 	return croppedMat, nil
 }
 
@@ -242,7 +242,7 @@ func CropSubGroupFromHeader(mat *gocv.Mat) (gocv.Mat, error) {
 	}
 
 	croppedMat := mat.Region(headerRect)
-	//SaveMat("./assets/group-crop2.png", croppedMat)
+	SaveMat("./assets/tmp/group-crop2.png", croppedMat)
 	return croppedMat, nil
 }
 
@@ -378,7 +378,7 @@ func GetAnswer(mat *gocv.Mat, i int, numberOfChoices int) rune {
 				answer = rune('x')
 			}
 		}
-		fmt.Println("checkbox", j, "intensity:", meanIntensity.Val1)
+		//fmt.Println("checkbox", j, "intensity:", meanIntensity.Val1)
 		rectMat.Close()
 		checkboxMat.Close()
 	}
@@ -403,10 +403,19 @@ func GetGroupCode(headerMat *gocv.Mat) rune {
 		}
 
 		checkboxMat := headerMat.Region(checkbox)
+		SaveMat(fmt.Sprintf("./assets/tmp/group_box_%d.png", j), checkboxMat)
 		minArea, maxArea := answerSquareAreaBounds(numberOfGroups)
 		rect := FindRectangle(&checkboxMat, minArea, maxArea)
+		fmt.Printf("[GROUP] box=%d rectEmpty=%v wholeMean=%.1f\n", j, rect.Empty(), checkboxMat.Mean().Val1)
 		if rect.Empty() {
+			// Distinguish solid-black fill (cancelled/artifact, mean ≈ 0-80)
+			// from circled/selected (mostly white inside, mean > 80)
+			wholeIntensity := checkboxMat.Mean()
 			checkboxMat.Close()
+			if wholeIntensity.Val1 <= 80 {
+				// Completely filled black — treat as voided/cancelled mark, skip
+				continue
+			}
 			if state == StateCircleFound {
 				return rune('x')
 			}
@@ -461,11 +470,20 @@ func GetSubGroupCode(headerMat *gocv.Mat) int {
 		}
 
 		checkboxMat := headerMat.Region(checkbox)
+		SaveMat(fmt.Sprintf("./assets/tmp/subgroup_box_%d.png", j), checkboxMat)
 
 		minArea, maxArea := answerSquareAreaBounds(numberOfSubgroups)
 		rect := FindRectangle(&checkboxMat, minArea, maxArea)
+		fmt.Printf("[SUBGROUP] box=%d rectEmpty=%v wholeMean=%.1f\n", j, rect.Empty(), checkboxMat.Mean().Val1)
 		if rect.Empty() {
+			// Distinguish solid-black fill (cancelled/artifact, mean ≈ 0-80)
+			// from circled/selected (mostly white inside, mean > 80)
+			wholeIntensity := checkboxMat.Mean()
 			checkboxMat.Close()
+			if wholeIntensity.Val1 <= 80 {
+				// Completely filled black — treat as voided/cancelled mark, skip
+				continue
+			}
 			if state == StateCircleFound {
 				return -1
 			}

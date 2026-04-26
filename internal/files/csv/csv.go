@@ -259,7 +259,7 @@ func ExportStudentsToCSV(db *gorm.DB, exam models.Exam) (string, error) {
 	defer writer.Flush()
 
 	// Hlavicka CSV
-	err = writer.Write([]string{"ID", "Meno", "Priezvisko", "Registračné číslo", "Skóre"})
+	err = writer.Write([]string{"ID", "Meno", "Priezvisko", "Reg. číslo", "Skóre"})
 
 	if err != nil {
 		errorLogger.Error("Chyba pri zápise hlavičky CSV", slog.String("error", err.Error()))
@@ -329,7 +329,7 @@ func ExportMultiDayResultsCSV(db *gorm.DB, examID uint) (string, error) {
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 
-	header := []string{"Meno", "Priezvisko", "Dátum skúšky", "Čas", "Miestnosť", "Podskupina", "Skóre", "Odpovede študenta", "Správne odpovede"}
+	header := []string{"Meno", "Priezvisko", "Reg. číslo", "Dátum skúšky", "Čas", "Miestnosť", "Podskupina", "Skóre", "Odpovede študenta", "Správne odpovede"}
 	if err := writer.Write(header); err != nil {
 		return "", err
 	}
@@ -366,6 +366,7 @@ func ExportMultiDayResultsCSV(db *gorm.DB, examID uint) (string, error) {
 		record := []string{
 			s.Name,
 			s.Surname,
+			fmt.Sprintf("%04d/%03d", s.RegistrationNumber/1000, s.RegistrationNumber%1000),
 			dateStr,
 			s.ExamTime,
 			s.Room,
