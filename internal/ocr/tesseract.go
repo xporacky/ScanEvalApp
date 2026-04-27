@@ -100,6 +100,7 @@ func ocrImageDigitsOnly(imagePath string, psm string) (string, error) {
 //
 // Notes:
 //   - Logs detailed errors for troubleshooting if extraction or parsing fails.
+//
 // parseIDSlashFormat extracts a registration number from whitelist-only OCR output.
 // With tessedit_char_whitelist=0123456789/, Tesseract maps box-enclosed digits correctly
 // and we can search directly for the dddd/ddd pattern.

@@ -269,7 +269,7 @@ func ProcessPage(wg *sync.WaitGroup, docMutex *sync.Mutex, doc *fitz.Document, p
 
 	if err != nil {
 		errorLogger.Error("Chyba pri aktualizácii študenta v databáze", "studentID", student.ID, "error", err.Error())
-		AddFailedPage(failedPages, exam.ID, pageNumber)
+		AddFailedPage(failedPages, exam.ID, pageNumber, fmt.Sprintf("DB_UPDATE_ERROR: %s", err.Error()))
 		return
 	}
 
