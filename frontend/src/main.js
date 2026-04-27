@@ -28,6 +28,8 @@ import {
   ParseExamTemplateCSV,
   UpdateExamAnswers,
   PrintLegend,
+  MergeResultCSVs,
+  PickCSVFile,
 } from '../wailsjs/go/main/App';
 import { EventsOn } from '../wailsjs/runtime/runtime';
 
@@ -65,6 +67,10 @@ const state = {
   mdCsvName: '',
   mdSubgroups: [{ name: '', answers: '' }],
   mdCheckboxMode: true,
+  mergeOutputPath: '',
+  mergeCsvPaths: [],
+  mergeCsvNames: [],
+  mergeOutputName: '',
 };
 
 const appEl = document.querySelector('#app');
@@ -85,6 +91,7 @@ function renderShell() {
         <button class="tab" data-tab="multiday">Multi-termín</button>
         <button class="tab" data-tab="students">Študenti</button>
         <button class="tab" data-tab="upload">Vyhodnotiť písomku</button>
+        <button class="tab" data-tab="csvmerge">CSV Merge</button>
         <button class="tab" data-tab="settings">Nastavenia</button>
       </nav>
       <section class="panel">
@@ -774,6 +781,10 @@ function renderContent() {
   }
   if (state.activeTab === 'settings') {
     renderSettings();
+    return;
+  }
+  if (state.activeTab === 'csvmerge') {
+    renderCsvMerge();
   }
 }
 
@@ -1211,6 +1222,145 @@ function renderSettings() {
         console.error(err);
         if (statusEl) statusEl.textContent = 'Ulozenie zlyhalo.';
       }
+    });
+  }
+}
+
+function renderCsvMerge() {
+  const content = document.getElementById('content');
+
+  const fileListHtml = state.mergeCsvPaths.length
+    ? `<ul class="merge-file-list">
+        ${state.mergeCsvNames.map((name, i) => `
+          <li class="merge-file-item">
+            <span class="merge-file-idx">${i + 1}.</span>
+            <span class="merge-file-name" title="${state.mergeCsvPaths[i]}">${name}</span>
+            <button class="btn danger small" data-remove-idx="${i}">✕</button>
+          </li>`).join('')}
+       </ul>`
+    : `<div class="merge-empty-hint">Zatiaľ žiadne súbory. Klikni „Pridať CSV".</div>`;
+
+  const canMerge = state.mergeCsvPaths.length >= 2 && state.mergeOutputName.trim() !== '';
+
+  content.innerHTML = `
+    <div class="settings-form csv-merge-form">
+      <h2 class="merge-title">Zlúčenie výsledkových CSV súborov</h2>
+      <p class="merge-desc">
+        Pridajte ľubovoľný počet výsledkových CSV súborov. Základ tvoria riadky z
+        <strong>prvého</strong> pridaného súboru – pre každého študenta (podľa Reg. čísla)
+        sa doplnia stĺpce <em>Podskupina, Skóre, Odpovede študenta, Správne odpovede</em>
+        zo súborov, kde má daný študent vyplnené odpovede.
+        Výsledok sa uloží do priečinka nastaveného v záložke Nastavenia.
+      </p>
+
+      <div class="merge-section">
+        <label class="merge-name-label">
+          Názov výsledného súboru
+          <div class="merge-name-row">
+            <input id="merge-output-name" class="merge-name-input" type="text"
+              placeholder="napr. vysledky_merged"
+              value="${state.mergeOutputName}" />
+            <span class="merge-ext">.csv</span>
+          </div>
+        </label>
+      </div>
+
+      <div class="merge-section">
+        <div class="merge-section-header">
+          <span class="merge-section-label">Vstupné CSV súbory (${state.mergeCsvPaths.length})</span>
+          <div class="merge-btns">
+            <button id="merge-add" class="btn">+ Pridať CSV</button>
+            ${state.mergeCsvPaths.length > 0
+              ? `<button id="merge-clear" class="btn secondary">Vymazať zoznam</button>`
+              : ''}
+          </div>
+        </div>
+        <div class="merge-file-list-wrap">${fileListHtml}</div>
+      </div>
+
+      <div class="form-actions">
+        <button id="merge-run" class="btn primary" ${canMerge ? '' : 'disabled'}>
+          Zlúčiť a uložiť
+        </button>
+        <span id="merge-status" class="status"></span>
+      </div>
+
+      ${state.mergeOutputPath ? `
+        <div class="merge-result">
+          <span class="merge-result-label">Naposledy uložené:</span>
+          <span class="merge-result-path">${state.mergeOutputPath}</span>
+          <button id="merge-open" class="btn secondary">Otvoriť</button>
+        </div>` : ''}
+    </div>
+  `;
+
+  document.getElementById('merge-output-name').addEventListener('input', (e) => {
+    state.mergeOutputName = e.target.value;
+    const btn = document.getElementById('merge-run');
+    if (btn) btn.disabled = state.mergeCsvPaths.length < 2 || state.mergeOutputName.trim() === '';
+  });
+
+  document.getElementById('merge-add').addEventListener('click', async () => {
+    const statusEl = document.getElementById('merge-status');
+    try {
+      const path = await PickCSVFile();
+      if (!path) return;
+      if (state.mergeCsvPaths.includes(path)) {
+        if (statusEl) { statusEl.textContent = 'Tento súbor je už v zozname.'; statusEl.className = 'status error'; }
+        return;
+      }
+      state.mergeCsvPaths.push(path);
+      state.mergeCsvNames.push(path.split(/[/\\]/).pop());
+      if (statusEl) statusEl.textContent = '';
+      renderCsvMerge();
+    } catch (err) {
+      console.error(err);
+      if (statusEl) { statusEl.textContent = 'Chyba pri výbere súboru.'; statusEl.className = 'status error'; }
+    }
+  });
+
+  document.querySelectorAll('[data-remove-idx]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const idx = Number(btn.dataset.removeIdx);
+      state.mergeCsvPaths.splice(idx, 1);
+      state.mergeCsvNames.splice(idx, 1);
+      renderCsvMerge();
+    });
+  });
+
+  const clearBtn = document.getElementById('merge-clear');
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      state.mergeCsvPaths = [];
+      state.mergeCsvNames = [];
+      renderCsvMerge();
+    });
+  }
+
+  document.getElementById('merge-run').addEventListener('click', async () => {
+    const statusEl = document.getElementById('merge-status');
+    if (statusEl) { statusEl.textContent = 'Zlučujem…'; statusEl.className = 'status'; }
+    try {
+      const outputPath = await MergeResultCSVs(state.mergeCsvPaths, state.mergeOutputName.trim());
+      if (!outputPath) {
+        if (statusEl) { statusEl.textContent = 'Zrušené.'; statusEl.className = 'status'; }
+        return;
+      }
+      state.mergeOutputPath = outputPath;
+      state.mergeCsvPaths = [];
+      state.mergeCsvNames = [];
+      if (statusEl) { statusEl.textContent = 'Hotovo!'; statusEl.className = 'status success'; }
+      renderCsvMerge();
+    } catch (err) {
+      console.error(err);
+      if (statusEl) { statusEl.textContent = 'Chyba: ' + (err?.message || err); statusEl.className = 'status error'; }
+    }
+  });
+
+  const openBtn = document.getElementById('merge-open');
+  if (openBtn) {
+    openBtn.addEventListener('click', async () => {
+      if (state.mergeOutputPath) await OpenPath(state.mergeOutputPath);
     });
   }
 }
