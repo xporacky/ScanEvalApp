@@ -23,9 +23,14 @@ var mutexUpdate sync.Mutex
 var mutexGetId sync.Mutex
 var counterMutex sync.Mutex
 
+type FailedPageInfo struct {
+	PageNumber int
+	Reason     string
+}
+
 type FailedPages struct {
 	mu   sync.Mutex
-	data map[uint][]int
+	data map[uint][]FailedPageInfo
 }
 
 // ProcessPDF processes a PDF scan and extracts data for students' pages for the given exam.
@@ -52,6 +57,7 @@ type FailedPages struct {
 //     for further inspection or manual correction.
 //   - Errors encountered during PDF loading or database operations are logged using the error logger.
 func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan chan string, counter *int, hadFailures *bool) {
+	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
 	// Vyčistenie všetkých stránok študentov pre daný test
@@ -62,7 +68,7 @@ func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan ch
 	}
 
 	failedPages := &FailedPages{
-		data: make(map[uint][]int),
+		data: make(map[uint][]FailedPageInfo),
 	}
 
 	safeTitle := common.SanitizeFilename(exam.Title)
@@ -103,15 +109,36 @@ func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan ch
 
 	if len(failedPages.data) > 0 {
 		*hadFailures = true
+		logger.Info("=== ZHRNUTIE ZLYHANÝCH STRÁN ===")
 	}
 
-	for examID, pages := range failedPages.data {
+	for examID, pageInfos := range failedPages.data {
 		safeTitle := common.SanitizeFilename(exam.Title)
-		err := pdf.ExportFailedPagesToPDF(safeTitle, examID, pages, scanPath)
+
+		// Rozdelenie podľa dôvodov
+		reasonMap := make(map[string][]int)
+		pageNumbers := make([]int, len(pageInfos))
+
+		for i, info := range pageInfos {
+			pageNumbers[i] = info.PageNumber
+			reasonMap[info.Reason] = append(reasonMap[info.Reason], info.PageNumber+1) // +1 pre ľudsky čitateľné číslo
+		}
+
+		// Logovanie rozdelené podľa dôvodov
+		logger.Info("Zlyhané strany pre exam", slog.Int("examID", int(examID)), slog.Int("total", len(pageInfos)))
+		for reason, pages := range reasonMap {
+			logger.Info("Dôvod zlyhania",
+				slog.String("reason", reason),
+				slog.Any("pages", pages),
+				slog.Int("count", len(pages)))
+		}
+
+		err := pdf.ExportFailedPagesToPDF(safeTitle, examID, pageNumbers, scanPath)
 		if err != nil {
 			errorLogger.Error("Nepodarilo sa exportovat PDF s chybnymi stranami", slog.String("examID", fmt.Sprint(exam.ID)), slog.String("error", err.Error()))
 			return
 		}
+		logger.Info("=================================")
 	}
 }
 
@@ -149,7 +176,7 @@ func ProcessPage(wg *sync.WaitGroup, docMutex *sync.Mutex, doc *fitz.Document, p
 	defer func() {
 		if r := recover(); r != nil {
 			errorLogger.Error("Panic v ProcessPage - strana preskočená", "strana", pageNumber+1, "recover", fmt.Sprint(r))
-			AddFailedPage(failedPages, exam.ID, pageNumber)
+			AddFailedPage(failedPages, exam.ID, pageNumber, "PANIC")
 		}
 	}()
 
@@ -158,7 +185,7 @@ func ProcessPage(wg *sync.WaitGroup, docMutex *sync.Mutex, doc *fitz.Document, p
 	docMutex.Unlock()
 	if err != nil {
 		errorLogger.Error("Chyba pri extrahovaní obrázka z PDF stránky", slog.Int("page", pageNumber), slog.String("error", err.Error()))
-		AddFailedPage(failedPages, exam.ID, pageNumber)
+		AddFailedPage(failedPages, exam.ID, pageNumber, "IMAGE_EXTRACTION_ERROR")
 		return
 	}
 	mat := ImageToMat(img)
@@ -171,8 +198,8 @@ func ProcessPage(wg *sync.WaitGroup, docMutex *sync.Mutex, doc *fitz.Document, p
 	mutexGetId.Unlock()
 
 	if err != nil {
-		errorLogger.Error("Chyba pri získavaní ID študenta z databázy", "PDF strana", pageNumber, "error", err.Error())
-		AddFailedPage(failedPages, exam.ID, pageNumber)
+		errorLogger.Error("Chyba pri získavaní ID študenta z databázy", "PDF strana", pageNumber+1, "error", err.Error())
+		AddFailedPage(failedPages, exam.ID, pageNumber, "ID_NOT_FOUND")
 		return
 	}
 
@@ -202,14 +229,14 @@ func ProcessPage(wg *sync.WaitGroup, docMutex *sync.Mutex, doc *fitz.Document, p
 	if len(answers) == 0 {
 		errorLogger.Error("Chyba pri rozpoznávaní odpovedí - žiadne odpovede detekované", "PDF strana", pageNumber+1)
 		// Gather pageNumbers to map
-		AddFailedPage(failedPages, exam.ID, pageNumber)
+		AddFailedPage(failedPages, exam.ID, pageNumber, "NO_ANSWERS_DETECTED")
 		return
 	}
 
 	if questionNumber == common.QUESTION_NUMBER_NOT_FOUND {
 		errorLogger.Error("Chyba pri rozpoznávaní čísiel otázok - ziadna otazka detekovana", "PDF strana", pageNumber+1)
 		// Gather pageNumbers to map
-		AddFailedPage(failedPages, exam.ID, pageNumber)
+		AddFailedPage(failedPages, exam.ID, pageNumber, "NO_QUESTION_NUMBERS")
 		return
 	}
 
@@ -229,7 +256,7 @@ func ProcessPage(wg *sync.WaitGroup, docMutex *sync.Mutex, doc *fitz.Document, p
 			"posledná otázka", questionNumber+1,
 			"otázok na strane", questionsOnPage,
 			"očakávaných", exam.QuestionCount)
-		AddFailedPage(failedPages, exam.ID, pageNumber)
+		AddFailedPage(failedPages, exam.ID, pageNumber, "INVALID_QUESTION_COUNT")
 		return
 	}
 

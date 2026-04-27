@@ -17,7 +17,7 @@ const ID_REGION_LEFT_PERCENT = 55
 // ID_SEPARATOR_Y_RATIO: estimated position of the header separator line (tikz y=-0.7)
 // as a fraction of mat.Cols() — tunable if box crops land too high or too low.
 // Decrease to shift crops UP, increase to shift DOWN.
-const ID_SEPARATOR_Y_RATIO = 0.19
+const ID_SEPARATOR_Y_RATIO = 0.268
 
 // ID_CENTER_X_OFFSET_RATIO: horizontal offset added to page center before tikz→pixel conversion.
 // Fraction of mat.Cols() — e.g. 0.02 ≈ 4mm right on A4. Increase to shift crops RIGHT.
@@ -26,16 +26,24 @@ const ID_CENTER_X_OFFSET_RATIO = 0.01
 // ID_SLASH_GAP_OFFSET_RATIO: extra rightward offset applied only to boxes 5-7 (after the slash separator).
 // Compensates if the second group of digits is printed slightly further right than the tikz coords predict.
 // Fraction of mat.Cols() — e.g. 0.01 ≈ 2mm on A4.
-const ID_SLASH_GAP_OFFSET_RATIO = 0.01
+const ID_SLASH_GAP_OFFSET_RATIO = 0.006
+
+// ID OCR retry configuration
+// MAX_ID_OCR_RETRIES: maximum number of retry attempts with adjusted offsets
+const MAX_ID_OCR_RETRIES = 20
+
+// ID_OFFSET_ADJUSTMENT_STEP: amount to adjust horizontal offset on each retry (fraction of mat.Cols())
+// Each retry will try different horizontal shifts (left/right)
+const ID_OFFSET_ADJUSTMENT_STEP = 0.001 // ~0.4mm on A4 at 300 DPI
 
 // Group checkbox paddings
-const GROUP_HEADER_HEIGHT = 350
-const GROUP_SIDE_PADDING = 470
-const GROUP_BOTTOM_PADDING = 250
+const GROUP_HEADER_HEIGHT = 375
+const GROUP_SIDE_PADDING = 395
+const GROUP_BOTTOM_PADDING = 275
 
-const SUBGROUP_HEADER_HEIGHT = 210
-const SUBGROUP_SIDE_PADDING = 635
-const SUBGROUP_BOTTOM_PADDING = 120
+const SUBGROUP_HEADER_HEIGHT = 235
+const SUBGROUP_SIDE_PADDING = 565
+const SUBGROUP_BOTTOM_PADDING = 135
 
 // Checkbox area thresholds for 0.45cm boxes scanned at 300 DPI:
 // 0.45cm * (300/2.54) ≈ 53px per side → area ≈ 2825 px²

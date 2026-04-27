@@ -24,7 +24,23 @@ import (
 
 var qrIDPattern = regexp.MustCompile(`(?:^|[|;\s])ID\s*:\s*(\d+)`)
 
+// offsetAdjustment represents adjustments to ID box OCR offsets for retry attempts
+type offsetAdjustment struct {
+	separatorYDelta float64 // adjustment to ID_SEPARATOR_Y_RATIO
+	centerXDelta    float64 // adjustment to ID_CENTER_X_OFFSET_RATIO
+	slashGapDelta   float64 // adjustment to ID_SLASH_GAP_OFFSET_RATIO
+}
+
+// digitResult holds OCR result for a single digit box
+type digitResult struct {
+	digit      string  // the recognized character
+	isValid    bool    // true if it's a valid digit (0-9)
+	attempt    int     // which attempt produced this result
+	confidence float64 // not used yet, but reserved for future OCR confidence scores
+}
+
 // extractIDByBoxOCR reads the 7 ID digits one box at a time using PSM 10 (single char).
+// If the first attempt doesn't find all 7 digits, it retries with adjusted offsets.
 // Box positions come from template_6.tex tikz coordinates.
 // Coordinate math (A4, 0.8in margins, tikz range -9.2..9.2):
 //
@@ -34,9 +50,133 @@ var qrIDPattern = regexp.MustCompile(`(?:^|[|;\s])ID\s*:\s*(\d+)`)
 func extractIDByBoxOCR(mat *gocv.Mat) (int, error) {
 	logger := logging.GetLogger()
 
+	// Define retry strategy: horizontal shifts only (Y position stays constant)
+	// Try progressively larger shifts left and right
+	adjustments := []offsetAdjustment{
+		{0.0, 0.0, 0.0},       // 0: Original values (baseline)
+		{0.0, -0.001, 0.0},    // 1: Tiny shift left
+		{0.0, 0.001, 0.0},     // 2: Tiny shift right
+		{0.0, -0.002, 0.0},    // 3: Small shift left
+		{0.0, 0.002, 0.0},     // 4: Small shift right
+		{0.0, -0.003, 0.0},    // 5: Medium shift left
+		{0.0, 0.003, 0.0},     // 6: Medium shift right
+		{0.0, -0.004, 0.0},    // 7: Larger shift left
+		{0.0, 0.004, 0.0},     // 8: Larger shift right
+		{0.0, -0.005, 0.0},    // 9: Max shift left
+		{0.0, 0.005, 0.0},     // 10: Max shift right
+		{0.0, 0.0, -0.002},    // 11: Adjust slash gap left
+		{0.0, 0.0, 0.002},     // 12: Adjust slash gap right
+		{0.0, -0.003, -0.002}, // 13: Shift left + slash gap left
+		{0.0, 0.003, 0.002},   // 14: Shift right + slash gap right
+	}
+
+	maxRetries := MAX_ID_OCR_RETRIES
+	if maxRetries > len(adjustments) {
+		maxRetries = len(adjustments)
+	}
+
+	// Store best results for each digit position (0-6)
+	bestDigits := make([]digitResult, 7)
+	for i := range bestDigits {
+		bestDigits[i] = digitResult{digit: "?", isValid: false, attempt: -1}
+	}
+
+	var lastErr error
+	foundAllDigits := false
+
+	for attempt := 0; attempt < maxRetries && !foundAllDigits; attempt++ {
+		adj := adjustments[attempt]
+
+		logger.Info("ID extraction attempt",
+			slog.Int("attempt", attempt),
+			slog.Float64("separatorYDelta", adj.separatorYDelta),
+			slog.Float64("centerXDelta", adj.centerXDelta),
+			slog.Float64("slashGapDelta", adj.slashGapDelta))
+
+		digits, err := tryExtractIDWithOffsets(mat, adj, attempt)
+
+		// Merge results: keep valid digits from this attempt
+		newValidCount := 0
+		for i := 0; i < 7 && i < len(digits); i++ {
+			if digits[i].isValid && !bestDigits[i].isValid {
+				bestDigits[i] = digits[i]
+				logger.Info("Found new valid digit",
+					slog.Int("position", i),
+					slog.String("digit", digits[i].digit),
+					slog.Int("fromAttempt", attempt))
+				newValidCount++
+			}
+		}
+
+		// Check if we have all 7 digits now
+		validCount := 0
+		for _, d := range bestDigits {
+			if d.isValid {
+				validCount++
+			}
+		}
+
+		logger.Info("Current digit status",
+			slog.Int("attempt", attempt),
+			slog.Int("totalValid", validCount),
+			slog.Int("newThisAttempt", newValidCount))
+
+		if validCount == 7 {
+			foundAllDigits = true
+			logger.Info("Successfully found all 7 digits",
+				slog.Int("finalAttempt", attempt))
+		}
+
+		if err != nil {
+			lastErr = err
+		}
+	}
+
+	// Build final ID from best digits
+	if foundAllDigits {
+		idStr := ""
+		for i, d := range bestDigits {
+			if !d.isValid {
+				return 0, fmt.Errorf("missing digit at position %d", i)
+			}
+			idStr += d.digit
+		}
+
+		logger.Info("Assembled ID from multiple attempts", slog.String("id", idStr))
+
+		id, err := strconv.Atoi(idStr)
+		if err != nil {
+			return 0, fmt.Errorf("failed to parse assembled ID %q: %w", idStr, err)
+		}
+		return id, nil
+	}
+
+	// Count how many digits we found
+	validCount := 0
+	for _, d := range bestDigits {
+		if d.isValid {
+			validCount++
+		}
+	}
+
+	return 0, fmt.Errorf("incomplete ID after %d attempts: found %d/7 digits, last error: %w", maxRetries, validCount, lastErr)
+}
+
+// tryExtractIDWithOffsets attempts to extract ID with specific offset adjustments
+// Returns: array of digitResult for each of the 7 digit positions, and error (if any)
+// Note: Only horizontal (X) adjustments are used; vertical (Y) position remains constant
+func tryExtractIDWithOffsets(mat *gocv.Mat, adj offsetAdjustment, attemptNum int) ([]digitResult, error) {
+	logger := logging.GetLogger()
+
+	// Apply offset adjustments
+	// Note: separatorYDelta is kept at 0 - we only adjust horizontal position
+	separatorYRatio := ID_SEPARATOR_Y_RATIO + adj.separatorYDelta
+	centerXOffsetRatio := ID_CENTER_X_OFFSET_RATIO + adj.centerXDelta
+	slashGapOffsetRatio := ID_SLASH_GAP_OFFSET_RATIO + adj.slashGapDelta
+
 	scale := float64(mat.Cols()) * (1.0 - 2.0*20.32/210.0) / 18.4
-	centerX := float64(mat.Cols())/2.0 + float64(mat.Cols())*ID_CENTER_X_OFFSET_RATIO
-	separatorY := float64(mat.Cols()) * ID_SEPARATOR_Y_RATIO
+	centerX := float64(mat.Cols())/2.0 + float64(mat.Cols())*centerXOffsetRatio
+	separatorY := float64(mat.Cols()) * separatorYRatio
 
 	toPixelX := func(x float64) int { return int(centerX + x*scale) }
 	toPixelY := func(y float64) int { return int(separatorY - (y+0.7)*scale) }
@@ -48,8 +188,24 @@ func extractIDByBoxOCR(mat *gocv.Mat) (int, error) {
 	// Crop 4px inside each border so the thick rectangle lines don't confuse OCR
 	const borderPad = 4
 
-	slashGapPx := int(float64(mat.Cols()) * ID_SLASH_GAP_OFFSET_RATIO)
-	digits := ""
+	slashGapPx := int(float64(mat.Cols()) * slashGapOffsetRatio)
+
+	// Initialize results for all 7 digit positions
+	results := make([]digitResult, 7)
+	for i := range results {
+		results[i] = digitResult{digit: "?", isValid: false, attempt: attemptNum}
+	}
+
+	// Log crop positions for debugging
+	if attemptNum == 0 {
+		logger.Info("ID box crop positions",
+			slog.Float64("separatorYRatio", separatorYRatio),
+			slog.Float64("centerXOffsetRatio", centerXOffsetRatio),
+			slog.Float64("slashGapOffsetRatio", slashGapOffsetRatio),
+			slog.Int("boxTop", boxTop),
+			slog.Int("boxBottom", boxBottom))
+	}
+
 	for i, bx := range boxXPositions {
 		extraX := 0
 		if i >= 4 { // boxes after the slash separator
@@ -60,42 +216,71 @@ func extractIDByBoxOCR(mat *gocv.Mat) (int, error) {
 			Max: image.Point{toPixelX(bx+0.6) - borderPad + extraX, boxBottom - borderPad},
 		}
 		if region.Min.X < 0 || region.Min.Y < 0 || region.Max.X > mat.Cols() || region.Max.Y > mat.Rows() {
-			return 0, fmt.Errorf("digit box %d out of image bounds: %v", i, region)
+			logger.Warn("Digit box out of bounds", slog.Int("box", i), slog.Any("region", region))
+			continue
 		}
 
 		digitMat := mat.Region(region)
-		tmpPath := fmt.Sprintf("./assets/tmp/id-digit-%d.png", i)
+		// Save with attempt number so we can see how crops shift between retries
+		tmpPath := fmt.Sprintf("./assets/tmp/id-digit-%d-attempt-%d.png", i, attemptNum)
 		SaveMat(tmpPath, digitMat)
 		digitMat.Close()
+
+		// Log the exact crop coordinates for this box
+		logger.Debug("ID digit box crop",
+			slog.Int("attempt", attemptNum),
+			slog.Int("box", i),
+			slog.Int("x1", region.Min.X),
+			slog.Int("y1", region.Min.Y),
+			slog.Int("x2", region.Max.X),
+			slog.Int("y2", region.Max.Y),
+			slog.Int("width", region.Dx()),
+			slog.Int("height", region.Dy()))
 
 		raw, err := ocr.OcrSingleChar(tmpPath)
 		//files.DeleteFile(tmpPath)
 		if err != nil {
-			return 0, fmt.Errorf("OCR failed for digit box %d: %w", i, err)
+			logger.Warn("OCR failed for digit box",
+				slog.Int("attempt", attemptNum),
+				slog.Int("box", i),
+				slog.String("error", err.Error()))
+			continue
 		}
 
 		d := strings.TrimSpace(raw)
-		logger.Info("ID box OCR", slog.Int("box", i), slog.String("digit", d))
-		digits += d
+		logger.Debug("ID box OCR",
+			slog.Int("attempt", attemptNum),
+			slog.Int("box", i),
+			slog.String("digit", d),
+			slog.String("savedTo", tmpPath))
+
+		// Check if it's a valid digit
+		isValid := len(d) == 1 && d[0] >= '0' && d[0] <= '9'
+		results[i] = digitResult{
+			digit:   d,
+			isValid: isValid,
+			attempt: attemptNum,
+		}
 	}
 
-	logger.Info("ID box OCR combined", slog.String("digits", digits))
-	// Strip any "/" that OCR may produce (it's in the whitelist for the full-header fallback).
-	clean := strings.Map(func(r rune) rune {
-		if r >= '0' && r <= '9' {
-			return r
+	// Count valid digits for logging
+	validCount := 0
+	digitsStr := ""
+	for _, r := range results {
+		if r.isValid {
+			validCount++
+			digitsStr += r.digit
+		} else {
+			digitsStr += "?"
 		}
-		return -1
-	}, digits)
-	logger.Info("ID box OCR cleaned", slog.String("clean", clean))
-	if len(clean) == 0 {
-		return 0, fmt.Errorf("no digits extracted from boxes, raw: %q", digits)
 	}
-	id, err := strconv.Atoi(clean)
-	if err != nil {
-		return 0, fmt.Errorf("failed to parse ID %q: %w", clean, err)
-	}
-	return id, nil
+
+	logger.Debug("ID box OCR results",
+		slog.Int("attempt", attemptNum),
+		slog.String("digits", digitsStr),
+		slog.Int("validCount", validCount))
+
+	return results, nil
 }
 
 // FindContours detects external contours in the provided image using edge detection and morphological operations.
@@ -356,8 +541,11 @@ func ExportFailedPagesToPDF(examTitle string, examID uint, pages []int, inputPDF
 }
 
 // Adds a failed page into failedPagesMap with the use of locks
-func AddFailedPage(failedPages *FailedPages, examID uint, pageNumber int) {
+func AddFailedPage(failedPages *FailedPages, examID uint, pageNumber int, reason string) {
 	failedPages.mu.Lock()
 	defer failedPages.mu.Unlock()
-	failedPages.data[examID] = append(failedPages.data[examID], pageNumber)
+	failedPages.data[examID] = append(failedPages.data[examID], FailedPageInfo{
+		PageNumber: pageNumber,
+		Reason:     reason,
+	})
 }
