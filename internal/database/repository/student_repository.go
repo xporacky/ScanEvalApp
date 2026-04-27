@@ -183,8 +183,13 @@ func UpdateStudentAnswers(db *gorm.DB, studentId uint, examId uint, questionNumb
 	}
 
 	studentAnswers := []rune(student.Answers)
+	startIndex := (questionNumber - len(answers)) + 1
+	endIndex := questionNumber
+	if startIndex < 0 || endIndex >= len(studentAnswers) {
+		return fmt.Errorf("neplatný rozsah otázok pre študenta %d: start=%d end=%d answers=%d total=%d", studentId, startIndex, endIndex, len(answers), len(studentAnswers))
+	}
 	for i, answer := range answers {
-		studentAnswers[(questionNumber-len(answers))+i+1] = answer
+		studentAnswers[startIndex+i] = answer
 	}
 	student.Answers = string(studentAnswers)
 
@@ -201,9 +206,6 @@ func UpdateStudentAnswers(db *gorm.DB, studentId uint, examId uint, questionNumb
 		UpdateStudent(db, student)
 		return nil
 	}
-
-	startIndex := (questionNumber - len(answers)) + 1
-	endIndex := questionNumber
 
 	score := 0
 	for i := startIndex; i <= endIndex; i++ {
