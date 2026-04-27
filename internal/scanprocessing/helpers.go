@@ -477,9 +477,18 @@ func GetStudent(mat *gocv.Mat, db *gorm.DB, examID uint) (*models.Student, error
 		rect := image.Rectangle{Min: image.Point{idLeft, PADDING}, Max: image.Point{mat.Cols() - PADDING, (mat.Rows() / 4) - PADDING}}
 		headerMat := mat.Region(rect)
 		defer headerMat.Close()
-		SaveMat(TEMP_HEADER_IMAGE_PATH, headerMat)
-		registrationNumber, err = ocr.ExtractID(TEMP_HEADER_IMAGE_PATH)
-		files.DeleteFile(TEMP_HEADER_IMAGE_PATH)
+		
+		tmpFile, err := os.CreateTemp("./assets/tmp", "ocr-header-*.png")
+		if err != nil {
+			errorLogger.Error("Nepodarilo sa vytvoriť dočasný súbor pre OCR záhlavia", slog.String("error", err.Error()))
+			return nil, err
+		}
+		tmpPath := tmpFile.Name()
+		tmpFile.Close()
+		defer files.DeleteFile(tmpPath)
+		
+		SaveMat(tmpPath, headerMat)
+		registrationNumber, err = ocr.ExtractID(tmpPath)
 		if err != nil {
 			errorLogger.Error("Chyba pri extrakcii registrationNumber zo záhlavia obrázku", slog.String("error", err.Error()))
 			return nil, err

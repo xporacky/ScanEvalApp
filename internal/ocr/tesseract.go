@@ -3,6 +3,7 @@ package ocr
 import (
 	"ScanEvalApp/internal/common"
 	"ScanEvalApp/internal/logging"
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -10,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 )
 
 // PSM_SINGLE_LINE specifies Tesseract's Page Segmentation Mode 7,
@@ -49,8 +51,15 @@ func OcrImage(imagePath string, psm string) (string, error) {
 		errorLogger.Error("Chyba pri získavaní absolútnej cesty k obrázku", slog.String("error", err.Error()))
 		return "", err
 	}
-	cmd := exec.Command("tesseract", imagePath, "stdout", "-l", "slk", "--psm", psm)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "tesseract", imagePath, "stdout", "-l", "slk", "--psm", psm)
 	out, err := cmd.Output()
+	if ctx.Err() == context.DeadlineExceeded {
+		errorLogger.Error("OCR proces prekročil časový limit", slog.String("imagePath", imagePath))
+		return "", ctx.Err()
+	}
 	if err != nil {
 		errorLogger.Error("Error during OCR process for image", slog.String("imagePath", imagePath), slog.String("error", err.Error()))
 		return "", err

@@ -89,6 +89,7 @@ func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan ch
 		errorLogger.Error("Chyba pri načítaní PDF súboru", slog.String("file", scanPath), slog.String("error", err.Error()))
 		panic(err)
 	}
+	defer doc.Close()
 	var wg sync.WaitGroup
 	var docMutex sync.Mutex
 	numWorkers := runtime.NumCPU()
@@ -173,6 +174,7 @@ func ProcessPage(wg *sync.WaitGroup, docMutex *sync.Mutex, doc *fitz.Document, p
 	defer wg.Done()
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
+	defer reportPageDone(progressChan, counter, totalPages)
 	defer func() {
 		if r := recover(); r != nil {
 			errorLogger.Error("Panic v ProcessPage - strana preskočená", "strana", pageNumber+1, "recover", fmt.Sprint(r))
@@ -267,11 +269,15 @@ func ProcessPage(wg *sync.WaitGroup, docMutex *sync.Mutex, doc *fitz.Document, p
 
 	if err != nil {
 		errorLogger.Error("Chyba pri aktualizácii študenta v databáze", "studentID", student.ID, "error", err.Error())
+		AddFailedPage(failedPages, exam.ID, pageNumber)
 		return
 	}
 
 	logger.Info("Aktualizované odpovede študenta", "studentID", student.ID, "answers", student.Answers)
 
+}
+
+func reportPageDone(progressChan chan string, counter *int, totalPages int) {
 	if counter != nil {
 		counterMutex.Lock()
 		*counter = *counter + 1
@@ -283,7 +289,6 @@ func ProcessPage(wg *sync.WaitGroup, docMutex *sync.Mutex, doc *fitz.Document, p
 			progressChan <- fmt.Sprintf("Spracovaných %d / %d", curr, totalPages)
 		}
 	}
-
 }
 
 func copyFile(src, dst string) error {
