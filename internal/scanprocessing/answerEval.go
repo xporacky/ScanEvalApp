@@ -2,7 +2,6 @@ package scanprocessing
 
 import (
 	"ScanEvalApp/internal/common"
-	"ScanEvalApp/internal/files"
 	"ScanEvalApp/internal/logging"
 	"ScanEvalApp/internal/ocr"
 	"fmt"
@@ -79,7 +78,25 @@ func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int, numberOfChoices int) 
 		studentAnswers = append(studentAnswers, GetAnswer(&croppedMat, i, numberOfChoices))
 		// if we dont have question number yet try to find it
 		if questionNumber == common.QUESTION_NUMBER_NOT_FOUND {
-			questionNumber = GetQuestionNumber(&croppedMat, i, numberOfChoices)
+			foundQuestionNumber := GetQuestionNumber(&croppedMat, i, numberOfChoices)
+			if foundQuestionNumber == common.QUESTION_NUMBER_NOT_FOUND {
+				continue
+			}
+
+			firstQuestionIndex := foundQuestionNumber - 1 - i
+			lastQuestionIndex := firstQuestionIndex + len(studentAnswers) - 1
+			if firstQuestionIndex < 0 || lastQuestionIndex >= numberOfQuestions {
+				logger.Info("Ignorujem neplatné číslo otázky z OCR",
+					slog.Int("questionIndex", i),
+					slog.Int("foundQuestionNumber", foundQuestionNumber),
+					slog.Int("firstQuestionIndex", firstQuestionIndex),
+					slog.Int("lastQuestionIndex", lastQuestionIndex),
+					slog.Int("numberOfQuestions", numberOfQuestions),
+				)
+				continue
+			}
+
+			questionNumber = lastQuestionIndex
 			continue
 		}
 		questionNumber++
@@ -94,7 +111,7 @@ func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int, numberOfChoices int) 
 	if questionNumber == common.QUESTION_NUMBER_NOT_FOUND {
 		return common.QUESTION_NUMBER_NOT_FOUND, nil
 	}
-	return questionNumber - 1, studentAnswers
+	return questionNumber, studentAnswers
 }
 
 // DetectGroupFromHeader reads the group (A-H) and subgroup (1-5) checkboxes from the
@@ -294,7 +311,9 @@ func FindRectangle(mat *gocv.Mat, minAreaSize float64, maxAreaSize float64) imag
 //   - int: The extracted question number. If OCR fails, it returns zero (default int value).
 func GetQuestionNumber(mat *gocv.Mat, i int, numberOfChoices int) int {
 	errorLogger := logging.GetErrorLogger()
-	rect := image.Rectangle{Min: image.Point{PADDING, PADDING + (i * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE)}, Max: image.Point{(mat.Cols() / (numberOfChoices + 1)) - PADDING, ((i + 1) * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE) - PADDING}}
+	rect := image.Rectangle{
+		Min: image.Point{PADDING, PADDING/2 + (i * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE)},
+		Max: image.Point{(mat.Cols() / (numberOfChoices + 1)) - PADDING, ((i + 1) * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE) - PADDING/2}}
 	questionMat := mat.Region(rect)
 	defer questionMat.Close()
 
@@ -308,7 +327,8 @@ func GetQuestionNumber(mat *gocv.Mat, i int, numberOfChoices int) int {
 
 	SaveMat(tmpPath, questionMat)
 	questionNum, err := ocr.ExtractQuestionNumber(tmpPath)
-	files.DeleteFile(tmpPath)
+	logger := logging.GetLogger()
+	logger.Info("OCR výrez čísla otázky ponechaný na debug", slog.String("path", tmpPath), slog.Int("questionIndex", i))
 
 	if err != nil {
 		errorLogger.Error("Chyba pri extrakcii čísla otázky",
