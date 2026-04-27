@@ -43,7 +43,6 @@ func DetectAnswersOnSheet(mat *gocv.Mat, choices, questions int) ([]rune, error)
 func getAnswerParametric(mat *gocv.Mat, rowIndex, choices, questions int) rune {
 	answer := rune('x')
 	state := StateEmpty
-
 	for j := 1; j <= choices; j++ {
 		padding := CHECKBOX_AREA_PADDING
 		if rowIndex == 0 || rowIndex == questions-1 {
@@ -75,6 +74,9 @@ func getAnswerParametric(mat *gocv.Mat, rowIndex, choices, questions int) rune {
 		}
 		rectMat := checkboxMat.Region(inner)
 		mean := rectMat.Mean()
+		if mean.Val1 < MEAN_INTENSITY_X_HIGHEST {
+			fmt.Println(mean.Val1)
+		}
 		//fmt.Println(mean.Val1)
 		if mean.Val1 < MEAN_INTENSITY_X_HIGHEST && mean.Val1 > MEAN_INTENSITY_X_LOWEST {
 			if state == StateEmpty {

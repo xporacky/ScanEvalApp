@@ -49,30 +49,30 @@ func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int, numberOfChoices int) 
 		logger.Info("Ohraničujúci obdĺžnik nebol nájdený", slog.String("error", err.Error()))
 		return common.QUESTION_NUMBER_NOT_FOUND, nil
 	}
-	/*
-		croppedUpperHeader, err := CropGroupFromHeader(mat)
-		if err != nil {
-			logger.Info("Ohraničujúci obdĺžnik nebol nájdený", slog.String("error", err.Error()))
-			return common.QUESTION_NUMBER_NOT_FOUND, nil
-		}
-		defer croppedUpperHeader.Close()
-		group := GetGroupCode(&croppedUpperHeader)
 
-		croppedLowerHeader, err := CropSubGroupFromHeader(mat)
-		if err != nil {
-			logger.Info("Ohraničujúci obdĺžnik nebol nájdený", slog.String("error", err.Error()))
-			return common.QUESTION_NUMBER_NOT_FOUND, nil
-		}
-		defer croppedLowerHeader.Close()
-		subGroup := GetSubGroupCode(&croppedLowerHeader)
+	croppedUpperHeader, err := CropGroupFromHeader(mat)
+	if err != nil {
+		logger.Info("Ohraničujúci obdĺžnik nebol nájdený", slog.String("error", err.Error()))
+		return common.QUESTION_NUMBER_NOT_FOUND, nil
+	}
+	defer croppedUpperHeader.Close()
+	group := GetGroupCode(&croppedUpperHeader)
 
-		if group == 'x' || subGroup == -1 {
-			logger.Info("Nebola najdena skupina alebo podskupina", slog.Any("group", string(group)), slog.Int("subGroup", subGroup))
-			return common.QUESTION_NUMBER_NOT_FOUND, nil
-		}
-		groupCode := fmt.Sprintf("%c%d", group, subGroup)
-		fmt.Println(groupCode)
-	*/
+	croppedLowerHeader, err := CropSubGroupFromHeader(mat)
+	if err != nil {
+		logger.Info("Ohraničujúci obdĺžnik nebol nájdený", slog.String("error", err.Error()))
+		return common.QUESTION_NUMBER_NOT_FOUND, nil
+	}
+	defer croppedLowerHeader.Close()
+	subGroup := GetSubGroupCode(&croppedLowerHeader)
+
+	if group == 'x' || subGroup == -1 {
+		logger.Info("Nebola najdena skupina alebo podskupina", slog.Any("group", string(group)), slog.Int("subGroup", subGroup))
+		return common.QUESTION_NUMBER_NOT_FOUND, nil
+	}
+	groupCode := fmt.Sprintf("%c%d", group, subGroup)
+	fmt.Println("Skupina: ", groupCode)
+
 	questionNumber := common.QUESTION_NUMBER_NOT_FOUND
 	for i := 0; i < NUMBER_OF_QUESTIONS_PER_PAGE; i++ {
 		studentAnswers = append(studentAnswers, GetAnswer(&croppedMat, i, numberOfChoices))
@@ -162,7 +162,7 @@ func CropGroupFromHeader(mat *gocv.Mat) (gocv.Mat, error) {
 	}
 
 	croppedMat := mat.Region(headerRect)
-	//SaveMat("./assets/group-crop.png", croppedMat)
+	SaveMat("./assets/group-crop.png", croppedMat)
 	return croppedMat, nil
 }
 
@@ -204,7 +204,7 @@ func CropSubGroupFromHeader(mat *gocv.Mat) (gocv.Mat, error) {
 	}
 
 	croppedMat := mat.Region(headerRect)
-	//SaveMat("./assets/group-crop2.png", croppedMat)
+	SaveMat("./assets/group-crop2.png", croppedMat)
 	return croppedMat, nil
 }
 
@@ -258,6 +258,8 @@ func GetQuestionNumber(mat *gocv.Mat, i int, numberOfChoices int) int {
 	errorLogger := logging.GetErrorLogger()
 	rect := image.Rectangle{Min: image.Point{PADDING, PADDING + (i * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE)}, Max: image.Point{(mat.Cols() / (numberOfChoices + 1)) - PADDING, ((i + 1) * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE) - PADDING}}
 	questionMat := mat.Region(rect)
+	path := fmt.Sprintf("./assets/nemberMat_%d.png", i)
+	SaveMat(path, questionMat)
 	defer questionMat.Close()
 	SaveMat(TEMP_IMAGE_PATH, questionMat)
 	questionNum, err := ocr.ExtractQuestionNumber(TEMP_IMAGE_PATH)
