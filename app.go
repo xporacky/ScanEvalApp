@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"ScanEvalApp/internal/common"
@@ -554,6 +555,55 @@ func (a *App) PrintLegend() (string, error) {
 	outputPath := filepath.Join(absDirPath, "legenda.pdf")
 	if err := os.WriteFile(outputPath, pdfBytes, 0644); err != nil {
 		return "", fmt.Errorf("failed to save legend PDF: %w", err)
+	}
+
+	return outputPath, nil
+}
+
+// PickCSVFile opens a single-file picker for CSV files and returns the selected path.
+func (a *App) PickCSVFile() (string, error) {
+	if a.ctx == nil {
+		return "", fmt.Errorf("runtime not ready")
+	}
+	return runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "Vyber CSV súbor",
+		Filters: []runtime.FileFilter{
+			{DisplayName: "CSV súbory", Pattern: "*.csv"},
+		},
+	})
+}
+
+// MergeResultCSVs zlúči zadané vstupné CSV súbory a uloží výsledok do
+// adresára nastaveného v konfigurácii pod názvom outputName.
+// Vracia úplnú cestu k výsledného súboru.
+func (a *App) MergeResultCSVs(inputPaths []string, outputName string) (string, error) {
+	if a.ctx == nil {
+		return "", fmt.Errorf("runtime not ready")
+	}
+	if len(inputPaths) < 2 {
+		return "", fmt.Errorf("je potrebné vybrať aspoň 2 CSV súbory")
+	}
+	if outputName == "" {
+		return "", fmt.Errorf("zadaj názov výsledného súboru")
+	}
+
+	dirPath, err := config.LoadLastPath()
+	if err != nil || dirPath == "" {
+		return "", fmt.Errorf("miesto ukladania nie je nastavené – nastav ho v záložke Nastavenia")
+	}
+	absDirPath, err := filepath.Abs(dirPath)
+	if err != nil {
+		return "", fmt.Errorf("neplatná cesta ukladania: %w", err)
+	}
+
+	name := outputName
+	if !strings.HasSuffix(strings.ToLower(name), ".csv") {
+		name += ".csv"
+	}
+	outputPath := filepath.Join(absDirPath, name)
+
+	if err := csv.MergeResultCSVs(inputPaths, outputPath); err != nil {
+		return "", err
 	}
 
 	return outputPath, nil
