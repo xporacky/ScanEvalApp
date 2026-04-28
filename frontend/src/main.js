@@ -55,7 +55,7 @@ const state = {
   uploadConfig: '',
   statsExamId: 0,
   statsSelected: {},
-  studentFilter: { name: '', surname: '', regNum: '' },
+  studentFilter: { name: '', surname: '', room: '', regNum: '' },
   mdTitle: '',
   mdSchoolYear: '',
   mdQuestionCount: 10,
@@ -233,16 +233,19 @@ function stripDiacritics(str) {
 function applyStudentFilter() {
   const nameFilter = stripDiacritics(state.studentFilter.name.toLowerCase().trim());
   const surnameFilter = stripDiacritics(state.studentFilter.surname.toLowerCase().trim());
+  const roomFilter = stripDiacritics(state.studentFilter.room.toLowerCase().trim());
   const regNumFilter = stripDiacritics(state.studentFilter.regNum.toLowerCase().trim());
 
   document.querySelectorAll('.students-table .row').forEach((row) => {
     const name = stripDiacritics((row.querySelector('[data-label="Meno"]')?.textContent || '').toLowerCase());
     const surname = stripDiacritics((row.querySelector('[data-label="Priezvisko"]')?.textContent || '').toLowerCase());
+    const room = stripDiacritics((row.querySelector('[data-label="Miestnost"]')?.textContent || '').toLowerCase());
     const regNum = (row.querySelector('[data-label="Reg cislo"]')?.textContent || '').toLowerCase();
 
     const visible =
       name.includes(nameFilter) &&
       surname.includes(surnameFilter) &&
+      room.includes(roomFilter) &&
       regNum.includes(regNumFilter);
 
     row.style.display = visible ? '' : 'none';
@@ -265,6 +268,7 @@ function renderStudents() {
     <div class="students-filter">
       <input type="text" id="filter-name" placeholder="Hľadaj podľa mena…" value="${state.studentFilter.name}">
       <input type="text" id="filter-surname" placeholder="Hľadaj podľa priezviska…" value="${state.studentFilter.surname}">
+      <input type="text" id="filter-room" placeholder="Hľadaj podľa miestnosti…" value="${state.studentFilter.room}">
       <input type="text" id="filter-regnum" placeholder="Hľadaj podľa reg. čísla…" value="${state.studentFilter.regNum}">
     </div>
     <div class="students-table">
@@ -308,6 +312,10 @@ function renderStudents() {
   });
   document.getElementById('filter-surname').addEventListener('input', (e) => {
     state.studentFilter.surname = e.target.value;
+    applyStudentFilter();
+  });
+  document.getElementById('filter-room').addEventListener('input', (e) => {
+    state.studentFilter.room = e.target.value;
     applyStudentFilter();
   });
   document.getElementById('filter-regnum').addEventListener('input', (e) => {

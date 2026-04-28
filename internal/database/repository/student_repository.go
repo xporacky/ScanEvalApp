@@ -135,6 +135,7 @@ func GetStudentsQuery(db *gorm.DB, query string) ([]models.Student, error) {
 
 		if strings.Contains(RemoveDiacritics(student.Name), query) ||
 			strings.Contains(RemoveDiacritics(student.Surname), query) ||
+			strings.Contains(RemoveDiacritics(student.Room), query) ||
 			strings.Contains(fmt.Sprintf("%d", student.RegistrationNumber), query) {
 			students = append(students, student)
 		}
