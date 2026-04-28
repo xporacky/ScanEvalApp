@@ -509,6 +509,9 @@ func LoadConfig(configFile string) error {
 	var config struct {
 		MeanIntensityXLowest  float64 `json:"mean_intensity_x_lowest"`
 		MeanIntensityXHighest float64 `json:"mean_intensity_x_highest"`
+		IDSeparatorYRatio     float64 `json:"id_separator_y_ratio"`
+		IDCenterXOffsetRatio  float64 `json:"id_center_x_offset_ratio"`
+		IDSlashGapOffsetRatio float64 `json:"id_slash_gap_offset_ratio"`
 	}
 
 	decoder := json.NewDecoder(file)
@@ -518,6 +521,9 @@ func LoadConfig(configFile string) error {
 
 	MEAN_INTENSITY_X_LOWEST = config.MeanIntensityXLowest
 	MEAN_INTENSITY_X_HIGHEST = config.MeanIntensityXHighest
+	ID_SEPARATOR_Y_RATIO = config.IDSeparatorYRatio
+	ID_CENTER_X_OFFSET_RATIO = config.IDCenterXOffsetRatio
+	ID_SLASH_GAP_OFFSET_RATIO = config.IDSlashGapOffsetRatio
 	return nil
 }
 

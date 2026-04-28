@@ -1,4 +1,7 @@
 {
     "mean_intensity_x_lowest": 180,
-    "mean_intensity_x_highest": 235
+    "mean_intensity_x_highest": 235,
+    "id_separator_y_ratio": 0.286,
+    "id_center_x_offset_ratio": 0.02,
+    "id_slash_gap_offset_ratio": 0.016
   }
