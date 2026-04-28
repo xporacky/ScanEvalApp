@@ -503,6 +503,10 @@ func extractRegistrationNumberFromQR(qrText string) (int, error) {
 	return 0, fmt.Errorf("QR text does not contain ID field: %s", qrText)
 }
 
+func isPlausibleRegistrationNumber(registrationNumber int) bool {
+	return registrationNumber >= 10000 && registrationNumber <= 9999999
+}
+
 // GetStudent attempts to find and return a student from the provided image (gocv.Mat)
 // using either a QR code or OCR to extract the student's ID or registration number.
 //
@@ -528,18 +532,31 @@ func GetStudent(mat *gocv.Mat, db *gorm.DB, examID uint) (*models.Student, error
 	if qrText != "" {
 		id, err := extractRegistrationNumberFromQR(qrText)
 		if err != nil {
-			errorLogger.Error("Chyba pri konverzii QR textu na ID", slog.String("qrText", qrText), slog.String("error", err.Error()))
-			return nil, err
+			logger.Warn("Chyba pri konverzii QR textu na ID, skúšam OCR fallback",
+				slog.String("qrText", qrText),
+				slog.String("error", err.Error()))
+		} else if !isPlausibleRegistrationNumber(id) {
+			logger.Warn("Neplatné registračné číslo z QR, skúšam OCR fallback", slog.Int("id", id))
+		} else {
+			logger.Info("Id studenta bolo najdene z qr kodu", slog.Int("id", id))
+			//return repository.GetStudentById(db, uint(id), examID)
+			student, err := repository.GetStudentByRegistrationNumber(db, uint(id), examID)
+			if err == nil {
+				return student, nil
+			}
+			logger.Warn("Študent z QR nebol nájdený, skúšam OCR fallback",
+				slog.Int("registrationNumber", id),
+				slog.String("error", err.Error()))
 		}
-		logger.Info("Id studenta bolo najdene z qr kodu", slog.Int("id", id))
-		//return repository.GetStudentById(db, uint(id), examID)
-		return repository.GetStudentByRegistrationNumber(db, uint(id), examID)
 
 	}
 	logger.Warn("QR kód nebol nájdený, pokúšame sa získať ID z boxov v hlavičke")
 
 	// Primary fallback: crop each ID digit box individually (PSM 10, single char).
 	registrationNumber, err := extractIDByBoxOCR(mat)
+	if err == nil && !isPlausibleRegistrationNumber(registrationNumber) {
+		err = fmt.Errorf("invalid registration number from box OCR %d", registrationNumber)
+	}
 	if err != nil {
 		logger.Warn("Box OCR fallback zlyhal, skúšam header OCR", slog.String("error", err.Error()))
 		// Secondary fallback: crop right portion of header and run full OCR.
@@ -555,17 +572,26 @@ func GetStudent(mat *gocv.Mat, db *gorm.DB, examID uint) (*models.Student, error
 		}
 		tmpPath := tmpFile.Name()
 		tmpFile.Close()
-		defer files.DeleteFile(tmpPath)
 
 		SaveMat(tmpPath, headerMat)
 		registrationNumber, err = ocr.ExtractID(tmpPath)
 		if err != nil {
-			errorLogger.Error("Chyba pri extrakcii registrationNumber zo záhlavia obrázku", slog.String("error", err.Error()))
+			errorLogger.Error("Chyba pri extrakcii registrationNumber zo záhlavia obrázku",
+				slog.String("error", err.Error()),
+				slog.String("path", tmpPath))
 			return nil, err
+		}
+		files.DeleteFile(tmpPath)
+		if !isPlausibleRegistrationNumber(registrationNumber) {
+			return nil, fmt.Errorf("invalid registration number from header OCR %d", registrationNumber)
 		}
 	}
 	logger.Info("Registracne cislo bolo najdene", slog.Int("registrationNumber", registrationNumber))
-	return repository.GetStudentByRegistrationNumber(db, uint(registrationNumber), examID)
+	student, err := repository.GetStudentByRegistrationNumber(db, uint(registrationNumber), examID)
+	if err != nil {
+		return nil, fmt.Errorf("registration number from OCR %d: %w", registrationNumber, err)
+	}
+	return student, nil
 }
 
 func LoadConfig(configFile string) error {
