@@ -196,6 +196,21 @@ func OcrSingleChar(imagePath string) (string, error) {
 	return ocrImageDigitsOnly(imagePath, PSM_SINGLE_CHAR)
 }
 
+func parseQuestionNumberText(text string) (int, bool) {
+	text = strings.TrimSpace(text)
+	match := regexp.MustCompile(`\d+`).FindString(text)
+	if match == "" {
+		return common.QUESTION_NUMBER_NOT_FOUND, false
+	}
+
+	var num int
+	_, err := fmt.Sscan(match, &num)
+	if err != nil {
+		return common.QUESTION_NUMBER_NOT_FOUND, false
+	}
+	return num, true
+}
+
 // ExtractQuestionNumber performs OCR on the specified image path to extract and parse a question number.
 //
 // It uses OCR (configured for single-line text) to read the content of the image,
@@ -212,18 +227,29 @@ func OcrSingleChar(imagePath string) (string, error) {
 // Notes:
 //   - Logs successful extraction or any errors encountered during the process.
 func ExtractQuestionNumber(path string) (int, error) {
-	errorLogger := logging.GetErrorLogger()
 	logger := logging.GetLogger()
-	dt, err := OcrImage(path, PSM_SINGLE_LINE)
-	if err != nil {
-		return common.QUESTION_NUMBER_NOT_FOUND, err
+
+	psmModes := []string{
+		PSM_SINGLE_LINE,
+		PSM_SINGLE_CHAR,
+		PSM_UNIFORM_BLOCK,
 	}
-	var num int
-	_, err = fmt.Sscan(dt, &num)
-	if err != nil {
-		errorLogger.Error("Failed to convert QuestionNumber to integer", slog.String("error", err.Error()))
-		return common.QUESTION_NUMBER_NOT_FOUND, err
+	var rawTexts []string
+	for _, psm := range psmModes {
+		dt, err := ocrImageDigitsOnly(path, psm)
+		if err != nil {
+			return common.QUESTION_NUMBER_NOT_FOUND, err
+		}
+		rawTexts = append(rawTexts, strings.TrimSpace(dt))
+		if num, ok := parseQuestionNumberText(dt); ok {
+			logger.Info("Question number", slog.Int("number", num), slog.String("psm", psm))
+			return num, nil
+		}
 	}
-	logger.Info("Question number", slog.Int("number", num))
-	return num, nil
+
+	err := fmt.Errorf("no question number found in OCR output")
+	logger.Debug("Question number OCR returned no digits",
+		slog.String("ocrText", strings.Join(rawTexts, " | ")),
+		slog.String("error", err.Error()))
+	return common.QUESTION_NUMBER_NOT_FOUND, err
 }
