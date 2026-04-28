@@ -408,12 +408,82 @@ func SaveMat(path string, mat gocv.Mat) {
 //   - string: The decoded text from the QR code. If no QR code is detected, an empty string is returned.
 func ReadQR(mat *gocv.Mat) string {
 	qrDetector := gocv.NewQRCodeDetector()
+	defer qrDetector.Close()
+
+	if text := detectQR(qrDetector, *mat); text != "" {
+		return text
+	}
+
+	candidates := buildQRFallbackCandidates(mat)
+	defer func() {
+		for _, candidate := range candidates {
+			candidate.Close()
+		}
+	}()
+
+	for _, candidate := range candidates {
+		if text := detectQR(qrDetector, candidate); text != "" {
+			return text
+		}
+	}
+
+	return ""
+}
+
+func detectQR(qrDetector gocv.QRCodeDetector, mat gocv.Mat) string {
 	points := gocv.NewMat()
 	defer points.Close()
 	qrCode := gocv.NewMat()
 	defer qrCode.Close()
-	text := qrDetector.DetectAndDecode(*mat, &points, &qrCode)
-	return text
+	return qrDetector.DetectAndDecode(mat, &points, &qrCode)
+}
+
+func buildQRFallbackCandidates(mat *gocv.Mat) []gocv.Mat {
+	if mat == nil || mat.Empty() {
+		return nil
+	}
+
+	cols := mat.Cols()
+	rows := mat.Rows()
+	rects := []image.Rectangle{
+		image.Rect(cols*65/100, rows*8/100, cols-PADDING, rows*36/100),
+		image.Rect(cols*55/100, rows*5/100, cols-PADDING, rows*42/100),
+	}
+
+	var candidates []gocv.Mat
+	for _, rect := range rects {
+		rect = rect.Intersect(image.Rect(0, 0, cols, rows))
+		if rect.Empty() {
+			continue
+		}
+
+		crop := mat.Region(rect)
+		candidates = append(candidates, crop.Clone())
+
+		gray := crop
+		grayClone := gocv.NewMat()
+		if crop.Channels() > 1 {
+			gocv.CvtColor(crop, &grayClone, gocv.ColorBGRToGray)
+			gray = grayClone
+		}
+
+		for _, scale := range []float64{2, 3, 4} {
+			resized := gocv.NewMat()
+			gocv.Resize(gray, &resized, image.Point{}, scale, scale, gocv.InterpolationCubic)
+			candidates = append(candidates, resized)
+
+			thresholded := gocv.NewMat()
+			gocv.Threshold(resized, &thresholded, 0, 255, gocv.ThresholdBinary|gocv.ThresholdOtsu)
+			candidates = append(candidates, thresholded)
+		}
+
+		if !grayClone.Empty() {
+			grayClone.Close()
+		}
+		crop.Close()
+	}
+
+	return candidates
 }
 
 func extractRegistrationNumberFromQR(qrText string) (int, error) {
