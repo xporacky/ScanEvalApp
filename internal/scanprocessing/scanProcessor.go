@@ -60,12 +60,8 @@ func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan ch
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
-	// Vyčistenie všetkých stránok študentov pre daný test
-	err := repository.ClearStudentForExam(db, exam.ID)
-	if err != nil {
-		errorLogger.Error("Nepodarilo sa vyčistiť stránky študentov", slog.String("examID", fmt.Sprint(exam.ID)), slog.String("error", err.Error()))
-		return
-	}
+	// Nevymažeme študentov - umožňuje inkrementálne vyhodnotenie po častiach
+	// UpdateStudentAnswers teraz inteligentne zvládne duplicitné stránky
 
 	failedPages := &FailedPages{
 		data: make(map[uint][]FailedPageInfo),
@@ -78,7 +74,7 @@ func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan ch
 		return
 	}
 	destPath := filepath.Join(common.GLOBAL_TEMP_SCAN, fileName)
-	err = copyFile(scanPath, destPath)
+	err := copyFile(scanPath, destPath)
 	if err != nil {
 		errorLogger.Error("Chyba pri kopírovaní súboru:", slog.String("error", err.Error()))
 		return

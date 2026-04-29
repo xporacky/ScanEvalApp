@@ -193,11 +193,26 @@ func UpdateStudentAnswers(db *gorm.DB, studentId uint, examId uint, questionNumb
 	}
 	student.Answers = string(studentAnswers)
 
+	// Inteligentná detekcia duplicitných stránok
 	pageNumberStr := strconv.Itoa(pageNumber)
-	if student.Pages == "" {
-		student.Pages = pageNumberStr
+	pageAlreadyProcessed := false
+	if student.Pages != "" {
+		// Kontrola či stránka už je v zozname (presná zhoda)
+		pageList := strings.Split(student.Pages, "-")
+		for _, p := range pageList {
+			if p == pageNumberStr {
+				pageAlreadyProcessed = true
+				logger.Info("Stránka už bola spracovaná - prepočítavam skóre",
+					slog.Int("studentID", int(studentId)),
+					slog.Int("page", pageNumber))
+				break
+			}
+		}
+		if !pageAlreadyProcessed {
+			student.Pages += "-" + pageNumberStr
+		}
 	} else {
-		student.Pages += "-" + pageNumberStr
+		student.Pages = pageNumberStr
 	}
 
 	correctAnswers := resolveCorrectAnswers(exam, student)
@@ -207,16 +222,15 @@ func UpdateStudentAnswers(db *gorm.DB, studentId uint, examId uint, questionNumb
 		return nil
 	}
 
+	// Vždy prepočítame CELÉ skóre od začiatku (nie len za aktuálnu stránku)
+	// Zabezpečí to konzistentné skóre aj pri opakovanom vyhodnotení
 	score := 0
-	for i := startIndex; i <= endIndex; i++ {
-		if i >= len(correctAnswers) {
-			break
-		}
-		if unicode.ToLower(studentAnswers[i]) == unicode.ToLower(correctAnswers[i]) {
+	for i := 0; i < len(studentAnswers) && i < len(correctAnswers); i++ {
+		if studentAnswers[i] != '?' && unicode.ToLower(studentAnswers[i]) == unicode.ToLower(correctAnswers[i]) {
 			score++
 		}
 	}
-	student.Score += score
+	student.Score = score
 
 	UpdateStudent(db, student)
 	return nil

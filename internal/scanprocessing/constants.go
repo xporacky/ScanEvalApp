@@ -40,13 +40,13 @@ const MAX_ID_OCR_RETRIES = 20
 const ID_OFFSET_ADJUSTMENT_STEP = 0.001 // ~0.4mm on A4 at 300 DPI
 
 // Group checkbox paddings
-const GROUP_HEADER_HEIGHT = 375
-const GROUP_SIDE_PADDING = 395
-const GROUP_BOTTOM_PADDING = 275
+const GROUP_HEADER_HEIGHT = 350
+const GROUP_SIDE_PADDING = 370
+const GROUP_BOTTOM_PADDING = 250
 
-const SUBGROUP_HEADER_HEIGHT = 235
-const SUBGROUP_SIDE_PADDING = 565
-const SUBGROUP_BOTTOM_PADDING = 135
+const SUBGROUP_HEADER_HEIGHT = 210
+const SUBGROUP_SIDE_PADDING = 540
+const SUBGROUP_BOTTOM_PADDING = 110
 
 // Checkbox area thresholds for 0.45cm boxes scanned at 300 DPI:
 // 0.45cm * (300/2.54) ≈ 53px per side → area ≈ 2825 px²
