@@ -24,8 +24,15 @@ var mutexGetId sync.Mutex
 var counterMutex sync.Mutex
 
 type FailedPageInfo struct {
-	PageNumber int
-	Reason     string
+	PageNumber            int    `json:"pageNumber"`
+	Reason                string `json:"reason"`
+	ExamTitle             string `json:"examTitle"`
+	ExamDate              string `json:"examDate"`
+	ExamTime              string `json:"examTime"`
+	Room                  string `json:"room"`
+	ExtractedAnswers      string `json:"extractedAnswers"`
+	UnrecognizedQuestions []int  `json:"unrecognizedQuestions"` // Question numbers that had 'x' (unrecognized)
+	DetailedReason        string `json:"detailedReason"`
 }
 
 type FailedPages struct {
@@ -56,7 +63,7 @@ type FailedPages struct {
 //   - At the end of processing, all failed pages are exported to a separate PDF file using `ExportFailedPagesToPDF`
 //     for further inspection or manual correction.
 //   - Errors encountered during PDF loading or database operations are logged using the error logger.
-func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan chan string, counter *int, hadFailures *bool) {
+func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan chan string, counter *int, hadFailures *bool) []FailedPageInfo {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
@@ -71,13 +78,13 @@ func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan ch
 	fileName := fmt.Sprintf("scan_%s_%d.pdf", safeTitle, exam.ID)
 	if err := os.MkdirAll(common.GLOBAL_TEMP_SCAN, 0755); err != nil {
 		errorLogger.Error("Nepodarilo sa vytvoriť cieľový adresár:", slog.String("error", err.Error()))
-		return
+		return nil
 	}
 	destPath := filepath.Join(common.GLOBAL_TEMP_SCAN, fileName)
 	err := copyFile(scanPath, destPath)
 	if err != nil {
 		errorLogger.Error("Chyba pri kopírovaní súboru:", slog.String("error", err.Error()))
-		return
+		return nil
 	}
 
 	doc, err := fitz.New(scanPath)
@@ -109,8 +116,14 @@ func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan ch
 		logger.Info("=== ZHRNUTIE ZLYHANÝCH STRÁN ===")
 	}
 
+	// Collect all failed pages for return
+	var allFailedPages []FailedPageInfo
+
 	for examID, pageInfos := range failedPages.data {
 		safeTitle := common.SanitizeFilename(exam.Title)
+
+		// Add to return list
+		allFailedPages = append(allFailedPages, pageInfos...)
 
 		// Rozdelenie podľa dôvodov
 		reasonMap := make(map[string][]int)
@@ -133,10 +146,12 @@ func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan ch
 		err := pdf.ExportFailedPagesToPDF(safeTitle, examID, pageNumbers, scanPath)
 		if err != nil {
 			errorLogger.Error("Nepodarilo sa exportovat PDF s chybnymi stranami", slog.String("examID", fmt.Sprint(exam.ID)), slog.String("error", err.Error()))
-			return
+			return allFailedPages
 		}
 		logger.Info("=================================")
 	}
+
+	return allFailedPages
 }
 
 // ProcessPage processes a single page from the provided PDF document, extracts student information,
@@ -174,7 +189,15 @@ func ProcessPage(wg *sync.WaitGroup, docMutex *sync.Mutex, doc *fitz.Document, p
 	defer func() {
 		if r := recover(); r != nil {
 			errorLogger.Error("Panic v ProcessPage - strana preskočená", "strana", pageNumber+1, "recover", fmt.Sprint(r))
-			AddFailedPage(failedPages, exam.ID, pageNumber, "PANIC")
+			AddFailedPageDetailed(failedPages, exam.ID, FailedPageInfo{
+				PageNumber:     pageNumber,
+				Reason:         "PANIC",
+				ExamTitle:      exam.Title,
+				ExamDate:       exam.Date.Format("02.01.2006"),
+				ExamTime:       "",
+				Room:           "",
+				DetailedReason: fmt.Sprintf("Kritická chyba pri spracovaní: %v", r),
+			})
 		}
 	}()
 
@@ -183,7 +206,15 @@ func ProcessPage(wg *sync.WaitGroup, docMutex *sync.Mutex, doc *fitz.Document, p
 	docMutex.Unlock()
 	if err != nil {
 		errorLogger.Error("Chyba pri extrahovaní obrázka z PDF stránky", slog.Int("page", pageNumber), slog.String("error", err.Error()))
-		AddFailedPage(failedPages, exam.ID, pageNumber, "IMAGE_EXTRACTION_ERROR")
+		AddFailedPageDetailed(failedPages, exam.ID, FailedPageInfo{
+			PageNumber:     pageNumber,
+			Reason:         "IMAGE_EXTRACTION_ERROR",
+			ExamTitle:      exam.Title,
+			ExamDate:       exam.Date.Format("02.01.2006"),
+			ExamTime:       "",
+			Room:           "",
+			DetailedReason: fmt.Sprintf("Chyba pri extrakcii obrázka: %s", err.Error()),
+		})
 		return
 	}
 	mat := ImageToMat(img)
@@ -197,7 +228,15 @@ func ProcessPage(wg *sync.WaitGroup, docMutex *sync.Mutex, doc *fitz.Document, p
 
 	if err != nil {
 		errorLogger.Error("Chyba pri získavaní ID študenta z databázy", "PDF strana", pageNumber+1, "error", err.Error())
-		AddFailedPage(failedPages, exam.ID, pageNumber, "ID_NOT_FOUND")
+		AddFailedPageDetailed(failedPages, exam.ID, FailedPageInfo{
+			PageNumber:     pageNumber,
+			Reason:         "ID_NOT_FOUND",
+			ExamTitle:      exam.Title,
+			ExamDate:       exam.Date.Format("02.01.2006"),
+			ExamTime:       "",
+			Room:           "",
+			DetailedReason: fmt.Sprintf("Študent nebol nájdený: %s", err.Error()),
+		})
 		return
 	}
 
@@ -214,6 +253,16 @@ func ProcessPage(wg *sync.WaitGroup, docMutex *sync.Mutex, doc *fitz.Document, p
 			}
 		} else {
 			errorLogger.Error("Nepodarilo sa rozpoznať skupinu z hlavičky", "PDF strana", pageNumber+1, "studentID", student.ID)
+			AddFailedPageDetailed(failedPages, exam.ID, FailedPageInfo{
+				PageNumber:     pageNumber,
+				Reason:         "GROUP_NOT_RECOGNIZED",
+				ExamTitle:      exam.Title,
+				ExamDate:       student.ExamDate.Format("02.01.2006"),
+				ExamTime:       student.ExamTime,
+				Room:           student.Room,
+				DetailedReason: "Nepodarilo sa rozpoznať skupinu/podskupinu z hlavičky (multiday test)",
+			})
+			return
 		}
 	}
 
@@ -227,15 +276,61 @@ func ProcessPage(wg *sync.WaitGroup, docMutex *sync.Mutex, doc *fitz.Document, p
 	if len(answers) == 0 {
 		errorLogger.Error("Chyba pri rozpoznávaní odpovedí - žiadne odpovede detekované", "PDF strana", pageNumber+1)
 		// Gather pageNumbers to map
-		AddFailedPage(failedPages, exam.ID, pageNumber, "NO_ANSWERS_DETECTED")
+		AddFailedPageDetailed(failedPages, exam.ID, FailedPageInfo{
+			PageNumber:       pageNumber,
+			Reason:           "NO_ANSWERS_DETECTED",
+			ExamTitle:        exam.Title,
+			ExamDate:         student.ExamDate.Format("02.01.2006"),
+			ExamTime:         student.ExamTime,
+			Room:             student.Room,
+			ExtractedAnswers: "",
+			DetailedReason:   "Na stránke neboli detekované žiadne odpovede",
+		})
 		return
 	}
 
 	if questionNumber == common.QUESTION_NUMBER_NOT_FOUND {
 		errorLogger.Error("Chyba pri rozpoznávaní čísiel otázok - ziadna otazka detekovana", "PDF strana", pageNumber+1)
 		// Gather pageNumbers to map
-		AddFailedPage(failedPages, exam.ID, pageNumber, "NO_QUESTION_NUMBERS")
+		AddFailedPageDetailed(failedPages, exam.ID, FailedPageInfo{
+			PageNumber:       pageNumber,
+			Reason:           "NO_QUESTION_NUMBERS",
+			ExamTitle:        exam.Title,
+			ExamDate:         student.ExamDate.Format("02.01.2006"),
+			ExamTime:         student.ExamTime,
+			Room:             student.Room,
+			ExtractedAnswers: string(answers),
+			DetailedReason:   "Neboli rozpoznané čísla otázok na stránke",
+		})
 		return
+	}
+
+	// Check for unrecognized answers during scanning (GetAnswer returned 'x')
+	var unrecognizedQuestions []int
+	startQuestionNum := (questionNumber - len(answers)) + 1
+	for i, ans := range answers {
+		// Check for 'x' or null character (rune(0))
+		// Note: '0' comes from CSV initialization, not from GetAnswer
+		if ans == 'x' || ans == rune(0) {
+			unrecognizedQuestions = append(unrecognizedQuestions, startQuestionNum+i+1) // +1 for 1-based indexing
+		}
+	}
+
+	// If there are unrecognized answers during scanning, log and replace with 'X'
+	if len(unrecognizedQuestions) > 0 {
+		// Replace unrecognized characters with uppercase 'X' for database storage
+		for i := range answers {
+			if answers[i] == 'x' || answers[i] == rune(0) {
+				answers[i] = 'X'
+			}
+		}
+
+		errorLogger.Warn("Stránka obsahuje nerozpoznané odpovede počas skenovania",
+			"PDF strana", pageNumber+1,
+			"studentID", student.ID,
+			"študent", student.Name,
+			"nerozpoznané otázky", unrecognizedQuestions,
+			"extrahované odpovede", string(answers))
 	}
 
 	// Validácia počtu otázok: strana musí mať buď plných 20 otázok, alebo byť poslednou stranou s menej otázkami
@@ -254,7 +349,16 @@ func ProcessPage(wg *sync.WaitGroup, docMutex *sync.Mutex, doc *fitz.Document, p
 			"posledná otázka", questionNumber+1,
 			"otázok na strane", questionsOnPage,
 			"očakávaných", exam.QuestionCount)
-		AddFailedPage(failedPages, exam.ID, pageNumber, "INVALID_QUESTION_COUNT")
+		AddFailedPageDetailed(failedPages, exam.ID, FailedPageInfo{
+			PageNumber:       pageNumber,
+			Reason:           "INVALID_QUESTION_COUNT",
+			ExamTitle:        exam.Title,
+			ExamDate:         student.ExamDate.Format("02.01.2006"),
+			ExamTime:         student.ExamTime,
+			Room:             student.Room,
+			ExtractedAnswers: string(answers),
+			DetailedReason:   fmt.Sprintf("Neočakávaný počet otázok: %d na strane (očakávaných %d)", questionsOnPage, exam.QuestionCount),
+		})
 		return
 	}
 
@@ -265,11 +369,58 @@ func ProcessPage(wg *sync.WaitGroup, docMutex *sync.Mutex, doc *fitz.Document, p
 
 	if err != nil {
 		errorLogger.Error("Chyba pri aktualizácii študenta v databáze", "studentID", student.ID, "error", err.Error())
-		AddFailedPage(failedPages, exam.ID, pageNumber, fmt.Sprintf("DB_UPDATE_ERROR: %s", err.Error()))
+		AddFailedPageDetailed(failedPages, exam.ID, FailedPageInfo{
+			PageNumber:       pageNumber,
+			Reason:           "DB_UPDATE_ERROR",
+			ExamTitle:        exam.Title,
+			ExamDate:         student.ExamDate.Format("02.01.2006"),
+			ExamTime:         student.ExamTime,
+			Room:             student.Room,
+			ExtractedAnswers: string(answers),
+			DetailedReason:   fmt.Sprintf("Chyba pri ukladaní do databázy: %s", err.Error()),
+		})
 		return
 	}
 
-	logger.Info("Aktualizované odpovede študenta", "studentID", student.ID, "answers", student.Answers)
+	// Reload student from DB to get final answers after update
+	updatedStudent, err := repository.GetStudentById(db, student.ID, exam.ID)
+	if err != nil {
+		errorLogger.Error("Chyba pri načítaní študenta po update", "studentID", student.ID, "error", err.Error())
+		return
+	}
+
+	logger.Info("Aktualizované odpovede študenta", "studentID", updatedStudent.ID, "answers", updatedStudent.Answers)
+
+	// Check if final student answers still contain '0' or 'X' (incomplete/unrecognized)
+	var incompleteQuestions []int
+	finalAnswers := []rune(updatedStudent.Answers)
+	for i, ans := range finalAnswers {
+		if ans == '0' || ans == 'X' {
+			incompleteQuestions = append(incompleteQuestions, i+1) // +1 for 1-based indexing
+		}
+	}
+
+	// If there are incomplete answers after update, add to failed pages
+	if len(incompleteQuestions) > 0 {
+		errorLogger.Warn("Študent má neúplné odpovede po spracovaní strany",
+			"PDF strana", pageNumber+1,
+			"studentID", updatedStudent.ID,
+			"študent", updatedStudent.Name,
+			"neúplné otázky", incompleteQuestions,
+			"finálne odpovede", updatedStudent.Answers)
+
+		AddFailedPageDetailed(failedPages, exam.ID, FailedPageInfo{
+			PageNumber:            pageNumber,
+			Reason:                "PARTIAL_RECOGNITION",
+			ExamTitle:             exam.Title,
+			ExamDate:              updatedStudent.ExamDate.Format("02.01.2006"),
+			ExamTime:              updatedStudent.ExamTime,
+			Room:                  updatedStudent.Room,
+			ExtractedAnswers:      updatedStudent.Answers,
+			UnrecognizedQuestions: incompleteQuestions,
+			DetailedReason:        fmt.Sprintf("Po spracovaní strany zostali neúplné odpovede v otázkách %v (označené ako 0 alebo X)", incompleteQuestions),
+		})
+	}
 
 }
 

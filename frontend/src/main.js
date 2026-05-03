@@ -1736,8 +1736,56 @@ async function init() {
     let message = 'Vyhodnotenie dokoncene.';
     let extra = '';
     if (payload?.hadFailures && payload.failedPath) {
-      message = 'Niektore strany sa nepodarilo spracovat.';
+      message = `Niektore strany sa nepodarilo spracovat (${payload.failedCount || 0} stran).`;
       extra = `<div class="file-row"><span class="file-path">${payload.failedPath}</span><button id="open-failed" class="btn">Otvorit PDF</button></div>`;
+      
+      // Add detailed table if failedPages data is available
+      if (payload?.failedPages && payload.failedPages.length > 0) {
+        extra += '<div style="margin-top: 20px;"><h3>Detaily zlyhaných strán:</h3>';
+        extra += '<div style="max-height: 400px; overflow-y: auto;">';
+        extra += '<table style="width: 100%; border-collapse: collapse; font-size: 12px;">';
+        extra += '<thead><tr style="background: #f0f0f0; position: sticky; top: 0; color: #333;">';
+        extra += '<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Strana PDF</th>';
+        extra += '<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Test / Čas</th>';
+        extra += '<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Dôvod</th>';
+        extra += '<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Detail</th>';
+        extra += '</tr></thead><tbody>';
+        
+        payload.failedPages.forEach(page => {
+          const pageNum = (page.pageNumber || 0) + 1; // Convert to 1-based
+          let examInfo = page.examTitle || 'Neznámy test';
+          if (page.examDate && page.examTime) {
+            examInfo += `<br><small>${page.examDate} o ${page.examTime}</small>`;
+          } else if (page.examDate) {
+            examInfo += `<br><small>${page.examDate}</small>`;
+          }
+          if (page.room) {
+            examInfo += `<br><small>Miestnosť: ${page.room}</small>`;
+          }
+          
+          const reason = translateReason(page.reason);
+          let detail = page.detailedReason || '';
+          
+          // Add extracted answers if available
+          if (page.extractedAnswers && page.reason === 'PARTIAL_RECOGNITION') {
+            detail += `<br><strong>Extrahované odpovede:</strong> ${page.extractedAnswers}`;
+          }
+          
+          // Highlight unrecognized questions
+          if (page.unrecognizedQuestions && page.unrecognizedQuestions.length > 0) {
+            detail += `<br><strong>Nerozpoznané otázky:</strong> ${page.unrecognizedQuestions.join(', ')}`;
+          }
+          
+          extra += `<tr>`;
+          extra += `<td style="border: 1px solid #ddd; padding: 8px;">${pageNum}</td>`;
+          extra += `<td style="border: 1px solid #ddd; padding: 8px;">${examInfo}</td>`;
+          extra += `<td style="border: 1px solid #ddd; padding: 8px;">${reason}</td>`;
+          extra += `<td style="border: 1px solid #ddd; padding: 8px;">${detail}</td>`;
+          extra += `</tr>`;
+        });
+        
+        extra += '</tbody></table></div></div>';
+      }
     }
     showModal('Vyhodnotenie pisomiek', `<div class="status success">${message}</div>${extra}`);
     if (payload?.failedPath) {
@@ -1748,6 +1796,22 @@ async function init() {
     }
     refreshData();
   });
+}
+
+// Helper function to translate error reasons to Slovak
+function translateReason(reason) {
+  const translations = {
+    'PANIC': 'Kritická chyba',
+    'IMAGE_EXTRACTION_ERROR': 'Chyba pri extrakcii obrázka',
+    'ID_NOT_FOUND': 'Študent nenájdený',
+    'GROUP_NOT_RECOGNIZED': 'Nerozpoznaná skupina',
+    'NO_ANSWERS_DETECTED': 'Žiadne odpovede',
+    'NO_QUESTION_NUMBERS': 'Nerozpoznané čísla otázok',
+    'INVALID_QUESTION_COUNT': 'Nesprávny počet otázok',
+    'DB_UPDATE_ERROR': 'Chyba databázy',
+    'PARTIAL_RECOGNITION': 'Čiastočné rozpoznanie'
+  };
+  return translations[reason] || reason;
 }
 
 init();

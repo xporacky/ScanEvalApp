@@ -185,7 +185,7 @@ func scanProcess(t *UploadTab, db *gorm.DB) {
 
 	hadFailures := false
 	t.progressChan <- "Spracovanie PDF sa začalo..."
-	scanprocessing.ProcessPDF(t.filePath, exam, db, t.progressChan, &counter, &hadFailures)
+	_ = scanprocessing.ProcessPDF(t.filePath, exam, db, t.progressChan, &counter, &hadFailures)
 
 	safeTitle := common.SanitizeFilename(exam.Title)
 

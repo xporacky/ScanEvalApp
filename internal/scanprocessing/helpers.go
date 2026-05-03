@@ -634,3 +634,10 @@ func AddFailedPage(failedPages *FailedPages, examID uint, pageNumber int, reason
 		Reason:     reason,
 	})
 }
+
+// AddFailedPageDetailed adds a failed page with detailed information
+func AddFailedPageDetailed(failedPages *FailedPages, examID uint, info FailedPageInfo) {
+	failedPages.mu.Lock()
+	defer failedPages.mu.Unlock()
+	failedPages.data[examID] = append(failedPages.data[examID], info)
+}

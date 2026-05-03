@@ -476,7 +476,7 @@ func (a *App) EvaluateExam(examID uint, pdfPath, configName string) error {
 			}
 		}()
 
-		scanprocessing.ProcessPDF(pdfPath, exam, a.db, progressChan, &counter, &hadFailures)
+		failedPagesInfo := scanprocessing.ProcessPDF(pdfPath, exam, a.db, progressChan, &counter, &hadFailures)
 		close(progressChan)
 
 		failedPath := ""
@@ -493,6 +493,8 @@ func (a *App) EvaluateExam(examID uint, pdfPath, configName string) error {
 			"examId":      exam.ID,
 			"hadFailures": hadFailures,
 			"failedPath":  failedPath,
+			"failedPages": failedPagesInfo,
+			"failedCount": len(failedPagesInfo),
 		})
 	}()
 
