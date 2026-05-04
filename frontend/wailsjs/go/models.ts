@@ -74,6 +74,7 @@ export namespace main {
 	    showName: boolean;
 	    answers: string[];
 	    studentCSVContent: string;
+	    subgroupAnswers: Record<string, string>;
 	
 	    static createFrom(source: any = {}) {
 	        return new ExamTemplate(source);
@@ -89,6 +90,7 @@ export namespace main {
 	        this.showName = source["showName"];
 	        this.answers = source["answers"];
 	        this.studentCSVContent = source["studentCSVContent"];
+	        this.subgroupAnswers = source["subgroupAnswers"];
 	    }
 	}
 	export class StudentSummary {

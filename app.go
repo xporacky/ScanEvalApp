@@ -63,14 +63,15 @@ type ExamSummary struct {
 }
 
 type ExamTemplate struct {
-	Title             string   `json:"title"`
-	SchoolYear        string   `json:"schoolYear"`
-	DateTime          string   `json:"dateTime"`
-	QuestionCount     int      `json:"questionCount"`
-	OptionCount       int      `json:"optionCount"`
-	ShowName          bool     `json:"showName"`
-	Answers           []string `json:"answers"`
-	StudentCSVContent string   `json:"studentCSVContent"`
+	Title             string            `json:"title"`
+	SchoolYear        string            `json:"schoolYear"`
+	DateTime          string            `json:"dateTime"`
+	QuestionCount     int               `json:"questionCount"`
+	OptionCount       int               `json:"optionCount"`
+	ShowName          bool              `json:"showName"`
+	Answers           []string          `json:"answers"`
+	StudentCSVContent string            `json:"studentCSVContent"`
+	SubgroupAnswers   map[string]string `json:"subgroupAnswers"`
 }
 
 func (a *App) ListExams() ([]ExamSummary, error) {
@@ -426,15 +427,27 @@ func (a *App) ParseExamTemplateCSV(csvContent string) (ExamTemplate, error) {
 	}
 
 	return ExamTemplate{
-		Title:             template.Title,
-		SchoolYear:        template.SchoolYear,
-		DateTime:          template.DateTime,
-		QuestionCount:     template.QuestionCount,
-		OptionCount:       template.OptionCount,
-		ShowName:          template.ShowName,
-		Answers:           template.Answers,
-		StudentCSVContent: template.StudentCSVContent,
+		Title:           template.Title,
+		SchoolYear:      template.SchoolYear,
+		DateTime:        template.DateTime,
+		QuestionCount:   template.QuestionCount,
+		OptionCount:     template.OptionCount,
+		ShowName:        template.ShowName,
+		Answers:         template.Answers,
+		SubgroupAnswers: template.SubgroupAnswers,
 	}, nil
+}
+
+func (a *App) ExportMultiDayExamTemplateCSV(title, schoolYear string, questionCount, optionCount int, showName bool, subgroupAnswers map[string]string) (string, error) {
+	template := csv.ExamTemplate{
+		Title:           title,
+		SchoolYear:      schoolYear,
+		QuestionCount:   questionCount,
+		OptionCount:     optionCount,
+		ShowName:        showName,
+		SubgroupAnswers: subgroupAnswers,
+	}
+	return csv.ExportMultiDayExamTemplateCSV(template)
 }
 
 func (a *App) ListConfigs() ([]string, error) {

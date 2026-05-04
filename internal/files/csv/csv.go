@@ -30,6 +30,7 @@ type ExamTemplate struct {
 	ShowName          bool
 	Answers           []string
 	StudentCSVContent string
+	SubgroupAnswers   map[string]string
 }
 
 // ImportStudentsFromCSV parses student records from the given CSV content
@@ -443,6 +444,70 @@ func ExportExamTemplateCSV(template ExamTemplate) (string, error) {
 	return filePath, nil
 }
 
+// ExportMultiDayExamTemplateCSV saves a multi-day exam template CSV with meta fields and subgroup answers.
+// Unlike ExportExamTemplateCSV, it omits date_time and student CSV payload, and writes subgroup rows instead of answer rows.
+func ExportMultiDayExamTemplateCSV(template ExamTemplate) (string, error) {
+	errorLogger := logging.GetErrorLogger()
+
+	dirPath, err := config.LoadLastPath()
+	if err != nil {
+		errorLogger.Error("Chyba načítania configu", slog.String("error", err.Error()))
+		return "", err
+	}
+
+	absDirPath, err := filepath.Abs(dirPath)
+	if err != nil {
+		errorLogger.Error("Chyba pri konverzii cesty", slog.String("error", err.Error()))
+		return "", err
+	}
+
+	fileName := "multitermin_sablona.csv"
+	if strings.TrimSpace(template.Title) != "" {
+		fileName = common.SanitizeFilename(template.Title) + "_multitermin_sablona.csv"
+	}
+	filePath := filepath.Join(absDirPath, fileName)
+
+	file, err := os.Create(filePath)
+	if err != nil {
+		errorLogger.Error("Chyba pri vytváraní CSV šablóny", slog.String("fileName", filePath), slog.String("error", err.Error()))
+		return "", err
+	}
+	defer file.Close()
+
+	file.Write([]byte{0xEF, 0xBB, 0xBF})
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	rows := [][]string{
+		{"section", "key", "value"},
+		{"meta", "title", template.Title},
+		{"meta", "school_year", template.SchoolYear},
+		{"meta", "question_count", strconv.Itoa(template.QuestionCount)},
+		{"meta", "option_count", strconv.Itoa(template.OptionCount)},
+		{"meta", "show_name", strconv.FormatBool(template.ShowName)},
+	}
+
+	// Sort subgroup keys for deterministic output
+	keys := make([]string, 0, len(template.SubgroupAnswers))
+	for k := range template.SubgroupAnswers {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		rows = append(rows, []string{"subgroup", k, template.SubgroupAnswers[k]})
+	}
+
+	for _, row := range rows {
+		if err := writer.Write(row); err != nil {
+			errorLogger.Error("Chyba pri zápise CSV šablóny", slog.String("fileName", filePath), slog.String("error", err.Error()))
+			return "", err
+		}
+	}
+
+	return filePath, nil
+}
+
 func ParseExamTemplateCSV(csvContent string) (ExamTemplate, error) {
 	reader := csv.NewReader(strings.NewReader(csvContent))
 	rows, err := reader.ReadAll()
@@ -497,6 +562,11 @@ func ParseExamTemplateCSV(csvContent string) (ExamTemplate, error) {
 			}
 		case "answer":
 			template.Answers = append(template.Answers, strings.TrimSpace(value))
+		case "subgroup":
+			if template.SubgroupAnswers == nil {
+				template.SubgroupAnswers = make(map[string]string)
+			}
+			template.SubgroupAnswers[key] = value
 		case "payload":
 			if key == "students_csv" {
 				template.StudentCSVContent = value

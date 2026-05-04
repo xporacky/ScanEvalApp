@@ -7,6 +7,7 @@ import {
   PrintMultiDayExamPDFs,
   UpdateMultiDayAnswers,
   ExportMultiDayResultsCSV,
+  ExportMultiDayExamTemplateCSV,
   DeleteExam,
   ListExams,
   ListStudents,
@@ -67,6 +68,8 @@ const state = {
   mdCsvName: '',
   mdSubgroups: [{ name: '', answers: '' }],
   mdCheckboxMode: true,
+  mdTemplateCsvName: '',
+  mdTemplateCsvContent: '',
   mergeOutputPath: '',
   mergeCsvPaths: [],
   mergeCsvNames: [],
@@ -131,6 +134,8 @@ const statisticsOptions = [
   'Graf rozdelenia za jednotlivé príklady',
   'Úspešnosť absolútna aj relatívna',
   'Úspešnosť absolútna aj relatívna pre jednotlivé príklady',
+  'Štatistika podľa miestnosti',
+  'Štatistika podľa skupín',
 ];
 
 function formatDate(value) {
@@ -942,7 +947,7 @@ function renderMultiDay() {
         </label>
         <label>
           Pocet moznosti
-          <input id="md-option-count" type="number" min="3" max="8" value="${oCount}" required />
+          <input id="md-option-count" type="number" min="3" max="8" value="${oCount}" style="min-height:42px;width:100%;box-sizing:border-box;" required />
         </label>
         <label class="toggle-field">
           Zobrazit meno
@@ -952,10 +957,19 @@ function renderMultiDay() {
           </span>
         </label>
         <label class="file">
-          CSV zo systemu (s datumom, casom, miestnostou)
+          CSV so studentami (s datumom, casom, miestnostou)
           <input id="md-csv-file" type="file" accept=".csv" />
           <span class="file-name">${state.mdCsvName || 'Ziadny subor'}</span>
         </label>
+        <label class="file" style="margin-top:-8px;">
+          CSV sablona testu
+          <input id="md-template-csv-file" type="file" accept=".csv" />
+          <span class="file-name">${state.mdTemplateCsvName || 'Ziadny subor'}</span>
+        </label>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:-8px;">
+          <span style="font-size:13px;color:rgba(238,243,251,0.8);">&nbsp;</span>
+          <button type="button" id="md-load-template" ${state.mdTemplateCsvContent ? '' : 'disabled'} style="padding:10px 16px;border-radius:10px;border:1px solid rgba(255,255,255,0.18);font-weight:600;font-size:13px;cursor:${state.mdTemplateCsvContent ? 'pointer' : 'not-allowed'};background:${state.mdTemplateCsvContent ? '#3b82f6' : 'rgba(59,130,246,0.25)'};color:${state.mdTemplateCsvContent ? '#fff' : 'rgba(255,255,255,0.35)'};">Generovať podľa šablóny</button>
+        </div>
       </div>
 
       <div class="sg-section">
@@ -978,6 +992,7 @@ function renderMultiDay() {
       </div>
 
       <div class="form-actions">
+        <button type="button" id="md-save-template" class="secondary">Ulozit CSV sablonu</button>
         <button type="submit" class="primary">Vytvorit multi-terminovy test</button>
         <span id="md-status" class="status"></span>
       </div>
@@ -998,6 +1013,70 @@ function renderMultiDay() {
     state.mdShowName = e.target.checked;
     const t = document.querySelector('.md-toggle-text');
     if (t) t.textContent = state.mdShowName ? 'Ano' : 'Nie';
+  });
+
+  document.getElementById('md-template-csv-file').addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      state.mdTemplateCsvName = '';
+      state.mdTemplateCsvContent = '';
+      renderMultiDay();
+      return;
+    }
+    state.mdTemplateCsvName = file.name;
+    state.mdTemplateCsvContent = await file.text();
+    renderMultiDay();
+  });
+
+  document.getElementById('md-load-template').addEventListener('click', async () => {
+    if (!state.mdTemplateCsvContent) return;
+    const statusEl = document.getElementById('md-status');
+    statusEl.textContent = 'Načítavam šablónu...';
+    statusEl.className = 'status';
+    try {
+      const template = await ParseExamTemplateCSV(state.mdTemplateCsvContent);
+      state.mdTitle = template.title || '';
+      state.mdSchoolYear = template.schoolYear || '';
+      state.mdQuestionCount = Number(template.questionCount) || state.mdQuestionCount;
+      state.mdOptionCount = Number(template.optionCount) || state.mdOptionCount;
+      state.mdShowName = Boolean(template.showName);
+      if (template.subgroupAnswers && Object.keys(template.subgroupAnswers).length > 0) {
+        state.mdSubgroups = Object.entries(template.subgroupAnswers).map(([name, answers]) => ({ name, answers }));
+      }
+      renderMultiDay();
+      const nextStatusEl = document.getElementById('md-status');
+      if (nextStatusEl) { nextStatusEl.textContent = 'Šablóna načítaná.'; nextStatusEl.className = 'status success'; }
+    } catch (err) {
+      console.error(err);
+      const nextStatusEl = document.getElementById('md-status');
+      if (nextStatusEl) { nextStatusEl.textContent = 'Chyba pri načítaní šablóny.'; nextStatusEl.className = 'status error'; }
+    }
+  });
+
+  document.getElementById('md-save-template').addEventListener('click', async () => {
+    const statusEl = document.getElementById('md-status');
+    statusEl.textContent = 'Ukladam sablonu...';
+    statusEl.className = 'status';
+    const subgroupMap = {};
+    for (const sg of state.mdSubgroups) {
+      if (sg.name.trim()) subgroupMap[sg.name.trim()] = sg.answers.toUpperCase();
+    }
+    try {
+      const path = await ExportMultiDayExamTemplateCSV(
+        state.mdTitle.trim(),
+        state.mdSchoolYear.trim(),
+        Number(state.mdQuestionCount),
+        Number(state.mdOptionCount),
+        Boolean(state.mdShowName),
+        subgroupMap,
+      );
+      statusEl.textContent = path ? `Sablona ulozena: ${path}` : 'Sablona ulozena.';
+      statusEl.className = 'status success';
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = 'Chyba pri ukladani sablony.';
+      statusEl.className = 'status error';
+    }
   });
 
   document.getElementById('md-csv-file').addEventListener('change', async (e) => {
@@ -1084,6 +1163,8 @@ function renderMultiDay() {
       state.mdOptionCount = 5;
       state.mdShowName = true;
       state.mdSubgroups = [{ name: '', answers: '' }];
+      state.mdTemplateCsvName = '';
+      state.mdTemplateCsvContent = '';
       await refreshData();
       state.activeTab = 'exams';
       renderContent();

@@ -5,6 +5,7 @@ import (
 	"ScanEvalApp/internal/config"
 	"ScanEvalApp/internal/database/models"
 	"ScanEvalApp/internal/logging"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -22,9 +23,6 @@ func GenerateStatistics(selectedStats []string, exam *models.Exam) (string, erro
 	students := exam.Students
 
 	scores := getScores(students)
-	correctAnswers := strings.TrimSpace(exam.Questions)
-	correctAnswers = strings.ToLower(correctAnswers)
-
 	statsData := make(map[string]interface{})
 
 	// Initialize statistics options
@@ -36,7 +34,8 @@ func GenerateStatistics(selectedStats []string, exam *models.Exam) (string, erro
 	statsData["includePerQuestionDistribution"] = false
 	statsData["includeOverallSuccess"] = false
 	statsData["includePerQuestionSuccess"] = false
-
+	statsData["includeRoomStats"] = false
+	statsData["includeGroupStats"] = false
 	// Collect requested statistics
 	for _, stat := range selectedStats {
 		switch stat {
@@ -65,7 +64,7 @@ func GenerateStatistics(selectedStats []string, exam *models.Exam) (string, erro
 			statsData["scores"] = scores
 
 		case "Graf rozdelenia za jednotlivé príklady":
-			successPerQuestion := calculateSuccessPerQuestion(students, correctAnswers, exam.QuestionCount)
+			successPerQuestion := calculateSuccessPerQuestion(students, exam)
 			statsData["includePerQuestionDistribution"] = true
 			statsData["successPerQuestion"] = successPerQuestion
 
@@ -77,10 +76,20 @@ func GenerateStatistics(selectedStats []string, exam *models.Exam) (string, erro
 			statsData["relativeSuccess"] = relative * 100
 
 		case "Úspešnosť absolútna aj relatívna pre jednotlivé príklady":
-			absolutePerQuestion, relativePerQuestion := calculatePerQuestionSuccess(students, correctAnswers, exam.QuestionCount)
+			absolutePerQuestion, relativePerQuestion := calculatePerQuestionSuccess(students, exam)
 			statsData["includePerQuestionSuccess"] = true
 			statsData["absolutePerQuestion"] = absolutePerQuestion
 			statsData["relativePerQuestion"] = relativePerQuestion
+
+		case "Štatistika podľa miestnosti":
+			groups := groupStudentsByRoom(students, exam)
+			statsData["includeRoomStats"] = true
+			statsData["roomGroups"] = groups
+
+		case "Štatistika podľa skupín":
+			subgroups := groupStudentsBySubgroup(students)
+			statsData["includeGroupStats"] = true
+			statsData["subgroups"] = subgroups
 
 		default:
 			errorLogger.Error("Neznáma štatistika", slog.String("stat", stat))
@@ -217,6 +226,61 @@ func latexEscape(str string) string {
 	return strings.TrimSpace(replacer.Replace(str))
 }
 
+// RoomGroup represents a group of students identified by their date, time, and room.
+type RoomGroup struct {
+	Key      string
+	Students []models.Student
+}
+
+// groupStudentsBySubgroup groups students by their Subgroup field and returns sorted groups.
+func groupStudentsBySubgroup(students []models.Student) []RoomGroup {
+	groupMap := make(map[string][]models.Student)
+	for _, s := range students {
+		key := strings.TrimSpace(s.Subgroup)
+		if key == "" {
+			key = "(bez skupiny)"
+		}
+		groupMap[key] = append(groupMap[key], s)
+	}
+	keys := make([]string, 0, len(groupMap))
+	for k := range groupMap {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	groups := make([]RoomGroup, 0, len(keys))
+	for _, k := range keys {
+		groups = append(groups, RoomGroup{Key: k, Students: groupMap[k]})
+	}
+	return groups
+}
+
+// groupStudentsByRoom groups students by their (date, time, room) triple and returns sorted groups.
+func groupStudentsByRoom(students []models.Student, exam *models.Exam) []RoomGroup {
+	groupMap := make(map[string][]models.Student)
+	for _, s := range students {
+		date := exam.Date.Format("02.01.2006")
+		if !s.ExamDate.IsZero() {
+			date = s.ExamDate.Format("02.01.2006")
+		}
+		timeStr := exam.Date.Format("15:04")
+		if s.ExamTime != "" {
+			timeStr = s.ExamTime
+		}
+		key := date + ", " + timeStr + ", " + s.Room
+		groupMap[key] = append(groupMap[key], s)
+	}
+	keys := make([]string, 0, len(groupMap))
+	for k := range groupMap {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	groups := make([]RoomGroup, 0, len(keys))
+	for _, k := range keys {
+		groups = append(groups, RoomGroup{Key: k, Students: groupMap[k]})
+	}
+	return groups
+}
+
 // GenerateLatexReport generates the LaTeX content for the exam report.
 func GenerateLatexReport(exam *models.Exam, statsData map[string]interface{}) ([]byte, error) {
 	var builder strings.Builder
@@ -267,7 +331,7 @@ func GenerateLatexReport(exam *models.Exam, statsData map[string]interface{}) ([
 
 	// Score distribution graph
 	if statsData["includeScoreDistribution"].(bool) {
-		labels, coords := buildPlotData(statsData["scores"].([]int))
+		labels, coords := buildPlotData(statsData["scores"].([]int), exam.QuestionCount)
 
 		builder.WriteString(`
 		\section{Rozdelenie bodov}
@@ -368,29 +432,186 @@ func GenerateLatexReport(exam *models.Exam, statsData map[string]interface{}) ([
 		builder.WriteString(`\end{tabular}`)
 	}
 
+	// Room statistics pages
+	if statsData["includeRoomStats"].(bool) {
+		groups := statsData["roomGroups"].([]RoomGroup)
+
+		for _, group := range groups {
+			if len(group.Students) == 0 {
+				continue
+			}
+
+			groupScores := getScores(group.Students)
+			groupMax := calculateMax(groupScores)
+			groupMin := calculateMin(groupScores)
+			groupAvg := calculateAverage(groupScores)
+			groupMedian := calculateMedian(groupScores)
+			groupAbsolute, groupRelative := calculateOverallSuccess(group.Students, exam.QuestionCount)
+
+			builder.WriteString("\n\\clearpage\n\\vspace*{-1cm}\n")
+			builder.WriteString("\\begin{center}\n{\\large\\textbf{Štatistiky miestnosti: " + latexEscape(group.Key) + "}}\n\\end{center}\n")
+			builder.WriteString("\\vspace{0.4cm}\n\n")
+
+			builder.WriteString("\\begin{center}\n\\textbf{Základné štatistiky}\\\\[0.2em]\n")
+			builder.WriteString("\\begin{tabular}{|l|r|}\n\\hline\n")
+			builder.WriteString(fmt.Sprintf("Počet študentov & %d \\\\\n\\hline\n", len(group.Students)))
+			builder.WriteString(fmt.Sprintf("Maximum bodov & %d \\\\\n\\hline\n", groupMax))
+			builder.WriteString(fmt.Sprintf("Minimum bodov & %d \\\\\n\\hline\n", groupMin))
+			builder.WriteString(fmt.Sprintf("Priemer & %.2f \\\\\n\\hline\n", groupAvg))
+			builder.WriteString(fmt.Sprintf("Medián & %.2f \\\\\n\\hline\n", groupMedian))
+			builder.WriteString(fmt.Sprintf("Absolútna úspešnosť & %d \\\\\n\\hline\n", groupAbsolute))
+			builder.WriteString(fmt.Sprintf("Relatívna úspešnosť & %.2f\\%% \\\\\n\\hline\n", groupRelative*100))
+			builder.WriteString("\\end{tabular}\n\\end{center}\n\n")
+
+			groupLabels, groupCoords := buildPlotData(groupScores, exam.QuestionCount)
+			builder.WriteString("\\vspace{0.4cm}\n\n")
+			builder.WriteString("\\noindent\\textbf{Rozdelenie bodov}\n")
+			builder.WriteString(`
+	\begin{tikzpicture}
+	\begin{axis}[
+		ybar,
+		xlabel={Rozsahy bodov},
+		ylabel={Počet študentov},
+		width=\textwidth,
+		height=5cm,
+		bar width=0.6cm,
+		xtick=data,
+		xticklabels={` + groupLabels + `},
+		nodes near coords,
+	]
+	\addplot coordinates {
+	` + groupCoords + `
+	};
+	\end{axis}
+	\end{tikzpicture}
+	`)
+
+			if exam.QuestionCount > 0 {
+				absPerQ, relPerQ := calculatePerQuestionSuccess(group.Students, exam)
+				builder.WriteString("\n\\vspace{0.4cm}\n\n")
+				builder.WriteString("\\begin{center}\n\\textbf{Úspešnosť za jednotlivé príklady}\\\\[0.2em]\n")
+				builder.WriteString("{\\footnotesize\n")
+				builder.WriteString("\\begin{tabular}{|l|r|r|}\n\\hline\n")
+				builder.WriteString("\\textbf{Príklad} & \\textbf{Absolútna} & \\textbf{Relatívna (\\%)} \\\\\n\\hline\n")
+				for q := 0; q < len(absPerQ); q++ {
+					builder.WriteString(fmt.Sprintf("%d & %d & %.2f \\\\\n\\hline\n", q+1, absPerQ[q], relPerQ[q]))
+				}
+				builder.WriteString("\\end{tabular}\n}\n\\end{center}\n")
+			}
+		}
+	}
+
+	// Group (subgroup) statistics pages
+	if statsData["includeGroupStats"].(bool) {
+		subgroups := statsData["subgroups"].([]RoomGroup)
+
+		for _, group := range subgroups {
+			if len(group.Students) == 0 {
+				continue
+			}
+
+			groupScores := getScores(group.Students)
+			groupMax := calculateMax(groupScores)
+			groupMin := calculateMin(groupScores)
+			groupAvg := calculateAverage(groupScores)
+			groupMedian := calculateMedian(groupScores)
+			groupAbsolute, groupRelative := calculateOverallSuccess(group.Students, exam.QuestionCount)
+
+			builder.WriteString("\n\\clearpage\n\\vspace*{-1cm}\n")
+			builder.WriteString("\\begin{center}\n{\\large\\textbf{Štatistiky skupiny: " + latexEscape(group.Key) + "}}\n\\end{center}\n")
+			builder.WriteString("\\vspace{0.4cm}\n\n")
+
+			builder.WriteString("\\begin{center}\n\\textbf{Základné štatistiky}\\\\[0.2em]\n")
+			builder.WriteString("\\begin{tabular}{|l|r|}\n\\hline\n")
+			builder.WriteString(fmt.Sprintf("Počet študentov & %d \\\\\n\\hline\n", len(group.Students)))
+			builder.WriteString(fmt.Sprintf("Maximum bodov & %d \\\\\n\\hline\n", groupMax))
+			builder.WriteString(fmt.Sprintf("Minimum bodov & %d \\\\\n\\hline\n", groupMin))
+			builder.WriteString(fmt.Sprintf("Priemer & %.2f \\\\\n\\hline\n", groupAvg))
+			builder.WriteString(fmt.Sprintf("Medián & %.2f \\\\\n\\hline\n", groupMedian))
+			builder.WriteString(fmt.Sprintf("Absolútna úspešnosť & %d \\\\\n\\hline\n", groupAbsolute))
+			builder.WriteString(fmt.Sprintf("Relatívna úspešnosť & %.2f\\%% \\\\\n\\hline\n", groupRelative*100))
+			builder.WriteString("\\end{tabular}\n\\end{center}\n\n")
+
+			groupLabels, groupCoords := buildPlotData(groupScores, exam.QuestionCount)
+			builder.WriteString("\\vspace{0.4cm}\n\n")
+			builder.WriteString("\\noindent\\textbf{Rozdelenie bodov}\n")
+			builder.WriteString(`
+	\begin{tikzpicture}
+	\begin{axis}[
+		ybar,
+		xlabel={Rozsahy bodov},
+		ylabel={Počet študentov},
+		width=\textwidth,
+		height=5cm,
+		bar width=0.6cm,
+		xtick=data,
+		xticklabels={` + groupLabels + `},
+		nodes near coords,
+	]
+	\addplot coordinates {
+	` + groupCoords + `
+	};
+	\end{axis}
+	\end{tikzpicture}
+	`)
+
+			if exam.QuestionCount > 0 {
+				absPerQ, relPerQ := calculatePerQuestionSuccess(group.Students, exam)
+				builder.WriteString("\n\\vspace{0.4cm}\n\n")
+				builder.WriteString("\\begin{center}\n\\textbf{Úspešnosť za jednotlivé príklady}\\\\[0.2em]\n")
+				builder.WriteString("{\\footnotesize\n")
+				builder.WriteString("\\begin{tabular}{|l|r|r|}\n\\hline\n")
+				builder.WriteString("\\textbf{Príklad} & \\textbf{Absolútna} & \\textbf{Relatívna (\\%)} \\\\\n\\hline\n")
+				for q := 0; q < len(absPerQ); q++ {
+					builder.WriteString(fmt.Sprintf("%d & %d & %.2f \\\\\n\\hline\n", q+1, absPerQ[q], relPerQ[q]))
+				}
+				builder.WriteString("\\end{tabular}\n}\n\\end{center}\n")
+			}
+		}
+	}
+
 	builder.WriteString(`\end{document}`)
 
 	return []byte(builder.String()), nil
 }
 
-// buildPlotData processes the score data into labels and coordinates for LaTeX plotting.
-func buildPlotData(scores []int) (labels string, coordinates string) {
-	distribution := make(map[int]int)
-	for _, s := range scores {
-		lb := (s / 10) * 10
-		distribution[lb]++
+// buildPlotData produces exactly 5 bins for a score distribution histogram.
+// Bin 0: students with exactly 0 points.
+// Bins 1-4: the range [1..maxScore] split into 4 equal parts (ceiling division).
+func buildPlotData(scores []int, maxScore int) (labels string, coordinates string) {
+	bins := make([]int, 5)
+	binSize := 1
+	if maxScore > 0 {
+		binSize = (maxScore + 3) / 4 // ceil(maxScore / 4)
 	}
 
-	var lbs []int
-	for lb := range distribution {
-		lbs = append(lbs, lb)
+	for _, s := range scores {
+		if s <= 0 {
+			bins[0]++
+		} else {
+			b := (s-1)/binSize + 1
+			if b > 4 {
+				b = 4
+			}
+			bins[b]++
+		}
 	}
-	sort.Ints(lbs)
 
 	var labelParts, coordParts []string
-	for _, lb := range lbs {
-		labelParts = append(labelParts, fmt.Sprintf("%d-%d", lb, lb+9))
-		coordParts = append(coordParts, fmt.Sprintf("(%d,%d)", lb, distribution[lb]))
+	labelParts = append(labelParts, "0")
+	coordParts = append(coordParts, fmt.Sprintf("(0,%d)", bins[0]))
+	for i := 1; i <= 4; i++ {
+		lo := (i-1)*binSize + 1
+		hi := i * binSize
+		if maxScore > 0 && hi > maxScore {
+			hi = maxScore
+		}
+		if lo >= hi {
+			labelParts = append(labelParts, fmt.Sprintf("%d", lo))
+		} else {
+			labelParts = append(labelParts, fmt.Sprintf("%d-%d", lo, hi))
+		}
+		coordParts = append(coordParts, fmt.Sprintf("(%d,%d)", i, bins[i]))
 	}
 
 	return strings.Join(labelParts, ","), strings.Join(coordParts, "\n")
@@ -407,14 +628,24 @@ func buildPerQuestionPlotData(successRates []float64) (labels string, coordinate
 }
 
 // calculateSuccessPerQuestion calculates the success rate per question.
-// It compares each student answer to the correct answers and computes the percentage of correct answers per question.
-func calculateSuccessPerQuestion(students []models.Student, correctAnswers string, totalQuestions int) []float64 {
+// For multi-day exams each student's correct answers are determined by their subgroup.
+func calculateSuccessPerQuestion(students []models.Student, exam *models.Exam) []float64 {
+	totalQuestions := exam.QuestionCount
 	successRates := make([]float64, totalQuestions)
+	if len(students) == 0 {
+		return successRates
+	}
+
+	var subgroupAnswers map[string]string
+	if exam.IsMultiDay {
+		subgroupAnswers = parseSubgroupAnswers(exam.Questions)
+	}
 
 	for q := 0; q < totalQuestions; q++ {
 		correctCount := 0
 		for _, s := range students {
-			if len(s.Answers) > q && s.Answers[q] == correctAnswers[q] {
+			correct := getStudentCorrectAnswers(s, exam, subgroupAnswers)
+			if len(s.Answers) > q && len(correct) > q && s.Answers[q] == correct[q] {
 				correctCount++
 			}
 		}
@@ -425,17 +656,26 @@ func calculateSuccessPerQuestion(students []models.Student, correctAnswers strin
 }
 
 // calculatePerQuestionSuccess calculates both the absolute and relative success per question.
-// It returns two slices: one with the absolute number of correct answers per question,
-// and one with the relative percentage of success per question.
-func calculatePerQuestionSuccess(students []models.Student, correctAnswers string, totalQuestions int) ([]int, []float64) {
+// For multi-day exams each student's correct answers are determined by their subgroup.
+func calculatePerQuestionSuccess(students []models.Student, exam *models.Exam) ([]int, []float64) {
+	totalQuestions := exam.QuestionCount
 	absolute := make([]int, totalQuestions)
 	relative := make([]float64, totalQuestions)
 	totalStudents := len(students)
+	if totalStudents == 0 {
+		return absolute, relative
+	}
+
+	var subgroupAnswers map[string]string
+	if exam.IsMultiDay {
+		subgroupAnswers = parseSubgroupAnswers(exam.Questions)
+	}
 
 	for q := 0; q < totalQuestions; q++ {
 		correctCount := 0
 		for _, s := range students {
-			if len(s.Answers) > q && s.Answers[q] == correctAnswers[q] {
+			correct := getStudentCorrectAnswers(s, exam, subgroupAnswers)
+			if len(s.Answers) > q && len(correct) > q && s.Answers[q] == correct[q] {
 				correctCount++
 			}
 		}
@@ -444,4 +684,26 @@ func calculatePerQuestionSuccess(students []models.Student, correctAnswers strin
 	}
 
 	return absolute, relative
+}
+
+// parseSubgroupAnswers parses the JSON-encoded subgroup answers from an exam's Questions field.
+// Returns nil if the content is not valid JSON (e.g. plain answer string for non-multi-day exams).
+func parseSubgroupAnswers(questionsJSON string) map[string]string {
+	var result map[string]string
+	if err := json.Unmarshal([]byte(strings.TrimSpace(questionsJSON)), &result); err != nil {
+		return nil
+	}
+	return result
+}
+
+// getStudentCorrectAnswers returns the lowercased correct answer string for a given student.
+// For multi-day exams it looks up the student's subgroup in the parsed answers map.
+func getStudentCorrectAnswers(s models.Student, exam *models.Exam, subgroupAnswers map[string]string) string {
+	if subgroupAnswers != nil {
+		if answers, ok := subgroupAnswers[s.Subgroup]; ok {
+			return strings.ToLower(answers)
+		}
+		return ""
+	}
+	return strings.ToLower(strings.TrimSpace(exam.Questions))
 }
