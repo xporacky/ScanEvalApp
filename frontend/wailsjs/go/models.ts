@@ -73,8 +73,8 @@ export namespace main {
 	    optionCount: number;
 	    showName: boolean;
 	    answers: string[];
-	    subgroupAnswers: Record<string, string>;
 	    studentCSVContent: string;
+	    subgroupAnswers: Record<string, string>;
 	
 	    static createFrom(source: any = {}) {
 	        return new ExamTemplate(source);
@@ -89,8 +89,8 @@ export namespace main {
 	        this.optionCount = source["optionCount"];
 	        this.showName = source["showName"];
 	        this.answers = source["answers"];
-	        this.subgroupAnswers = source["subgroupAnswers"];
 	        this.studentCSVContent = source["studentCSVContent"];
+	        this.subgroupAnswers = source["subgroupAnswers"];
 	    }
 	}
 	export class StudentSummary {

@@ -1,0 +1,146 @@
+\documentclass[12pt]{article}
+
+\usepackage[
+    a4paper,
+    margin=0.8in
+]{geometry}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[main=slovak,provide=*]{babel}
+\usepackage{tikz}
+\usepackage{subfig}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{pgf}
+\usepackage{qrcode}
+\geometry{left=2.5cm, right=2.5cm, bottom=0.8in, top=2cm} %zmeneny top a sirka left right aby to slo viac do stredu
+
+\definecolor{mygray}{rgb}{0.8, 0.8, 0.8}
+
+\setlength{\headheight}{110pt}
+\addtolength{\topmargin}{20pt}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+
+\fancyhead[C]{%
+    \begin{tikzpicture}[remember picture,overlay, scale=0.937]
+        \node[anchor=west] at (-9.2,0.7) {\includegraphics[width=3.2cm]{assets/latex/stu-fei-vector-logo.png}};
+
+        \node[anchor=west] at (2.5,3.1) {\textbf{ID:}};
+        \draw[thick] (3.50,2.8) rectangle ++(0.6,0.6);
+        \draw[thick] (4.22,2.8) rectangle ++(0.6,0.6);
+        \draw[thick] (4.94,2.8) rectangle ++(0.6,0.6);
+        \draw[thick] (5.66,2.8) rectangle ++(0.6,0.6);
+        \draw[thick] (7.10,2.8) rectangle ++(0.6,0.6);
+        \draw[thick] (7.82,2.8) rectangle ++(0.6,0.6);
+        \draw[thick] (8.54,2.8) rectangle ++(0.6,0.6);
+        \node at (6.68,3.1) {\Large /};
+        \node at (3.8,3.1) {\footnotesize 0};
+        \node at (4.52,3.1) {\footnotesize 4};
+        \node at (5.24,3.1) {\footnotesize 5};
+        \node at (5.96,3.1) {\footnotesize 0};
+        \node at (7.40,3.1) {\footnotesize 7};
+        \node at (8.12,3.1) {\footnotesize 2};
+        \node at (8.84,3.1) {\footnotesize 8};
+        
+
+        \node at (-6.0,3.1) {%
+            \begin{tabular}{c c}
+                \textbf{Miestnosť: CD300} &
+                \textbf{Čas: 10:00}
+            \end{tabular}
+        };
+
+        \foreach \x/\label in {-3.5/A, -2.5/B, -1.5/C, -0.5/D, 0.5/E, 1.5/F, 2.5/G, 3.5/H} {
+           \node at (\x,1.6) {\textbf{\label}};
+           \node[black!8] at (\x,1) {\scalebox{2}{\textbf{$\times$}}};
+           \node[draw, rectangle, minimum size=0.45cm, inner sep=0pt] at (\x,1) {};
+        }
+
+        \foreach \x/\label in {-2.0/1, -1.0/2, 0/3, 1/4, 2/5} {
+            \node at (\x,0.35) {\textbf{\label}};
+            \node[black!8] at (\x,-0.25) {\scalebox{2}{\textbf{$\times$}}};
+            \node[draw, rectangle, minimum size=0.45cm, inner sep=0pt] at (\x,-0.25) {};
+        }
+
+        
+
+        \node[anchor=east] at (9.2,0.6) {
+            \qrcode[height=1.8cm]{ ID:0450728 | MENO:Diana Horpinchenko | DATUM:29.04.2026 | MIESTNOST:CD300 }
+        };
+
+        \draw[thick] (-9.2,-0.7) -- (9.2,-0.7);
+    \end{tikzpicture}%
+}
+
+\newcounter{rowCounter}
+\setcounter{rowCounter}{1}
+\newcounter{rowPosition}
+\newcounter{blocksNeeded}
+
+\newcommand{\ceilDiv}[1]{%
+    \pgfmathtruncatemacro{\tempResult}{(#1 + 14)/15}%
+    \setcounter{blocksNeeded}{\tempResult}%
+}
+
+\newcommand{\generateBlock}[2]{%
+    \setcounter{rowPosition}{1}
+
+    \begin{tikzpicture}[font=\small, scale=0.937]
+        \draw[thick, black] (-1,-17) rectangle (13.5,-2);
+
+        \foreach \position/\letter in {1/A,2/B,3/C,4/D,5/E,6/F} {
+            \node at ({\position * 2}, -1.5) {\letter};
+        }
+
+        \foreach \line in {#1,...,#2} {
+            \pgfmathsetmacro{\y}{-(\value{rowPosition}) - 1.5}
+
+            \node at (0,\y) {\normalsize\textbf{\arabic{rowCounter}}};
+
+            \foreach \position in {1,2,3,4,5,6} {
+                \node[black!8] at ({\position * 2},\y) {\scalebox{2}{\textbf{$\times$}}};
+                \node[draw, rectangle, minimum size=0.45cm, inner sep=0pt] at ({\position * 2}, \y) {};
+            }
+
+            \ifnum\value{rowPosition}=5
+                \draw[thin, black] (-1,-7.0) -- (13.5,-7.0);
+            \fi
+            \ifnum\value{rowPosition}=10
+                \draw[thin, black] (-1,-12.0) -- (13.5,-12.0);
+            \fi
+            \ifnum\value{rowPosition}=15
+                \draw[thin, black] (-1,-17.0) -- (13.5,-17.0);
+            \fi
+
+            \stepcounter{rowPosition}
+            \stepcounter{rowCounter}
+        }
+
+    \end{tikzpicture}%
+}
+
+\newcommand{\generateMultipleBlocks}[1]{%
+    \ceilDiv{#1}
+    \foreach \blockIndex in {1,...,\theblocksNeeded} {
+        \pgfmathtruncatemacro{\startQuestion}{\value{rowCounter}}
+        \pgfmathtruncatemacro{\endQuestion}{min(\value{rowCounter}+14,#1)}
+
+        \generateBlock{\startQuestion}{\endQuestion}
+
+        \ifnum\blockIndex<\theblocksNeeded\relax
+            \newpage
+        \fi
+    }
+}
+
+\begin{document}
+\begin{center}
+    \generateMultipleBlocks{ 15 }
+\end{center}
+\end{document}

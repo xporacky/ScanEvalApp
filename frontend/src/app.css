@@ -526,6 +526,17 @@
     white-space: nowrap;
 }
 
+#settings-path {
+    flex: 1;
+    min-width: 0;
+    padding: 9px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(10, 15, 25, 0.7);
+    color: #eef3fb;
+    font-size: 13px;
+}
+
 .stats-form {
     display: flex;
     flex-direction: column;

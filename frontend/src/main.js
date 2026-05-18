@@ -7,6 +7,7 @@ import {
   PrintMultiDayExamPDFs,
   UpdateMultiDayAnswers,
   ExportMultiDayResultsCSV,
+  ExportMultiDayExamTemplateCSV,
   DeleteExam,
   ListExams,
   ListStudents,
@@ -20,7 +21,6 @@ import {
   PickPDF,
   PickFolder,
   ExportExamTemplateCSV,
-  ExportExamAnswersCSV,
   GetSavePath,
   SetSavePath,
   GetExamStats,
@@ -66,9 +66,10 @@ const state = {
   mdShowName: true,
   mdCsvContent: '',
   mdCsvName: '',
-  mdTemplateCsvName: '',
   mdSubgroups: [{ name: '', answers: '' }],
   mdCheckboxMode: true,
+  mdTemplateCsvName: '',
+  mdTemplateCsvContent: '',
   mergeOutputPath: '',
   mergeCsvPaths: [],
   mergeCsvNames: [],
@@ -89,8 +90,7 @@ function renderShell() {
       </header>
       <nav class="tabs">
         <button class="tab" data-tab="exams">Písomky</button>
-        <button class="tab" data-tab="create">Vytvoriť písomku</button>
-        <button class="tab" data-tab="multiday">Multi-termín</button>
+        <button class="tab" data-tab="multiday">Vytvoriť písomku</button>
         <button class="tab" data-tab="students">Študenti</button>
         <button class="tab" data-tab="upload">Vyhodnotiť písomku</button>
         <button class="tab" data-tab="csvmerge">CSV Merge</button>
@@ -133,6 +133,8 @@ const statisticsOptions = [
   'Graf rozdelenia za jednotlivé príklady',
   'Úspešnosť absolútna aj relatívna',
   'Úspešnosť absolútna aj relatívna pre jednotlivé príklady',
+  'Štatistika podľa miestnosti',
+  'Štatistika podľa skupín',
 ];
 
 function formatDate(value) {
@@ -175,7 +177,6 @@ function renderExams() {
       <span>Odpovede</span>
       <span>Vyhodnotiť</span>
       <span>Štatistika PDF</span>
-      <span>Export odpovedí</span>
       <span>CSV</span>
       <span>Zmazať</span>
     </div>
@@ -201,11 +202,8 @@ function renderExams() {
           <span class="cell" data-label="Vyhodnotiť">
             <button class="btn" data-action="evaluate" data-exam-id="${exam.id}">Vyhodnotiť</button>
           </span>
-              <span class="cell" data-label="Štatistika PDF">
+          <span class="cell" data-label="Štatistika PDF">
             <button class="btn" data-action="stats-pdf" data-exam-id="${exam.id}">Štatistika</button>
-          </span>
-          <span class="cell" data-label="Export odpovedí">
-            <button class="btn" data-action="export-answers" data-exam-id="${exam.id}">Uloz odpovede do CSV</button>
           </span>
           <span class="cell" data-label="CSV">
             ${exam.isMultiDay
@@ -412,100 +410,6 @@ function getTemplateCsvLabel() {
   return state.templateCsvName || 'Ziadny subor';
 }
 
-function parseExamTemplateCSVClient(csvContent) {
-  const rows = csvContent
-    .replace(/\r\n/g, '\n')
-    .replace(/\r/g, '\n')
-    .split('\n')
-    .map((row) => row.trim())
-    .filter((row) => row.length > 0)
-    .map((row) => {
-      const parts = row.split(',');
-      const section = parts[0]?.trim();
-      const key = parts[1]?.trim();
-      const value = parts.slice(2).join(',').trim();
-      return { section, key, value };
-    });
-
-  const template = {
-    title: '',
-    schoolYear: '',
-    dateTime: '',
-    questionCount: 0,
-    optionCount: 5,
-    showName: true,
-    answers: [],
-    subgroupAnswers: {},
-    studentCSVContent: '',
-  };
-
-  if (rows.length === 0) {
-    return template;
-  }
-
-  const first = rows[0];
-  if (first.section?.toLowerCase() === 'section' && first.key?.toLowerCase() === 'key' && first.value?.toLowerCase() === 'value') {
-    rows.shift();
-  }
-
-  rows.forEach((row) => {
-    const section = row.section?.toLowerCase();
-    const key = row.key;
-    const value = row.value;
-    if (!section || !key) return;
-
-    switch (section) {
-      case 'meta':
-        switch (key.toLowerCase()) {
-          case 'title':
-            template.title = value;
-            break;
-          case 'school_year':
-            template.schoolYear = value;
-            break;
-          case 'date_time':
-            template.dateTime = value;
-            break;
-          case 'question_count':
-            template.questionCount = Number(value) || template.questionCount;
-            break;
-          case 'option_count':
-            template.optionCount = Number(value) || template.optionCount;
-            break;
-          case 'show_name':
-            template.showName = value.toLowerCase() === 'true';
-            break;
-        }
-        break;
-      case 'answer':
-        template.answers[Number(key) - 1] = value.toUpperCase();
-        break;
-      case 'subgroup':
-        template.subgroupAnswers[key] = value.toUpperCase();
-        break;
-      case 'payload':
-        if (key === 'students_csv') {
-          template.studentCSVContent = value;
-        }
-        break;
-    }
-  });
-
-  if (template.questionCount <= 0) {
-    template.questionCount = template.answers.length || Object.values(template.subgroupAnswers)[0]?.length || 0;
-  }
-
-  if (template.answers.length > template.questionCount) {
-    template.answers = template.answers.slice(0, template.questionCount);
-  }
-
-  while (template.answers.length < template.questionCount) {
-    template.answers.push('');
-  }
-
-  return template;
-}
-
 function renderCreateExam() {
   const content = document.getElementById('content');
   syncAnswersState();
@@ -545,14 +449,14 @@ function renderCreateExam() {
           <span class="file-name">${getStudentCsvLabel()}</span>
         </label>
         <label class="file">
-          Import odpovedi z CSV
+          CSV sablona testu
           <input id="template-csv-file" type="file" accept=".csv" />
           <span class="file-name">${getTemplateCsvLabel()}</span>
         </label>
       </div>
       <div class="form-actions">
         <button type="button" id="generate" class="secondary">Generovat otazky</button>
-        <button type="button" id="save-template" class="secondary">Ulozit odpovede do CSV</button>
+        <button type="button" id="save-template" class="secondary">Ulozit CSV sablonu</button>
         <button type="submit" class="primary">Vytvorit test</button>
         <span id="form-status" class="status"></span>
       </div>
@@ -1042,7 +946,7 @@ function renderMultiDay() {
         </label>
         <label>
           Pocet moznosti
-          <input id="md-option-count" type="number" min="3" max="8" value="${oCount}" required />
+          <input id="md-option-count" type="number" min="3" max="8" value="${oCount}" style="min-height:42px;width:100%;box-sizing:border-box;" required />
         </label>
         <label class="toggle-field">
           Zobrazit meno
@@ -1052,15 +956,19 @@ function renderMultiDay() {
           </span>
         </label>
         <label class="file">
-          CSV zo systemu (s datumom, casom, miestnostou)
+          CSV so studentami (s datumom, casom, miestnostou)
           <input id="md-csv-file" type="file" accept=".csv" />
           <span class="file-name">${state.mdCsvName || 'Ziadny subor'}</span>
         </label>
-        <label class="file">
-          Import odpovedi z CSV
+        <label class="file" style="margin-top:-8px;">
+          CSV sablona testu
           <input id="md-template-csv-file" type="file" accept=".csv" />
           <span class="file-name">${state.mdTemplateCsvName || 'Ziadny subor'}</span>
         </label>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:-8px;">
+          <span style="font-size:13px;color:rgba(238,243,251,0.8);">&nbsp;</span>
+          <button type="button" id="md-load-template" ${state.mdTemplateCsvContent ? '' : 'disabled'} style="padding:10px 16px;border-radius:10px;border:1px solid rgba(255,255,255,0.18);font-weight:600;font-size:13px;cursor:${state.mdTemplateCsvContent ? 'pointer' : 'not-allowed'};background:${state.mdTemplateCsvContent ? '#3b82f6' : 'rgba(59,130,246,0.25)'};color:${state.mdTemplateCsvContent ? '#fff' : 'rgba(255,255,255,0.35)'};">Generovať podľa šablóny</button>
+        </div>
       </div>
 
       <div class="sg-section">
@@ -1083,6 +991,7 @@ function renderMultiDay() {
       </div>
 
       <div class="form-actions">
+        <button type="button" id="md-save-template" class="secondary">Ulozit CSV sablonu</button>
         <button type="submit" class="primary">Vytvorit multi-terminovy test</button>
         <span id="md-status" class="status"></span>
       </div>
@@ -1105,48 +1014,76 @@ function renderMultiDay() {
     if (t) t.textContent = state.mdShowName ? 'Ano' : 'Nie';
   });
 
+  document.getElementById('md-template-csv-file').addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      state.mdTemplateCsvName = '';
+      state.mdTemplateCsvContent = '';
+      renderMultiDay();
+      return;
+    }
+    state.mdTemplateCsvName = file.name;
+    state.mdTemplateCsvContent = await file.text();
+    renderMultiDay();
+  });
+
+  document.getElementById('md-load-template').addEventListener('click', async () => {
+    if (!state.mdTemplateCsvContent) return;
+    const statusEl = document.getElementById('md-status');
+    statusEl.textContent = 'Načítavam šablónu...';
+    statusEl.className = 'status';
+    try {
+      const template = await ParseExamTemplateCSV(state.mdTemplateCsvContent);
+      state.mdTitle = template.title || '';
+      state.mdSchoolYear = template.schoolYear || '';
+      state.mdQuestionCount = Number(template.questionCount) || state.mdQuestionCount;
+      state.mdOptionCount = Number(template.optionCount) || state.mdOptionCount;
+      state.mdShowName = Boolean(template.showName);
+      if (template.subgroupAnswers && Object.keys(template.subgroupAnswers).length > 0) {
+        state.mdSubgroups = Object.entries(template.subgroupAnswers).map(([name, answers]) => ({ name, answers }));
+      }
+      renderMultiDay();
+      const nextStatusEl = document.getElementById('md-status');
+      if (nextStatusEl) { nextStatusEl.textContent = 'Šablóna načítaná.'; nextStatusEl.className = 'status success'; }
+    } catch (err) {
+      console.error(err);
+      const nextStatusEl = document.getElementById('md-status');
+      if (nextStatusEl) { nextStatusEl.textContent = 'Chyba pri načítaní šablóny.'; nextStatusEl.className = 'status error'; }
+    }
+  });
+
+  document.getElementById('md-save-template').addEventListener('click', async () => {
+    const statusEl = document.getElementById('md-status');
+    statusEl.textContent = 'Ukladam sablonu...';
+    statusEl.className = 'status';
+    const subgroupMap = {};
+    for (const sg of state.mdSubgroups) {
+      if (sg.name.trim()) subgroupMap[sg.name.trim()] = sg.answers.toUpperCase();
+    }
+    try {
+      const path = await ExportMultiDayExamTemplateCSV(
+        state.mdTitle.trim(),
+        state.mdSchoolYear.trim(),
+        Number(state.mdQuestionCount),
+        Number(state.mdOptionCount),
+        Boolean(state.mdShowName),
+        subgroupMap,
+      );
+      statusEl.textContent = path ? `Sablona ulozena: ${path}` : 'Sablona ulozena.';
+      statusEl.className = 'status success';
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = 'Chyba pri ukladani sablony.';
+      statusEl.className = 'status error';
+    }
+  });
+
   document.getElementById('md-csv-file').addEventListener('change', async (e) => {
     const file = e.target.files?.[0];
     if (!file) { state.mdCsvContent = ''; state.mdCsvName = ''; return; }
     state.mdCsvName = file.name;
     state.mdCsvContent = await file.text();
     document.querySelector('#md-csv-file + .file-name').textContent = file.name;
-  });
-
-  document.getElementById('md-template-csv-file').addEventListener('change', async (e) => {
-    const file = e.target.files?.[0];
-    const templateLabel = document.querySelector('#md-template-csv-file + .file-name');
-    if (!file) {
-      state.mdTemplateCsvName = '';
-      if (templateLabel) templateLabel.textContent = 'Ziadny subor';
-      return;
-    }
-    state.mdTemplateCsvName = file.name;
-    if (templateLabel) templateLabel.textContent = file.name;
-
-    try {
-      const text = await file.text();
-      let template = await ParseExamTemplateCSV(text);
-      if (!template.subgroupAnswers || Object.keys(template.subgroupAnswers).length === 0) {
-        template = parseExamTemplateCSVClient(text);
-      }
-      state.mdTitle = template.title || '';
-      state.mdSchoolYear = template.schoolYear || '';
-      state.mdQuestionCount = Number(template.questionCount) || 0;
-      state.mdOptionCount = Number(template.optionCount) || 5;
-      state.mdShowName = Boolean(template.showName);
-      if (template.subgroupAnswers && Object.keys(template.subgroupAnswers).length > 0) {
-        state.mdSubgroups = Object.entries(template.subgroupAnswers).map(([name, answers]) => ({ name, answers: answers.toUpperCase() }));
-      } else if (Array.isArray(template.answers) && template.answers.length > 0) {
-        state.mdSubgroups = [{ name: 'A', answers: template.answers.join('').toUpperCase() }];
-      } else {
-        state.mdSubgroups = [{ name: '', answers: '' }];
-      }
-      renderMultiDay();
-    } catch (err) {
-      console.error(err);
-      window.alert('Chyba pri nacitani CSV sablony.');
-    }
   });
 
   document.getElementById('sg-checkbox-mode').addEventListener('change', (e) => {
@@ -1225,6 +1162,8 @@ function renderMultiDay() {
       state.mdOptionCount = 5;
       state.mdShowName = true;
       state.mdSubgroups = [{ name: '', answers: '' }];
+      state.mdTemplateCsvName = '';
+      state.mdTemplateCsvContent = '';
       await refreshData();
       state.activeTab = 'exams';
       renderContent();
@@ -1319,13 +1258,21 @@ function renderUpload() {
 
 function renderSettings() {
   const content = document.getElementById('content');
+  const failedPagesPath = state.savePath ? `${state.savePath.replace(/[\\/]+$/, '')}/failed_pages` : '';
   content.innerHTML = `
     <div class="settings-form">
       <label>
         Miesto ukladania PDF
         <div class="file-row">
-          <span class="file-path">${state.savePath || 'Nenastavene'}</span>
+          <input id="settings-path" type="text" value="${state.savePath || ''}" placeholder="/home/vbox/ScanEvalApp/output" />
           <button id="settings-pick" class="btn">Vybrat priecinok</button>
+        </div>
+      </label>
+      <label>
+        Failed pages
+        <div class="file-row">
+          <span class="file-path">${failedPagesPath || 'Nenastavene'}</span>
+          <button id="settings-open-failed" class="btn" ${failedPagesPath ? '' : 'disabled'}>Otvorit priecinok</button>
         </div>
       </label>
       <div class="form-actions">
@@ -1337,13 +1284,27 @@ function renderSettings() {
 
   const pickBtn = document.getElementById('settings-pick');
   const saveBtn = document.getElementById('settings-save');
+  const openFailedBtn = document.getElementById('settings-open-failed');
+  const pathInput = document.getElementById('settings-path');
+
+  if (pathInput) {
+    pathInput.addEventListener('input', () => {
+      state.savePath = pathInput.value.trim();
+    });
+  }
 
   if (pickBtn) {
     pickBtn.addEventListener('click', async () => {
-      const path = await PickFolder();
-      if (path) {
-        state.savePath = path;
-        renderSettings();
+      const statusEl = document.getElementById('settings-status');
+      try {
+        const path = await PickFolder();
+        if (path) {
+          state.savePath = path;
+          renderSettings();
+        }
+      } catch (err) {
+        console.error(err);
+        if (statusEl) statusEl.textContent = 'Vyber priecinka zlyhal. Cestu mozes zadat rucne.';
       }
     });
   }
@@ -1362,6 +1323,18 @@ function renderSettings() {
       } catch (err) {
         console.error(err);
         if (statusEl) statusEl.textContent = 'Ulozenie zlyhalo.';
+      }
+    });
+  }
+
+  if (openFailedBtn && failedPagesPath) {
+    openFailedBtn.addEventListener('click', async () => {
+      const statusEl = document.getElementById('settings-status');
+      try {
+        await OpenPath(failedPagesPath);
+      } catch (err) {
+        console.error(err);
+        if (statusEl) statusEl.textContent = 'Priecinok sa nepodarilo otvorit.';
       }
     });
   }
@@ -1776,16 +1749,6 @@ function bindExamActions() {
           });
         }
         renderStatsModal();
-        return;
-      }
-if (action === 'export-answers') {
-        try {
-          const path = await ExportExamAnswersCSV(examId);
-          if (path) await OpenPath(path);
-        } catch (err) {
-          console.error(err);
-          showModal('Export odpovedí', '<div class="error">Export odpovedí do CSV zlyhal.</div>');
-        }
         return;
       }
       if (action === 'csv') {

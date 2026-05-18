@@ -1,0 +1,101 @@
+\documentclass[12pt]{article}
+\usepackage{tikz}
+\usepackage{subfig}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage[margin=1.0in]{geometry}
+\usepackage{fancyhdr}
+\usepackage{pgf}
+\usepackage{qrcode}
+
+\definecolor{mygray}{rgb}{0.8, 0.8, 0.8}
+
+\setlength{\headheight}{65.90973pt}
+\addtolength{\topmargin}{5pt}
+\pagestyle{fancy}
+
+\fancyhead[L]{
+    \raisebox{1ex}{
+    %\includegraphics[width=2.1cm]{assets/latex/stu-fei-vector-logo.png}
+    }
+}
+
+\fancyhead[R]{
+    \raisebox{5ex}{
+        \scalebox{0.5}{
+           \qrcode{ 154 }
+        }
+    }
+}
+
+\fancyhead[C]{
+    \parbox{1\textwidth}{
+        \centering
+        \textbf{Meno: Martin Nagy} \hspace{1.5em}
+        \textbf{ID: 151} \\[0.5em]
+        \textbf{Dátum: 08. 01. 2026} \hspace{1.5em}
+        \textbf{Miestnosť: A300} \hspace{1.5em}
+        \textbf{Čas: 23:50}
+    }
+}
+
+\newcounter{rowCounter}
+\setcounter{rowCounter}{1}
+\newcounter{rowPosition}
+\newcounter{blocksNeeded}
+\newcounter{remainingQuestions}
+
+\newcommand{\ceilDiv}[1]{%
+    \pgfmathsetmacro{\tempResult}{int((#1 + 19) / 20)}
+    \setcounter{blocksNeeded}{\tempResult}
+}
+
+\newcommand{\generateBlock}[2]{
+    \setcounter{rowPosition}{1}
+
+    \begin{tikzpicture}[font=\small]
+        \draw[thick, black] (-1, -22) rectangle (7.5, -2);
+
+        \foreach \position/\letter in {1/A, 2/B, 3/C} {
+            \node at ({\position * 2}, -1.5) {\letter};
+        }
+
+        \foreach \line in {#1,...,#2} {
+            \begin{scope}[yshift=-\the\value{rowPosition}cm - 1.5cm]
+                \node at (0, 0) {\normalsize\textbf{\the\value{rowCounter}}};
+                \foreach \position in {1,2,3} {
+                    \node[mygray] at ({\position * 2},0) {\scalebox{2}{\textbf{$\times$}}};
+                    \node[draw, rectangle, inner sep=5pt] at ({\position * 2}, 0) {};
+                }
+                \ifnum\value{rowPosition}=5
+                    \draw[thin, black] (-1, -\the\value{rowPosition} cm + 4.5cm) -- (7.5, -\the\value{rowPosition} cm + 4.5cm);
+                \fi
+                \ifnum\value{rowPosition}=10
+                    \draw[thin, black] (-1, -\the\value{rowPosition} cm + 9.5cm) -- (7.5, -\the\value{rowPosition} cm + 9.5cm);
+                \fi
+                \ifnum\value{rowPosition}=15
+                    \draw[thin, black] (-1, -\the\value{rowPosition} cm + 14.5cm) -- (7.5, -\the\value{rowPosition} cm + 14.5cm);
+                \fi
+                \stepcounter{rowPosition}
+                \stepcounter{rowCounter}
+            \end{scope}
+        }
+    \end{tikzpicture}
+}
+
+\newcommand{\generateMultipleBlocks}[1]{
+    \setcounter{remainingQuestions}{#1}
+    \ceilDiv{#1}
+    \foreach \blockIndex in {1,...,\the\value{blocksNeeded}} {
+        \pgfmathsetmacro{\startQuestion}{\the\value{rowCounter}}
+        \pgfmathsetmacro{\endQuestion}{min(\the\value{rowCounter} + 19, #1)}
+        \generateBlock{\number\startQuestion}{\number\endQuestion}
+        \addtocounter{remainingQuestions}{-\the\value{rowPosition}}
+    }
+}
+
+\begin{document}
+\begin{center}
+    \generateMultipleBlocks{ 35 }
+\end{center}
+\end{document}

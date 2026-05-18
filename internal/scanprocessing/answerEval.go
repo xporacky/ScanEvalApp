@@ -507,6 +507,11 @@ func GetAnswer(mat *gocv.Mat, i int, numberOfChoices int) rune {
 		rectMat.Close()
 		checkboxMat.Close()
 	}
+	// If no checkbox was ever marked (state never left StateEmpty), the student
+	// left the question blank. Returns 'N' (no answer) instead of 'X'
+	if answer == rune('x') && state == StateEmpty {
+		return rune('N')
+	}
 	return answer
 }
 

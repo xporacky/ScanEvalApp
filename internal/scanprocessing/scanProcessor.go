@@ -63,7 +63,7 @@ type FailedPages struct {
 //   - At the end of processing, all failed pages are exported to a separate PDF file using `ExportFailedPagesToPDF`
 //     for further inspection or manual correction.
 //   - Errors encountered during PDF loading or database operations are logged using the error logger.
-func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan chan string, counter *int, hadFailures *bool) []FailedPageInfo {
+func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan chan string, counter *int, hadFailures *bool) ([]FailedPageInfo, error) {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
@@ -78,19 +78,19 @@ func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan ch
 	fileName := fmt.Sprintf("scan_%s_%d.pdf", safeTitle, exam.ID)
 	if err := os.MkdirAll(common.GLOBAL_TEMP_SCAN, 0755); err != nil {
 		errorLogger.Error("Nepodarilo sa vytvoriť cieľový adresár:", slog.String("error", err.Error()))
-		return nil
+		return nil, err
 	}
 	destPath := filepath.Join(common.GLOBAL_TEMP_SCAN, fileName)
 	err := copyFile(scanPath, destPath)
 	if err != nil {
 		errorLogger.Error("Chyba pri kopírovaní súboru:", slog.String("error", err.Error()))
-		return nil
+		return nil, err
 	}
 
 	doc, err := fitz.New(scanPath)
 	if err != nil {
 		errorLogger.Error("Chyba pri načítaní PDF súboru", slog.String("file", scanPath), slog.String("error", err.Error()))
-		panic(err)
+		return nil, err
 	}
 	defer doc.Close()
 	var wg sync.WaitGroup
@@ -146,12 +146,12 @@ func ProcessPDF(scanPath string, exam *models.Exam, db *gorm.DB, progressChan ch
 		err := pdf.ExportFailedPagesToPDF(safeTitle, examID, pageNumbers, scanPath)
 		if err != nil {
 			errorLogger.Error("Nepodarilo sa exportovat PDF s chybnymi stranami", slog.String("examID", fmt.Sprint(exam.ID)), slog.String("error", err.Error()))
-			return allFailedPages
+			return allFailedPages, err
 		}
 		logger.Info("=================================")
 	}
 
-	return allFailedPages
+	return allFailedPages, nil
 }
 
 // ProcessPage processes a single page from the provided PDF document, extracts student information,
