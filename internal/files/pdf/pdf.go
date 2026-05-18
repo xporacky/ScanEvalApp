@@ -3,10 +3,11 @@ package pdf
 import (
 	"ScanEvalApp/internal/common"
 	"ScanEvalApp/internal/config"
+	"ScanEvalApp/internal/database/models"
 	"ScanEvalApp/internal/database/repository"
-	"ScanEvalApp/internal/latex"
 	"ScanEvalApp/internal/logging"
 	"fmt"
+	"image"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -14,25 +15,28 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/gen2brain/go-fitz"
+	"gocv.io/x/gocv"
 	"gorm.io/gorm"
 )
 
 // SlicePdfForStudent slices a PDF file based on the pages specified in the students record in DB.
 // It uses the pdftk tool to extract specific pages from the input PDF and saves the result to an output PDF.
-func SlicePdfForStudent(db *gorm.DB, registrationNumber int) (string, error) {
+func SlicePdfForStudent(db *gorm.DB, studentID uint) (string, error) {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
 
-	student, err := latex.FindStudentByRegistrationNumber(db, registrationNumber)
-	if err != nil {
-		errorLogger.Error("Error finding student", "registration_number", registrationNumber, slog.String("error", err.Error()))
+	var student models.Student
+	if err := db.First(&student, studentID).Error; err != nil {
+		errorLogger.Error("Error finding student", "student_id", studentID, slog.String("error", err.Error()))
 		return "", err
 	}
+	registrationNumber := student.RegistrationNumber
 
 	pagesStr := student.Pages
 
 	if pagesStr == "" {
-		err = fmt.Errorf("študent (číslo registrácie: %d) nemá žiadne stránky v databáze", registrationNumber)
+		err := fmt.Errorf("študent (číslo registrácie: %d) nemá žiadne stránky v databáze", registrationNumber)
 		logger.Info("Študent nemá žiadne stránky v DB", "registration_number", registrationNumber)
 		return "", err
 	}
@@ -100,7 +104,71 @@ func SlicePdfForStudent(db *gorm.DB, registrationNumber int) (string, error) {
 	}
 
 	logger.Info("PDF slicing pomocou pdftk hotový", "output_path", outputPDF)
+
+	// Skontroluj orientáciu prvej strany a ak je obrátená, otočíme o 180°
+	if isUpsideDown(outputPDF) {
+		rotated := outputPDF + "_rotated.pdf"
+		rotCmd := exec.Command("pdftk", outputPDF, "rotate", "1-endsouth", "output", rotated)
+		if rotOut, rotErr := rotCmd.CombinedOutput(); rotErr != nil {
+			errorLogger.Error("Chyba pri rotácii PDF", "error", rotErr.Error(), "output", string(rotOut))
+		} else {
+			os.Remove(outputPDF)
+			os.Rename(rotated, outputPDF)
+			logger.Info("PDF otočené o 180°", "output_path", outputPDF)
+		}
+	}
+
 	return outputPDF, nil
+}
+
+// isUpsideDown opens the first page of a PDF and checks if it is upside down
+// by comparing contour counts in the upper vs lower half of the image.
+func isUpsideDown(pdfPath string) bool {
+	doc, err := fitz.New(pdfPath)
+	if err != nil {
+		return false
+	}
+	defer doc.Close()
+	if doc.NumPage() == 0 {
+		return false
+	}
+	img, err := doc.Image(0)
+	if err != nil {
+		return false
+	}
+
+	// Convert RGBA to grayscale gocv.Mat
+	bounds := img.Bounds()
+	w, h := bounds.Dx(), bounds.Dy()
+	bytes := make([]byte, 0, w*h*3)
+	for j := bounds.Min.Y; j < bounds.Max.Y; j++ {
+		for i := bounds.Min.X; i < bounds.Max.X; i++ {
+			r, g, b, _ := img.At(i, j).RGBA()
+			bytes = append(bytes, byte(b>>8), byte(g>>8), byte(r>>8))
+		}
+	}
+	mat, err := gocv.NewMatFromBytes(h, w, gocv.MatTypeCV8UC3, bytes)
+	if err != nil {
+		return false
+	}
+	defer mat.Close()
+	gray := gocv.NewMat()
+	defer gray.Close()
+	gocv.CvtColor(mat, &gray, gocv.ColorBGRToGray)
+
+	// CheckUpsideDown: lower half has more contours → upside down
+	upperPart := gray.Region(image.Rect(0, 0, gray.Cols(), gray.Rows()/2))
+	lowerPart := gray.Region(image.Rect(0, gray.Rows()/2, gray.Cols(), gray.Rows()))
+	canny := gocv.NewMat()
+	defer canny.Close()
+
+	gocv.Canny(upperPart, &canny, 100, 200)
+	upperContours := gocv.FindContours(canny, gocv.RetrievalExternal, gocv.ChainApproxNone)
+
+	gocv.Canny(lowerPart, &canny, 100, 200)
+	lowerContours := gocv.FindContours(canny, gocv.RetrievalExternal, gocv.ChainApproxNone)
+
+	return lowerContours.Size() > upperContours.Size()
 }
 
 // ExportFailedPagesToPDF extracts a subset of pages (marked as failed) from the input PDF

@@ -7,6 +7,14 @@ import (
 	"gocv.io/x/gocv"
 )
 
+// Adjusts the padding for checkboxes based on the number of choices.
+func checkboxPaddingForChoices(choices int) int {
+	if choices == 8 {
+		return 4
+	}
+	return CHECKBOX_PADDING
+}
+
 // DetectAnswersOnSheet spracuje už narovnaný a zosivatený harok (mat),
 // vyreže blok s odpoveďami, prejde riadky a vráti odpovede.
 // choices = počet možností (napr. 5), questions = počet otázok v hárku (napr. 20).
@@ -14,7 +22,10 @@ func DetectAnswersOnSheet(mat *gocv.Mat, choices, questions int) ([]rune, error)
 	if choices < 1 || questions < 1 {
 		return nil, fmt.Errorf("choices a questions musia byť > 0")
 	}
-	cropped := CropMatAnswersOnly(mat) // použitá existujúca funkcia (vracia nový Mat výrezu)
+	cropped, err := CropMatAnswersOnly(mat)
+	if err != nil {
+		return nil, fmt.Errorf("prazdna alebo neplatna strana: %w", err)
+	}
 	results := make([]rune, 0, questions)
 
 	for i := 0; i < questions; i++ {
@@ -43,7 +54,8 @@ func getAnswerParametric(mat *gocv.Mat, rowIndex, choices, questions int) rune {
 			Max: image.Point{(mat.Cols() / (choices + 1)) * (j + 1), ((rowIndex + 1) * mat.Rows() / questions) - padding},
 		}
 		checkboxMat := mat.Region(checkbox)
-		rect := FindRectangle(&checkboxMat, ANSWER_SQUARE_MIN_AREA_SIZE, ANSWER_SQUARE_MAX_AREA_SIZE)
+		minArea, maxArea := answerSquareAreaBounds(choices)
+		rect := FindRectangle(&checkboxMat, minArea, maxArea)
 
 		if rect.Empty() {
 			// žiadny rámik → interpretuj ako krúžok/označenie v stĺpci bez rámika
@@ -56,14 +68,14 @@ func getAnswerParametric(mat *gocv.Mat, rowIndex, choices, questions int) rune {
 			checkboxMat.Close()
 			continue
 		}
-
+		pad := checkboxPaddingForChoices(choices)
 		inner := image.Rectangle{
-			Min: image.Point{rect.Min.X + CHECKBOX_PADDING, rect.Min.Y + CHECKBOX_PADDING},
-			Max: image.Point{rect.Max.X - CHECKBOX_PADDING, rect.Max.Y - CHECKBOX_PADDING},
+			Min: image.Point{rect.Min.X + pad, rect.Min.Y + pad},
+			Max: image.Point{rect.Max.X - pad, rect.Max.Y - pad},
 		}
 		rectMat := checkboxMat.Region(inner)
 		mean := rectMat.Mean()
-
+		//fmt.Println(mean.Val1)
 		if mean.Val1 < MEAN_INTENSITY_X_HIGHEST && mean.Val1 > MEAN_INTENSITY_X_LOWEST {
 			if state == StateEmpty {
 				answer = rune('a' + (j - 1))
@@ -75,6 +87,9 @@ func getAnswerParametric(mat *gocv.Mat, rowIndex, choices, questions int) rune {
 
 		rectMat.Close()
 		checkboxMat.Close()
+		/*if j == choices {
+			fmt.Println(string("dalsia otazka"))
+		}*/
 	}
 	return answer
 }

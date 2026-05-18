@@ -2,10 +2,11 @@ package scanprocessing
 
 import (
 	"ScanEvalApp/internal/common"
-	"ScanEvalApp/internal/files"
 	"ScanEvalApp/internal/logging"
 	"ScanEvalApp/internal/ocr"
+	"fmt"
 	"image"
+	"os"
 
 	"log/slog"
 
@@ -14,6 +15,14 @@ import (
 
 var MEAN_INTENSITY_X_LOWEST float64
 var MEAN_INTENSITY_X_HIGHEST float64
+
+// checkboxPaddingForChoices returns the padding value to be used for checkbox inner area calculation
+func answerSquareAreaBounds(choices int) (float64, float64) {
+	if choices == 8 {
+		return ANSWER_SQUARE_MIN_AREA_SIZE_8, ANSWER_SQUARE_MAX_AREA_SIZE_8
+	}
+	return ANSWER_SQUARE_MIN_AREA_SIZE, ANSWER_SQUARE_MAX_AREA_SIZE
+}
 
 // EvaluateAnswers processes a scanned answer sheet image and extracts the student's answers.
 //
@@ -32,20 +41,57 @@ var MEAN_INTENSITY_X_HIGHEST float64
 // Returns:
 //   - int: The index of the last question found (or -1 if none were found).
 //   - []rune: A slice containing the student's selected answers as runes (e.g., 'A', 'B', 'C', etc.).
-func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int) (int, []rune) {
+func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int, numberOfChoices int) (int, []rune) {
 	logger := logging.GetLogger()
 	var studentAnswers []rune
-	croppedMat := CropMatAnswersOnly(mat)
+	croppedMat, err := CropMatAnswersOnly(mat)
+	if err != nil {
+		logger.Info("Ohraničujúci obdĺžnik nebol nájdený", slog.String("error", err.Error()))
+		return common.QUESTION_NUMBER_NOT_FOUND, nil
+	}
+	/*
+		croppedUpperHeader, err := CropGroupFromHeader(mat)
+		if err != nil {
+			logger.Info("Ohraničujúci obdĺžnik nebol nájdený", slog.String("error", err.Error()))
+			return common.QUESTION_NUMBER_NOT_FOUND, nil
+		}
+		defer croppedUpperHeader.Close()
+		group := GetGroupCode(&croppedUpperHeader)
+
+		croppedLowerHeader, err := CropSubGroupFromHeader(mat)
+		if err != nil {
+			logger.Info("Ohraničujúci obdĺžnik nebol nájdený", slog.String("error", err.Error()))
+			return common.QUESTION_NUMBER_NOT_FOUND, nil
+		}
+		defer croppedLowerHeader.Close()
+		subGroup := GetSubGroupCode(&croppedLowerHeader)
+
+		if group == 'x' || subGroup == -1 {
+			logger.Info("Nebola najdena skupina alebo podskupina", slog.Any("group", string(group)), slog.Int("subGroup", subGroup))
+			return common.QUESTION_NUMBER_NOT_FOUND, nil
+		}
+		groupCode := fmt.Sprintf("%c%d", group, subGroup)
+		fmt.Println(groupCode)
+	*/
 	questionNumber := common.QUESTION_NUMBER_NOT_FOUND
 	for i := 0; i < NUMBER_OF_QUESTIONS_PER_PAGE; i++ {
-		studentAnswers = append(studentAnswers, GetAnswer(&croppedMat, i))
+		studentAnswers = append(studentAnswers, GetAnswer(&croppedMat, i, numberOfChoices))
 		// if we dont have question number yet try to find it
 		if questionNumber == common.QUESTION_NUMBER_NOT_FOUND {
-			questionNumber = GetQuestionNumber(&croppedMat, i)
+			candidateQuestionNumber := GetQuestionNumber(&croppedMat, i, numberOfChoices)
+			if candidateQuestionNumber != common.QUESTION_NUMBER_NOT_FOUND &&
+				(candidateQuestionNumber < 1 || candidateQuestionNumber > numberOfQuestions) {
+				logger.Warn("OCR číslo otázky je mimo rozsahu testu",
+					slog.Int("questionIndex", i),
+					slog.Int("questionNumber", candidateQuestionNumber),
+					slog.Int("numberOfQuestions", numberOfQuestions))
+				continue
+			}
+			questionNumber = candidateQuestionNumber
 			continue
 		}
 		questionNumber++
-		if questionNumber > numberOfQuestions {
+		if questionNumber >= numberOfQuestions {
 			logger.Info("Všetky otázky boli nájdené")
 			break
 		}
@@ -59,6 +105,55 @@ func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int) (int, []rune) {
 	return questionNumber - 1, studentAnswers
 }
 
+// DetectGroupFromHeader reads the group (A-H) and subgroup (1-5) checkboxes from the
+// header of the scanned sheet and returns a combined code like "A1", "B3", etc.
+// Returns an empty string if detection fails or the result is ambiguous.
+func DetectGroupFromHeader(mat *gocv.Mat, pageNumber int) string {
+	logger := logging.GetLogger()
+
+	croppedUpper, err := CropGroupFromHeader(mat)
+	if err != nil {
+		logger.Info("Nepodarilo sa oreznúť oblasť skupiny", slog.String("error", err.Error()))
+		return ""
+	}
+	defer croppedUpper.Close()
+
+	group := GetGroupCode(&croppedUpper)
+	if group == 'x' {
+		path := fmt.Sprintf("./assets/tmp/group-fail-page-%03d-upper.png", pageNumber)
+		SaveMat(path, croppedUpper)
+		logger.Info("Skupinový kód nebol rozpoznaný",
+			slog.String("group", string(group)),
+			slog.String("path", path))
+		return ""
+	}
+
+	croppedLower, err := CropSubGroupFromHeader(mat)
+	if err != nil {
+		logger.Info("Nepodarilo sa oreznúť oblasť podskupiny", slog.String("error", err.Error()))
+		return ""
+	}
+	defer croppedLower.Close()
+
+	subGroup := GetSubGroupCode(&croppedLower)
+	if subGroup == -1 {
+		upperPath := fmt.Sprintf("./assets/tmp/group-fail-page-%03d-upper.png", pageNumber)
+		lowerPath := fmt.Sprintf("./assets/tmp/group-fail-page-%03d-lower.png", pageNumber)
+		SaveMat(upperPath, croppedUpper)
+		SaveMat(lowerPath, croppedLower)
+		logger.Info("Podskupinový kód nebol rozpoznaný",
+			slog.String("group", string(group)),
+			slog.Int("subGroup", subGroup),
+			slog.String("upperPath", upperPath),
+			slog.String("lowerPath", lowerPath))
+		return ""
+	}
+
+	groupCode := fmt.Sprintf("%c%d", group-('a'-'A'), subGroup)
+	logger.Info("Rozpoznaná skupina/podskupina", slog.String("groupCode", groupCode))
+	return groupCode
+}
+
 // CropMatAnswersOnly extracts the region of the image that contains only the answers.
 //
 // It finds the bounding rectangle that likely surrounds the answer area using the provided constants,
@@ -70,11 +165,105 @@ func EvaluateAnswers(mat *gocv.Mat, numberOfQuestions int) (int, []rune) {
 //
 // Returns:
 //   - gocv.Mat: A new Mat representing the cropped image region containing only the answers.
-func CropMatAnswersOnly(mat *gocv.Mat) gocv.Mat {
+func CropMatAnswersOnly(mat *gocv.Mat) (gocv.Mat, error) {
 	rect := FindRectangle(mat, BORDER_RECTANGLE_AREA_SIZE, -1)
-	rectSmaller := image.Rectangle{Min: image.Point{rect.Min.X + PADDING, rect.Min.Y + PADDING}, Max: image.Point{rect.Max.X - PADDING, rect.Max.Y - PADDING}}
+	if rect.Empty() {
+		return gocv.NewMat(), fmt.Errorf("ohranicujuci obdlznik nebol najdeny (prazdna strana?)")
+	}
+	rectSmaller := image.Rectangle{
+		Min: image.Point{rect.Min.X + PADDING, rect.Min.Y + PADDING},
+		Max: image.Point{rect.Max.X - PADDING, rect.Max.Y - PADDING},
+	}
+	if rectSmaller.Dx() <= 0 || rectSmaller.Dy() <= 0 {
+		return gocv.NewMat(), fmt.Errorf("ohranicujuci obdlznik je prilis maly")
+	}
 	croppedMat := mat.Region(rectSmaller)
-	return croppedMat
+	return croppedMat, nil
+}
+
+// Crops a rectangle from the header
+func CropGroupFromHeader(mat *gocv.Mat) (gocv.Mat, error) {
+	rect := FindRectangle(mat, BORDER_RECTANGLE_AREA_SIZE, -1)
+	if rect.Empty() {
+		return gocv.NewMat(), fmt.Errorf("hlavny obdlznik nebol najdeny")
+	}
+
+	// Vyrezeme pas nad hlavnym obdlznikom.
+	// Sirka ostane rovnaka ako hlavny obdlznik, vyska je len male pasmo nad nim.
+	headerRect := image.Rectangle{
+		Min: image.Point{
+			X: rect.Min.X + GROUP_SIDE_PADDING,
+			Y: rect.Min.Y - GROUP_HEADER_HEIGHT,
+		},
+		Max: image.Point{
+			X: rect.Max.X - GROUP_SIDE_PADDING,
+			Y: rect.Min.Y - GROUP_BOTTOM_PADDING,
+		},
+	}
+
+	// Ochrana proti vybehnutiu mimo obrazka
+	if headerRect.Min.X < 0 {
+		headerRect.Min.X = 0
+	}
+	if headerRect.Min.Y < 0 {
+		headerRect.Min.Y = 0
+	}
+	if headerRect.Max.X > mat.Cols() {
+		headerRect.Max.X = mat.Cols()
+	}
+	if headerRect.Max.Y > mat.Rows() {
+		headerRect.Max.Y = mat.Rows()
+	}
+
+	if headerRect.Dx() <= 0 || headerRect.Dy() <= 0 {
+		return gocv.NewMat(), fmt.Errorf("oblast headera je prilis mala alebo mimo obrazka")
+	}
+
+	croppedMat := mat.Region(headerRect)
+	SaveMat("./assets/tmp/group-crop.png", croppedMat)
+	return croppedMat, nil
+}
+
+func CropSubGroupFromHeader(mat *gocv.Mat) (gocv.Mat, error) {
+	rect := FindRectangle(mat, BORDER_RECTANGLE_AREA_SIZE, -1)
+	if rect.Empty() {
+		return gocv.NewMat(), fmt.Errorf("hlavny obdlznik nebol najdeny")
+	}
+
+	// Vyrezeme pas nad hlavnym obdlznikom.
+	// Sirka ostane rovnaka ako hlavny obdlznik, vyska je len male pasmo nad nim.
+	headerRect := image.Rectangle{
+		Min: image.Point{
+			X: rect.Min.X + SUBGROUP_SIDE_PADDING,
+			Y: rect.Min.Y - SUBGROUP_HEADER_HEIGHT,
+		},
+		Max: image.Point{
+			X: rect.Max.X - SUBGROUP_SIDE_PADDING,
+			Y: rect.Min.Y - SUBGROUP_BOTTOM_PADDING,
+		},
+	}
+
+	// Ochrana proti vybehnutiu mimo obrazka
+	if headerRect.Min.X < 0 {
+		headerRect.Min.X = 0
+	}
+	if headerRect.Min.Y < 0 {
+		headerRect.Min.Y = 0
+	}
+	if headerRect.Max.X > mat.Cols() {
+		headerRect.Max.X = mat.Cols()
+	}
+	if headerRect.Max.Y > mat.Rows() {
+		headerRect.Max.Y = mat.Rows()
+	}
+
+	if headerRect.Dx() <= 0 || headerRect.Dy() <= 0 {
+		return gocv.NewMat(), fmt.Errorf("oblast headera je prilis mala alebo mimo obrazka")
+	}
+
+	croppedMat := mat.Region(headerRect)
+	SaveMat("./assets/tmp/group-crop2.png", croppedMat)
+	return croppedMat, nil
 }
 
 // FindRectangle detects and returns the bounding rectangle of a contour in the image.
@@ -111,6 +300,111 @@ func FindRectangle(mat *gocv.Mat, minAreaSize float64, maxAreaSize float64) imag
 	return image.Rectangle{image.Pt(0, 0), image.Pt(0, 0)}
 }
 
+type questionNumberCrop struct {
+	name string
+	rect image.Rectangle
+}
+
+func questionNumberCrops(mat *gocv.Mat, i int, numberOfChoices int) []questionNumberCrop {
+	rowTop := i * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE
+	rowBottom := (i + 1) * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE
+	rowHeight := rowBottom - rowTop
+	baseXMax := (mat.Cols() / (numberOfChoices + 1)) - PADDING
+	wideXMax := baseXMax + rowHeight/2
+
+	bounds := image.Rect(0, 0, mat.Cols(), mat.Rows())
+	crops := []questionNumberCrop{
+		{
+			name: "center",
+			rect: image.Rect(PADDING, rowTop+rowHeight/4, baseXMax, rowBottom-rowHeight/4),
+		},
+		{
+			name: "full-row",
+			rect: image.Rect(PADDING, rowTop+PADDING, baseXMax, rowBottom-PADDING),
+		},
+		{
+			name: "wide-full-row",
+			rect: image.Rect(PADDING, rowTop+PADDING, wideXMax, rowBottom-PADDING),
+		},
+		{
+			name: "tall-row",
+			rect: image.Rect(PADDING/2, rowTop+PADDING/2, wideXMax, rowBottom-PADDING/2),
+		},
+	}
+
+	validCrops := make([]questionNumberCrop, 0, len(crops))
+	for _, crop := range crops {
+		crop.rect = crop.rect.Intersect(bounds)
+		if crop.rect.Dx() > 0 && crop.rect.Dy() > 0 {
+			validCrops = append(validCrops, crop)
+		}
+	}
+	return validCrops
+}
+
+func buildQuestionOCRMats(questionMat gocv.Mat) []gocv.Mat {
+	resized := gocv.NewMat()
+	gocv.Resize(questionMat, &resized, image.Point{}, 4, 4, gocv.InterpolationCubic)
+
+	gray := resized
+	grayClone := gocv.NewMat()
+	if resized.Channels() > 1 {
+		gocv.CvtColor(resized, &grayClone, gocv.ColorBGRToGray)
+		gray = grayClone
+	}
+
+	thresholded := gocv.NewMat()
+	gocv.Threshold(gray, &thresholded, 0, 255, gocv.ThresholdBinary|gocv.ThresholdOtsu)
+
+	if !grayClone.Empty() {
+		grayClone.Close()
+	}
+
+	return []gocv.Mat{resized, thresholded}
+}
+
+func extractQuestionNumberFromCrop(mat gocv.Mat, questionIndex int, cropName string) (int, error) {
+	errorLogger := logging.GetErrorLogger()
+	ocrMats := buildQuestionOCRMats(mat)
+	defer func() {
+		for _, ocrMat := range ocrMats {
+			ocrMat.Close()
+		}
+	}()
+
+	var lastErr error
+	for attempt, ocrMat := range ocrMats {
+		tmpFile, err := os.CreateTemp("./assets/tmp", "ocr-q-*.png")
+		if err != nil {
+			errorLogger.Error("Nepodarilo sa vytvoriť dočasný súbor pre OCR", slog.String("error", err.Error()))
+			return -1, err
+		}
+		tmpPath := tmpFile.Name()
+		tmpFile.Close()
+
+		SaveMat(tmpPath, ocrMat)
+		questionNum, err := ocr.ExtractQuestionNumber(tmpPath)
+		if err == nil && questionNum > 0 {
+			os.Remove(tmpPath)
+			return questionNum, nil
+		}
+
+		lastErr = err
+		errorLogger.Warn("Pokus extrakcie čísla otázky zlyhal",
+			slog.Int("questionIndex", questionIndex),
+			slog.String("crop", cropName),
+			slog.Int("attempt", attempt),
+			slog.String("path", tmpPath),
+			slog.Any("questionNum", questionNum),
+			slog.Any("error", err))
+	}
+
+	if lastErr == nil {
+		lastErr = fmt.Errorf("question number OCR returned no valid number")
+	}
+	return -1, lastErr
+}
+
 // GetQuestionNumber attempts to extract the question number from a specific region of the image using OCR.
 //
 // The function calculates a rectangular region within the image where the question number is expected,
@@ -123,24 +417,33 @@ func FindRectangle(mat *gocv.Mat, minAreaSize float64, maxAreaSize float64) imag
 //
 // Returns:
 //   - int: The extracted question number. If OCR fails, it returns zero (default int value).
-func GetQuestionNumber(mat *gocv.Mat, i int) int {
+func GetQuestionNumber(mat *gocv.Mat, i int, numberOfChoices int) int {
 	errorLogger := logging.GetErrorLogger()
-	rect := image.Rectangle{Min: image.Point{PADDING, PADDING + (i * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE)}, Max: image.Point{(mat.Cols() / (NUMBER_OF_CHOICES + 1)) - PADDING, ((i + 1) * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE) - PADDING}}
-	questionMat := mat.Region(rect)
-	defer questionMat.Close()
-	SaveMat(TEMP_IMAGE_PATH, questionMat)
-	questionNum, err := ocr.ExtractQuestionNumber(TEMP_IMAGE_PATH)
-	files.DeleteFile(TEMP_IMAGE_PATH)
-
-	if err != nil {
-		errorLogger.Error("Chyba pri extrakcii čísla otázky",
+	crops := questionNumberCrops(mat, i, numberOfChoices)
+	if len(crops) == 0 {
+		errorLogger.Error("Výrez čísla otázky je prázdny",
 			slog.Int("questionIndex", i),
-			slog.String("error", err.Error()),
-			slog.Int("questionNum", questionNum),
 		)
+		return -1
 	}
 
-	return questionNum
+	var lastErr error
+	for _, crop := range crops {
+		questionMat := mat.Region(crop.rect)
+		questionNum, err := extractQuestionNumberFromCrop(questionMat, i, crop.name)
+		questionMat.Close()
+		if err == nil {
+			return questionNum
+		}
+		lastErr = err
+	}
+
+	errorLogger.Error("Chyba pri extrakcii čísla otázky",
+		slog.Int("questionIndex", i),
+		slog.String("error", lastErr.Error()),
+		slog.Int("questionNum", common.QUESTION_NUMBER_NOT_FOUND),
+	)
+	return common.QUESTION_NUMBER_NOT_FOUND
 }
 
 // GetAnswer evaluates a single question's answer by analyzing the corresponding row of checkboxes.
@@ -159,18 +462,22 @@ func GetQuestionNumber(mat *gocv.Mat, i int) int {
 //
 // Returns:
 //   - rune: The selected answer (e.g., 'a', 'b', 'c', etc.). Returns 'x' if no valid or multiple answers are detected.
-func GetAnswer(mat *gocv.Mat, i int) rune {
+func GetAnswer(mat *gocv.Mat, i int, numberOfChoices int) rune {
 	answer := rune('x')
 	state := StateEmpty
-	for j := 1; j <= NUMBER_OF_CHOICES; j++ {
+	pad := checkboxPaddingForChoices(numberOfChoices)
+	for j := 1; j <= numberOfChoices; j++ {
 		padding := CHECKBOX_AREA_PADDING
 		if i == 0 || i == NUMBER_OF_QUESTIONS_PER_PAGE-1 {
 			padding = 0
 		}
-		checkbox := image.Rectangle{Min: image.Point{(mat.Cols() / (NUMBER_OF_CHOICES + 1) * (j)), padding + (i * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE)}, Max: image.Point{(mat.Cols() / (NUMBER_OF_CHOICES + 1)) * (j + 1), ((i + 1) * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE) - padding}}
+		checkbox := image.Rectangle{Min: image.Point{(mat.Cols() / (numberOfChoices + 1) * (j)), padding + (i * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE)}, Max: image.Point{(mat.Cols() / (numberOfChoices + 1)) * (j + 1), ((i + 1) * mat.Rows() / NUMBER_OF_QUESTIONS_PER_PAGE) - padding}}
 		checkboxMat := mat.Region(checkbox)
-		rect := FindRectangle(&checkboxMat, ANSWER_SQUARE_MIN_AREA_SIZE, ANSWER_SQUARE_MAX_AREA_SIZE)
+		//rect := FindRectangle(&checkboxMat, ANSWER_SQUARE_MIN_AREA_SIZE, ANSWER_SQUARE_MAX_AREA_SIZE)
+		minArea, maxArea := answerSquareAreaBounds(numberOfChoices)
+		rect := FindRectangle(&checkboxMat, minArea, maxArea)
 		if rect.Empty() {
+			checkboxMat.Close()
 			if state == StateCircleFound {
 				return rune('x')
 			}
@@ -178,10 +485,16 @@ func GetAnswer(mat *gocv.Mat, i int) rune {
 			state = StateCircleFound
 			continue
 		}
-		checkboxWithoutBorder := image.Rectangle{Min: image.Point{rect.Min.X + CHECKBOX_PADDING, rect.Min.Y + CHECKBOX_PADDING}, Max: image.Point{rect.Max.X - CHECKBOX_PADDING, rect.Max.Y - CHECKBOX_PADDING}}
+		checkboxWithoutBorder := image.Rectangle{Min: image.Point{rect.Min.X + pad, rect.Min.Y + pad}, Max: image.Point{rect.Max.X - pad, rect.Max.Y - pad}}
+		if checkboxWithoutBorder.Dx() <= 0 || checkboxWithoutBorder.Dy() <= 0 {
+			checkboxMat.Close()
+			continue
+		}
 		rectMat := checkboxMat.Region(checkboxWithoutBorder)
 		meanIntensity := rectMat.Mean()
 		if meanIntensity.Val1 < MEAN_INTENSITY_X_HIGHEST && meanIntensity.Val1 > MEAN_INTENSITY_X_LOWEST {
+			rectMat.Close()
+			checkboxMat.Close()
 			if state == StateEmpty {
 				answer = rune('a' + (j - 1))
 				state = StateXFound
@@ -190,9 +503,203 @@ func GetAnswer(mat *gocv.Mat, i int) rune {
 				answer = rune('x')
 			}
 		}
-		//fmt.Println(meanIntensity.Val1)
-		defer checkboxMat.Close()
-		defer rectMat.Close()
+		//fmt.Println("checkbox", j, "intensity:", meanIntensity.Val1)
+		rectMat.Close()
+		checkboxMat.Close()
 	}
 	return answer
+}
+
+func GetGroupCode(headerMat *gocv.Mat) rune {
+	state := StateEmpty
+	answer := rune('x')
+	numberOfGroups := 8
+	pad := checkboxPaddingForChoices(numberOfGroups)
+	for j := 0; j < numberOfGroups; j++ {
+		checkbox := image.Rectangle{
+			Min: image.Point{
+				X: j * headerMat.Cols() / numberOfGroups,
+				Y: 0,
+			},
+			Max: image.Point{
+				X: (j + 1) * headerMat.Cols() / numberOfGroups,
+				Y: headerMat.Rows(),
+			},
+		}
+
+		checkboxMat := headerMat.Region(checkbox)
+		SaveMat(fmt.Sprintf("./assets/tmp/group_box_%d.png", j), checkboxMat)
+		minArea, maxArea := answerSquareAreaBounds(numberOfGroups)
+		rect := FindRectangle(&checkboxMat, minArea, maxArea)
+		fmt.Printf("[GROUP] box=%d rectEmpty=%v wholeMean=%.1f\n", j, rect.Empty(), checkboxMat.Mean().Val1)
+		if rect.Empty() {
+			// Distinguish solid-black fill (cancelled/artifact, mean ≈ 0-80)
+			// from circled/selected (mostly white inside, mean > 80)
+			wholeIntensity := checkboxMat.Mean()
+			checkboxMat.Close()
+			if wholeIntensity.Val1 <= 80 {
+				// Completely filled black — treat as voided/cancelled mark, skip
+				continue
+			}
+			if state == StateCircleFound {
+				return rune('x')
+			}
+			answer = rune('a' + j)
+			state = StateCircleFound
+			continue
+		}
+		checkboxWithoutBorder := image.Rectangle{Min: image.Point{rect.Min.X + pad, rect.Min.Y + pad}, Max: image.Point{rect.Max.X - pad, rect.Max.Y - pad}}
+		if checkboxWithoutBorder.Dx() <= 0 || checkboxWithoutBorder.Dy() <= 0 {
+			checkboxMat.Close()
+			continue
+		}
+		rectMat := checkboxMat.Region(checkboxWithoutBorder)
+		meanIntensity := rectMat.Mean()
+		if meanIntensity.Val1 < MEAN_INTENSITY_X_HIGHEST && meanIntensity.Val1 > MEAN_INTENSITY_X_LOWEST {
+			rectMat.Close()
+			checkboxMat.Close()
+			if state == StateEmpty {
+				answer = rune('a' + j)
+				state = StateXFound
+				continue
+			} else if state == StateXFound {
+				answer = rune('x')
+			}
+		}
+
+		/*path := fmt.Sprintf("./assets/group_part_%d.png", i)
+		SaveMat(path, checkboxMat)*/
+
+		rectMat.Close()
+		checkboxMat.Close()
+	}
+	if index, ok := darkestMarkedBox(headerMat, numberOfGroups); ok {
+		return rune('a' + index)
+	}
+	return answer
+}
+
+func GetSubGroupCode(headerMat *gocv.Mat) int {
+	state := StateEmpty
+	answer := -1
+	numberOfSubgroups := 5
+	pad := CHECKBOX_PADDING
+
+	for j := 0; j < numberOfSubgroups; j++ {
+		checkbox := image.Rectangle{
+			Min: image.Point{
+				X: j * headerMat.Cols() / numberOfSubgroups,
+				Y: 0,
+			},
+			Max: image.Point{
+				X: (j + 1) * headerMat.Cols() / numberOfSubgroups,
+				Y: headerMat.Rows(),
+			},
+		}
+
+		checkboxMat := headerMat.Region(checkbox)
+		SaveMat(fmt.Sprintf("./assets/tmp/subgroup_box_%d.png", j), checkboxMat)
+
+		minArea, maxArea := answerSquareAreaBounds(numberOfSubgroups)
+		rect := FindRectangle(&checkboxMat, minArea, maxArea)
+		fmt.Printf("[SUBGROUP] box=%d rectEmpty=%v wholeMean=%.1f\n", j, rect.Empty(), checkboxMat.Mean().Val1)
+		if rect.Empty() {
+			// Distinguish solid-black fill (cancelled/artifact, mean ≈ 0-80)
+			// from circled/selected (mostly white inside, mean > 80)
+			wholeIntensity := checkboxMat.Mean()
+			checkboxMat.Close()
+			if wholeIntensity.Val1 <= 80 {
+				// Completely filled black — treat as voided/cancelled mark, skip
+				continue
+			}
+			if state == StateCircleFound {
+				return -1
+			}
+			answer = j + 1
+			state = StateCircleFound
+			continue
+		}
+
+		checkboxWithoutBorder := image.Rectangle{
+			Min: image.Point{rect.Min.X + pad, rect.Min.Y + pad},
+			Max: image.Point{rect.Max.X - pad, rect.Max.Y - pad},
+		}
+
+		if checkboxWithoutBorder.Dx() <= 0 || checkboxWithoutBorder.Dy() <= 0 {
+			checkboxMat.Close()
+			continue
+		}
+
+		rectMat := checkboxMat.Region(checkboxWithoutBorder)
+		meanIntensity := rectMat.Mean()
+
+		if meanIntensity.Val1 < MEAN_INTENSITY_X_HIGHEST && meanIntensity.Val1 > MEAN_INTENSITY_X_LOWEST {
+			rectMat.Close()
+			checkboxMat.Close()
+
+			if state == StateEmpty {
+				answer = j + 1
+				state = StateXFound
+				continue
+			} else if state == StateXFound {
+				return -1
+			}
+		}
+
+		rectMat.Close()
+		checkboxMat.Close()
+	}
+
+	if index, ok := darkestMarkedBox(headerMat, numberOfSubgroups); ok {
+		return index + 1
+	}
+	return answer
+}
+
+func darkestMarkedBox(headerMat *gocv.Mat, boxCount int) (int, bool) {
+	if headerMat == nil || headerMat.Empty() || boxCount <= 0 {
+		return -1, false
+	}
+
+	bestIndex := -1
+	bestRatio := 0.0
+	secondRatio := 0.0
+
+	for j := 0; j < boxCount; j++ {
+		checkbox := image.Rectangle{
+			Min: image.Point{
+				X: j * headerMat.Cols() / boxCount,
+				Y: 0,
+			},
+			Max: image.Point{
+				X: (j + 1) * headerMat.Cols() / boxCount,
+				Y: headerMat.Rows(),
+			},
+		}
+		checkboxMat := headerMat.Region(checkbox)
+		ratio := darkPixelRatio(checkboxMat)
+		checkboxMat.Close()
+
+		if ratio > bestRatio {
+			secondRatio = bestRatio
+			bestRatio = ratio
+			bestIndex = j
+			continue
+		}
+		if ratio > secondRatio {
+			secondRatio = ratio
+		}
+	}
+
+	return bestIndex, bestRatio >= 0.002 && bestRatio >= secondRatio*1.8
+}
+
+func darkPixelRatio(mat gocv.Mat) float64 {
+	if mat.Empty() {
+		return 0
+	}
+	thresholded := gocv.NewMat()
+	defer thresholded.Close()
+	gocv.Threshold(mat, &thresholded, 120, 255, gocv.ThresholdBinaryInv)
+	return float64(gocv.CountNonZero(thresholded)) / float64(mat.Rows()*mat.Cols())
 }

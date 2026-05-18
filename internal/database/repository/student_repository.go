@@ -2,6 +2,8 @@ package repository
 
 import (
 	"ScanEvalApp/internal/database/models"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -57,6 +59,10 @@ func GetStudentByRegistrationNumber(db *gorm.DB, registrationNumber uint, examID
 	result := db.Where("registration_number = ? AND exam_id = ?", registrationNumber, examID).First(&student)
 
 	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			logger.Debug("Študent nebol nájdený", "student registration number", registrationNumber, "exam_id", examID)
+			return nil, result.Error
+		}
 		errorLogger.Error("Študent nebol nájdený", "student registration number", registrationNumber, slog.Group("CRITICAL", slog.String("error", result.Error.Error())))
 		return nil, result.Error
 	}
@@ -138,7 +144,35 @@ func GetStudentsQuery(db *gorm.DB, query string) ([]models.Student, error) {
 	return students, nil
 }
 
+// resolveCorrectAnswers returns the correct answer string for the given student.
+// For multi-day exams (Questions is JSON), it looks up by student.Subgroup.
+// If subgroup is not yet set (header not scanned), returns nil — scoring is skipped.
+func resolveCorrectAnswers(exam *models.Exam, student *models.Student) []rune {
+	if strings.HasPrefix(strings.TrimSpace(exam.Questions), "{") {
+		var answersMap map[string]string
+		if err := json.Unmarshal([]byte(exam.Questions), &answersMap); err == nil {
+			if student.Subgroup == "" {
+				// TODO: Subgroup not yet set — will be filled once header scanning is implemented
+				return nil
+			}
+			if ans, ok := answersMap[student.Subgroup]; ok {
+				return []rune(ans)
+			}
+		}
+		return nil
+	}
+	return []rune(exam.Questions)
+}
+
+func UpdateStudentSubgroup(db *gorm.DB, studentId uint, examId uint, subgroup string) error {
+	return db.Model(&models.Student{}).
+		Where("id = ? AND exam_id = ?", studentId, examId).
+		Update("subgroup", subgroup).Error
+}
+
 func UpdateStudentAnswers(db *gorm.DB, studentId uint, examId uint, questionNumber int, answers []rune, pageNumber int) error {
+	logger := logging.GetLogger()
+
 	student, err := GetStudentById(db, studentId, examId)
 	if err != nil {
 		return err
@@ -147,34 +181,56 @@ func UpdateStudentAnswers(db *gorm.DB, studentId uint, examId uint, questionNumb
 	if err != nil {
 		return err
 	}
-	correctAnswers := []rune(exam.Questions)
+
 	studentAnswers := []rune(student.Answers)
+	startIndex := (questionNumber - len(answers)) + 1
+	endIndex := questionNumber
+	if startIndex < 0 || endIndex >= len(studentAnswers) {
+		return fmt.Errorf("neplatný rozsah otázok pre študenta %d: start=%d end=%d answers=%d total=%d", studentId, startIndex, endIndex, len(answers), len(studentAnswers))
+	}
 	for i, answer := range answers {
-		studentAnswers[(questionNumber-len(answers))+i+1] = answer
+		studentAnswers[startIndex+i] = answer
 	}
 	student.Answers = string(studentAnswers)
 
+	// Inteligentná detekcia duplicitných stránok
 	pageNumberStr := strconv.Itoa(pageNumber)
-
-	if student.Pages == "" {
-		student.Pages = pageNumberStr
+	pageAlreadyProcessed := false
+	if student.Pages != "" {
+		// Kontrola či stránka už je v zozname (presná zhoda)
+		pageList := strings.Split(student.Pages, "-")
+		for _, p := range pageList {
+			if p == pageNumberStr {
+				pageAlreadyProcessed = true
+				logger.Info("Stránka už bola spracovaná - prepočítavam skóre",
+					slog.Int("studentID", int(studentId)),
+					slog.Int("page", pageNumber))
+				break
+			}
+		}
+		if !pageAlreadyProcessed {
+			student.Pages += "-" + pageNumberStr
+		}
 	} else {
-		student.Pages += "-" + pageNumberStr
+		student.Pages = pageNumberStr
 	}
 
-	startIndex := (questionNumber - len(answers)) + 1
-	endIndex := questionNumber
+	correctAnswers := resolveCorrectAnswers(exam, student)
+	if correctAnswers == nil {
+		logger.Info("Preskakujem skórovanie — správne odpovede nie sú dostupné", "studentID", studentId)
+		UpdateStudent(db, student)
+		return nil
+	}
 
+	// Vždy prepočítame CELÉ skóre od začiatku (nie len za aktuálnu stránku)
+	// Zabezpečí to konzistentné skóre aj pri opakovanom vyhodnotení
 	score := 0
-	for i := startIndex; i <= endIndex; i++ {
-		studentChar := unicode.ToLower(studentAnswers[i])
-		correctChar := unicode.ToLower(correctAnswers[i])
-
-		if studentChar == correctChar {
+	for i := 0; i < len(studentAnswers) && i < len(correctAnswers); i++ {
+		if studentAnswers[i] != '?' && unicode.ToLower(studentAnswers[i]) == unicode.ToLower(correctAnswers[i]) {
 			score++
 		}
 	}
-	student.Score += score
+	student.Score = score
 
 	UpdateStudent(db, student)
 	return nil

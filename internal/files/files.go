@@ -1,11 +1,12 @@
 package files
 
 import (
-	"ScanEvalApp/internal/common"
-	"ScanEvalApp/internal/logging"
-	"log/slog"
-	"os"
-	"strings"
+    "ScanEvalApp/internal/common"
+    "ScanEvalApp/internal/logging"
+    "log/slog"
+    "os"
+    "path/filepath"
+    "strings"
 )
 
 // OpenFile reads and loads the contents of a file from the specified path.
@@ -23,14 +24,14 @@ import (
 // Notes:
 //   - On failure (e.g., file not found or permission issues), a detailed error is logged.
 func OpenFile(filePath string) ([]byte, error) {
-	errorLogger := logging.GetErrorLogger()
+    errorLogger := logging.GetErrorLogger()
 
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		errorLogger.Error("Chyba pri otváraní súboru", slog.Group("CRITICAL", slog.String("error", err.Error())), slog.String("file_path", filePath))
-		return nil, err
-	}
-	return data, nil
+    data, err := os.ReadFile(filePath)
+    if err != nil {
+        errorLogger.Error("Chyba pri otváraní súboru", slog.Group("CRITICAL", slog.String("error", err.Error())), slog.String("file_path", filePath))
+        return nil, err
+    }
+    return data, nil
 }
 
 // SaveFile saves the provided byte data to the specified file path.
@@ -49,16 +50,16 @@ func OpenFile(filePath string) ([]byte, error) {
 //   - If the file already exists, it will be overwritten.
 //   - Successful and failed operations are logged for debugging and monitoring purposes.
 func SaveFile(filePath string, data []byte) error {
-	logger := logging.GetLogger()
-	errorLogger := logging.GetErrorLogger()
+    logger := logging.GetLogger()
+    errorLogger := logging.GetErrorLogger()
 
-	err := os.WriteFile(filePath, data, common.FILE_PERMISSION)
-	if err != nil {
-		errorLogger.Error("Chyba pri ukladaní súboru", slog.Group("CRITICAL", slog.String("error", err.Error())), slog.String("file_path", filePath))
-		return err
-	}
-	logger.Info("Súbor uložený", slog.String("file_path", filePath))
-	return nil
+    err := os.WriteFile(filePath, data, common.FILE_PERMISSION)
+    if err != nil {
+        errorLogger.Error("Chyba pri ukladaní súboru", slog.Group("CRITICAL", slog.String("error", err.Error())), slog.String("file_path", filePath))
+        return err
+    }
+    logger.Info("Súbor uložený", slog.String("file_path", filePath))
+    return nil
 }
 
 // DeleteFile deletes a file located at the specified file path.
@@ -76,33 +77,50 @@ func SaveFile(filePath string, data []byte) error {
 //   - If the file does not exist, no action is taken and the function returns nil.
 //   - Successful and failed operations are logged for debugging and monitoring purposes.
 func DeleteFile(filePath string) error {
-	logger := logging.GetLogger()
-	errorLogger := logging.GetErrorLogger()
+    logger := logging.GetLogger()
+    errorLogger := logging.GetErrorLogger()
 
-	if _, err := os.Stat(filePath); err == nil {
-		err = os.Remove(filePath)
-		if err != nil {
-			errorLogger.Error("Chyba pri mazaní súboru", slog.Group("CRITICAL", slog.String("error", err.Error())), slog.String("file_path", filePath))
-			return err
-		}
-		logger.Info("Súbor úspešne vymazaný", slog.String("file_path", filePath))
-	}
-	return nil
+    if _, err := os.Stat(filePath); err == nil {
+        err = os.Remove(filePath)
+        if err != nil {
+            errorLogger.Error("Chyba pri mazaní súboru", slog.Group("CRITICAL", slog.String("error", err.Error())), slog.String("file_path", filePath))
+            return err
+        }
+        logger.Info("Súbor úspešne vymazaný", slog.String("file_path", filePath))
+    }
+    return nil
 }
 
 func GetFilesFromConfigs() ([]string, error) {
-	files, err := os.ReadDir("./configs")
-	if err != nil {
-		return nil, err
-	}
+    configDirs := []string{"./configs"}
 
-	var fileNames []string
-	for _, file := range files {
-		if !file.IsDir() {
-			name := file.Name()
-			name = strings.TrimSuffix(name, ".json")
-			fileNames = append(fileNames, name)
-		}
-	}
-	return fileNames, nil
+    if exePath, err := os.Executable(); err == nil {
+        exeDir := filepath.Dir(exePath)
+        configDirs = append(configDirs,
+            filepath.Join(exeDir, "..", "..", "configs"),
+            filepath.Join(exeDir, "..", "configs"),
+        )
+    }
+
+    var files []os.DirEntry
+    var err error
+    for _, dir := range configDirs {
+        files, err = os.ReadDir(dir)
+        if err == nil {
+            break
+        }
+    }
+    if err != nil {
+        return nil, err
+    }
+
+    var fileNames []string
+    for _, file := range files {
+        if !file.IsDir() {
+            name := file.Name()
+            name = strings.TrimSuffix(name, ".json")
+            fileNames = append(fileNames, name)
+        }
+    }
+    return fileNames, nil
 }

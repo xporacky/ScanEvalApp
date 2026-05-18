@@ -379,7 +379,7 @@ func TestAnswerRecognition(t *testing.T) {
 		t.Fatalf("Nepodarilo sa načítať skúšku: %v", err)
 	}
 	startTime := time.Now()
-	scanprocessing.ProcessPDF(pdfPath, exam, db, nil, &counter, &hadFailures)
+	_ = scanprocessing.ProcessPDF(pdfPath, exam, db, nil, &counter, &hadFailures)
 	duration := time.Since(startTime)
 
 	totalQuestions := 0

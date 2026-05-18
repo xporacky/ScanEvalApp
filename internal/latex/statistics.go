@@ -199,6 +199,10 @@ func calculateOverallSuccess(students []models.Student, totalQuestions int) (int
 // latexEscape escapes special characters for LaTeX compatibility.
 func latexEscape(str string) string {
 	replacer := strings.NewReplacer(
+		"\r\n", " ",
+		"\n", " ",
+		"\r", " ",
+		"\t", " ",
 		"\\", "\\textbackslash{}",
 		"&", "\\&",
 		"%", "\\%",
@@ -210,7 +214,7 @@ func latexEscape(str string) string {
 		"~", "\\textasciitilde{}",
 		"^", "\\textasciicircum{}",
 	)
-	return replacer.Replace(str)
+	return strings.TrimSpace(replacer.Replace(str))
 }
 
 // GenerateLatexReport generates the LaTeX content for the exam report.

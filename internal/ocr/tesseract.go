@@ -3,17 +3,21 @@ package ocr
 import (
 	"ScanEvalApp/internal/common"
 	"ScanEvalApp/internal/logging"
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strings"
+	"time"
 )
 
 // PSM_SINGLE_LINE specifies Tesseract's Page Segmentation Mode 7,
 // treating the image as a single line of text.
 const PSM_SINGLE_LINE = "7"
+const PSM_SINGLE_CHAR = "10"
 
 // PSM_UNIFORM_BLOCK specifies Tesseract's Page Segmentation Mode 6,
 // treating the image as a single uniform block of text.
@@ -47,7 +51,32 @@ func OcrImage(imagePath string, psm string) (string, error) {
 		errorLogger.Error("Chyba pri získavaní absolútnej cesty k obrázku", slog.String("error", err.Error()))
 		return "", err
 	}
-	cmd := exec.Command("tesseract", imagePath, "stdout", "-l", "slk", "--psm", psm)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "tesseract", imagePath, "stdout", "-l", "slk", "--psm", psm)
+	out, err := cmd.Output()
+	if ctx.Err() == context.DeadlineExceeded {
+		errorLogger.Error("OCR proces prekročil časový limit", slog.String("imagePath", imagePath))
+		return "", ctx.Err()
+	}
+	if err != nil {
+		errorLogger.Error("Error during OCR process for image", slog.String("imagePath", imagePath), slog.String("error", err.Error()))
+		return "", err
+	}
+	return string(out), nil
+}
+
+func ocrImageDigitsOnly(imagePath string, psm string) (string, error) {
+	errorLogger := logging.GetErrorLogger()
+
+	imagePath, err := filepath.Abs(imagePath)
+	if err != nil {
+		errorLogger.Error("Chyba pri získavaní absolútnej cesty k obrázku", slog.String("error", err.Error()))
+		return "", err
+	}
+	cmd := exec.Command("tesseract", imagePath, "stdout", "--psm", psm,
+		"-c", "tessedit_char_whitelist=0123456789/")
 	out, err := cmd.Output()
 	if err != nil {
 		errorLogger.Error("Error during OCR process for image", slog.String("imagePath", imagePath), slog.String("error", err.Error()))
@@ -71,32 +100,115 @@ func OcrImage(imagePath string, psm string) (string, error) {
 //
 // Notes:
 //   - Logs detailed errors for troubleshooting if extraction or parsing fails.
-func ExtractID(path string) (int, error) {
-	errorLogger := logging.GetErrorLogger()
-	dt, err := OcrImage(path, PSM_UNIFORM_BLOCK)
-	if err != nil {
-		return 0, err
-	}
-	re := regexp.MustCompile(`ID:\s*(\d+)`)
-	match := re.FindStringSubmatch(dt)
+//
+// parseIDSlashFormat extracts a registration number from whitelist-only OCR output.
+// With tessedit_char_whitelist=0123456789/, Tesseract maps box-enclosed digits correctly
+// and we can search directly for the dddd/ddd pattern.
+func parseIDSlashFormat(text string) (int, bool) {
+	re := regexp.MustCompile(`(\d{4}/\d{3})`)
+	match := re.FindStringSubmatch(text)
 	if len(match) < 2 {
-		dt, err := OcrImage(path, PSM_DEFAULT)
-		if err != nil {
-			return 0, err
+		return 0, false
+	}
+	digitsOnly := strings.ReplaceAll(match[1], "/", "")
+	var id int
+	_, err := fmt.Sscan(digitsOnly, &id)
+	if err != nil {
+		return 0, false
+	}
+	return id, true
+}
+
+// parseIDFromOCRText extracts the registration number from noisy OCR output.
+// Fallback for when whitelist OCR fails — looks for "ID:" label and strips non-digits.
+func parseIDFromOCRText(text string) (int, bool) {
+	re := regexp.MustCompile(`ID:\s*([\d\s/]+)`)
+	match := re.FindStringSubmatch(text)
+	if len(match) < 2 {
+		return 0, false
+	}
+	digitsOnly := strings.Map(func(r rune) rune {
+		if r >= '0' && r <= '9' {
+			return r
 		}
-		match = re.FindStringSubmatch(dt)
-		if len(match) < 2 {
-			errorLogger.Error("No ID found in the input image", slog.String("path", path))
-			return 0, errors.New("no id found in the input image")
-		}
+		return -1
+	}, match[1])
+	if digitsOnly == "" {
+		return 0, false
 	}
 	var id int
-	_, err = fmt.Sscan(match[1], &id)
+	_, err := fmt.Sscan(digitsOnly, &id)
 	if err != nil {
-		errorLogger.Error("Failed to convert ID to integer", slog.String("error", err.Error()))
+		return 0, false
+	}
+	return id, true
+}
+
+func ExtractID(path string) (int, error) {
+	logger := logging.GetLogger()
+	errorLogger := logging.GetErrorLogger()
+
+	// Primary: whitelist-only OCR forces digit mapping, then match dddd/ddd pattern.
+	dt, err := ocrImageDigitsOnly(path, PSM_UNIFORM_BLOCK)
+	if err != nil {
 		return 0, err
 	}
-	return id, nil
+	logger.Info("OCR digits-only raw text (PSM_UNIFORM_BLOCK)", slog.String("text", dt))
+	if id, ok := parseIDSlashFormat(dt); ok {
+		return id, nil
+	}
+
+	dt, err = ocrImageDigitsOnly(path, PSM_DEFAULT)
+	if err != nil {
+		return 0, err
+	}
+	logger.Info("OCR digits-only raw text (PSM_DEFAULT)", slog.String("text", dt))
+	if id, ok := parseIDSlashFormat(dt); ok {
+		return id, nil
+	}
+
+	// Fallback: full OCR with "ID:" label search.
+	dt, err = OcrImage(path, PSM_UNIFORM_BLOCK)
+	if err != nil {
+		return 0, err
+	}
+	logger.Info("OCR raw text (PSM_UNIFORM_BLOCK)", slog.String("text", dt))
+	if id, ok := parseIDFromOCRText(dt); ok {
+		return id, nil
+	}
+
+	dt, err = OcrImage(path, PSM_DEFAULT)
+	if err != nil {
+		return 0, err
+	}
+	logger.Info("OCR raw text (PSM_DEFAULT)", slog.String("text", dt))
+	if id, ok := parseIDFromOCRText(dt); ok {
+		return id, nil
+	}
+
+	errorLogger.Error("No ID found in the input image", slog.String("path", path))
+	return 0, errors.New("no id found in the input image")
+}
+
+// OcrSingleChar reads a single digit character from a tightly cropped image.
+// Uses PSM 10 (single character mode) with digit-only whitelist.
+func OcrSingleChar(imagePath string) (string, error) {
+	return ocrImageDigitsOnly(imagePath, PSM_SINGLE_CHAR)
+}
+
+func parseQuestionNumberText(text string) (int, bool) {
+	text = strings.TrimSpace(text)
+	match := regexp.MustCompile(`\d+`).FindString(text)
+	if match == "" {
+		return common.QUESTION_NUMBER_NOT_FOUND, false
+	}
+
+	var num int
+	_, err := fmt.Sscan(match, &num)
+	if err != nil {
+		return common.QUESTION_NUMBER_NOT_FOUND, false
+	}
+	return num, true
 }
 
 // ExtractQuestionNumber performs OCR on the specified image path to extract and parse a question number.
@@ -115,18 +227,29 @@ func ExtractID(path string) (int, error) {
 // Notes:
 //   - Logs successful extraction or any errors encountered during the process.
 func ExtractQuestionNumber(path string) (int, error) {
-	errorLogger := logging.GetErrorLogger()
 	logger := logging.GetLogger()
-	dt, err := OcrImage(path, PSM_SINGLE_LINE)
-	if err != nil {
-		return common.QUESTION_NUMBER_NOT_FOUND, err
+
+	psmModes := []string{
+		PSM_SINGLE_LINE,
+		PSM_SINGLE_CHAR,
+		PSM_UNIFORM_BLOCK,
 	}
-	var num int
-	_, err = fmt.Sscan(dt, &num)
-	if err != nil {
-		errorLogger.Error("Failed to convert QuestionNumber to integer", slog.String("error", err.Error()))
-		return common.QUESTION_NUMBER_NOT_FOUND, err
+	var rawTexts []string
+	for _, psm := range psmModes {
+		dt, err := ocrImageDigitsOnly(path, psm)
+		if err != nil {
+			return common.QUESTION_NUMBER_NOT_FOUND, err
+		}
+		rawTexts = append(rawTexts, strings.TrimSpace(dt))
+		if num, ok := parseQuestionNumberText(dt); ok {
+			logger.Info("Question number", slog.Int("number", num), slog.String("psm", psm))
+			return num, nil
+		}
 	}
-	logger.Info("Question number", slog.Int("number", num))
-	return num, nil
+
+	err := fmt.Errorf("no question number found in OCR output")
+	logger.Debug("Question number OCR returned no digits",
+		slog.String("ocrText", strings.Join(rawTexts, " | ")),
+		slog.String("error", err.Error()))
+	return common.QUESTION_NUMBER_NOT_FOUND, err
 }
