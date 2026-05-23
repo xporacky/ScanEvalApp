@@ -185,7 +185,11 @@ func scanProcess(t *UploadTab, db *gorm.DB) {
 
 	hadFailures := false
 	t.progressChan <- "Spracovanie PDF sa začalo..."
-	_ = scanprocessing.ProcessPDF(t.filePath, exam, db, t.progressChan, &counter, &hadFailures)
+	if _, err := scanprocessing.ProcessPDF(t.filePath, exam, db, t.progressChan, &counter, &hadFailures); err != nil {
+		errorLogger.Error("Chyba pri spracovaní PDF", slog.String("error", err.Error()))
+		t.progressChan <- fmt.Sprintf("Spracovanie zlyhalo: %s", err.Error())
+		return
+	}
 
 	safeTitle := common.SanitizeFilename(exam.Title)
 
@@ -201,7 +205,8 @@ func scanProcess(t *UploadTab, db *gorm.DB) {
 			errorLogger.Error("Chyba pri konverzii cesty", slog.String("error", err.Error()))
 			return
 		}
-		t.progressChan <- fmt.Sprintf("Niektoré strany sa nepodarilo spracovať\nPDF bolo uložené do: %s/%s_%d_failed_pages.pdf", absDirPath, safeTitle, t.examID)
+		failedPath := filepath.Join(absDirPath, common.FAILED_PAGES_DIR, fmt.Sprintf("%s%d_failed_pages.pdf", safeTitle, t.examID))
+		t.progressChan <- fmt.Sprintf("Niektoré strany sa nepodarilo spracovať\nPDF bolo uložené do: %s", failedPath)
 	} else {
 		t.progressChan <- "Spracovanie dokončené."
 	}

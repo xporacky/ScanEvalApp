@@ -253,7 +253,20 @@ func (a *App) OpenPath(path string) error {
 	if path == "" {
 		return fmt.Errorf("path is empty")
 	}
-	return exec.Command("xdg-open", path).Start()
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) && filepath.Base(path) == common.FAILED_PAGES_DIR {
+			if err := os.MkdirAll(path, 0755); err != nil {
+				return fmt.Errorf("failed to create failed pages directory: %w", err)
+			}
+		} else {
+			return fmt.Errorf("path does not exist: %w", err)
+		}
+	}
+	output, err := exec.Command("xdg-open", path).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to open path: %w: %s", err, strings.TrimSpace(string(output)))
+	}
+	return nil
 }
 
 type ExamStats struct {
@@ -489,15 +502,19 @@ func (a *App) EvaluateExam(examID uint, pdfPath, configName string) error {
 			}
 		}()
 
-		failedPagesInfo := scanprocessing.ProcessPDF(pdfPath, exam, a.db, progressChan, &counter, &hadFailures)
+		failedPagesInfo, err := scanprocessing.ProcessPDF(pdfPath, exam, a.db, progressChan, &counter, &hadFailures)
 		close(progressChan)
+		if err != nil {
+			runtime.EventsEmit(a.ctx, "evaluation_error", err.Error())
+			return
+		}
 
 		failedPath := ""
 		if hadFailures {
 			if dirPath, err := config.LoadLastPath(); err == nil {
 				if absDirPath, err := filepath.Abs(dirPath); err == nil {
 					safeTitle := common.SanitizeFilename(exam.Title)
-					failedPath = filepath.Join(absDirPath, fmt.Sprintf("%s%d_failed_pages.pdf", safeTitle, exam.ID))
+					failedPath = filepath.Join(absDirPath, common.FAILED_PAGES_DIR, fmt.Sprintf("%s%d_failed_pages.pdf", safeTitle, exam.ID))
 				}
 			}
 		}
@@ -543,7 +560,14 @@ func (a *App) SetSavePath(path string) error {
 	if path == "" {
 		return fmt.Errorf("path is empty")
 	}
-	return config.SaveLastPath(path)
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return fmt.Errorf("invalid path: %w", err)
+	}
+	if err := os.MkdirAll(filepath.Join(absPath, common.FAILED_PAGES_DIR), 0755); err != nil {
+		return fmt.Errorf("failed to create save path: %w", err)
+	}
+	return config.SaveLastPath(absPath)
 }
 
 func (a *App) PrintLegend() (string, error) {

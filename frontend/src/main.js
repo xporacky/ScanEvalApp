@@ -1259,13 +1259,21 @@ function renderUpload() {
 
 function renderSettings() {
   const content = document.getElementById('content');
+  const failedPagesPath = state.savePath ? `${state.savePath.replace(/[\\/]+$/, '')}/failed_pages` : '';
   content.innerHTML = `
     <div class="settings-form">
       <label>
         Miesto ukladania PDF
         <div class="file-row">
-          <span class="file-path">${state.savePath || 'Nenastavene'}</span>
+          <input id="settings-path" type="text" value="${state.savePath || ''}" placeholder="/home/vbox/ScanEvalApp/output" />
           <button id="settings-pick" class="btn">Vybrat priecinok</button>
+        </div>
+      </label>
+      <label>
+        Failed pages
+        <div class="file-row">
+          <span class="file-path">${failedPagesPath || 'Nenastavene'}</span>
+          <button id="settings-open-failed" class="btn" ${failedPagesPath ? '' : 'disabled'}>Otvorit priecinok</button>
         </div>
       </label>
       <div class="form-actions">
@@ -1277,13 +1285,27 @@ function renderSettings() {
 
   const pickBtn = document.getElementById('settings-pick');
   const saveBtn = document.getElementById('settings-save');
+  const openFailedBtn = document.getElementById('settings-open-failed');
+  const pathInput = document.getElementById('settings-path');
+
+  if (pathInput) {
+    pathInput.addEventListener('input', () => {
+      state.savePath = pathInput.value.trim();
+    });
+  }
 
   if (pickBtn) {
     pickBtn.addEventListener('click', async () => {
-      const path = await PickFolder();
-      if (path) {
-        state.savePath = path;
-        renderSettings();
+      const statusEl = document.getElementById('settings-status');
+      try {
+        const path = await PickFolder();
+        if (path) {
+          state.savePath = path;
+          renderSettings();
+        }
+      } catch (err) {
+        console.error(err);
+        if (statusEl) statusEl.textContent = 'Vyber priecinka zlyhal. Cestu mozes zadat rucne.';
       }
     });
   }
@@ -1302,6 +1324,18 @@ function renderSettings() {
       } catch (err) {
         console.error(err);
         if (statusEl) statusEl.textContent = 'Ulozenie zlyhalo.';
+      }
+    });
+  }
+
+  if (openFailedBtn && failedPagesPath) {
+    openFailedBtn.addEventListener('click', async () => {
+      const statusEl = document.getElementById('settings-status');
+      try {
+        await OpenPath(failedPagesPath);
+      } catch (err) {
+        console.error(err);
+        if (statusEl) statusEl.textContent = 'Priecinok sa nepodarilo otvorit.';
       }
     });
   }

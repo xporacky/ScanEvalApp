@@ -199,7 +199,13 @@ func ExportFailedPagesToPDF(examTitle string, examID uint, pages []int, inputPDF
 		return err
 	}
 
-	outputPDF := filepath.Join(absDirPath, fmt.Sprintf("%s%d_failed_pages.pdf", examTitle, examID))
+	failedPagesDir := filepath.Join(absDirPath, common.FAILED_PAGES_DIR)
+	if err := os.MkdirAll(failedPagesDir, 0755); err != nil {
+		errorLogger.Error("Chyba pri vytváraní priečinka pre chybné strany", slog.String("error", err.Error()))
+		return err
+	}
+
+	outputPDF := filepath.Join(failedPagesDir, fmt.Sprintf("%s%d_failed_pages.pdf", examTitle, examID))
 	cmdArgs = append(cmdArgs, "output", outputPDF)
 
 	cmd := exec.Command("pdftk", cmdArgs...)
