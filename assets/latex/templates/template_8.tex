@@ -1,29 +1,34 @@
-\documentclass[a4wide,12pt]{article}
+\documentclass[12pt]{article}
+
+\usepackage[
+    a4paper,
+    margin=0.8in
+]{geometry}
+
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
+\usepackage{lmodern}
 \usepackage[main=slovak,provide=*]{babel}
 \usepackage{tikz}
 \usepackage{subfig}
 \usepackage{graphicx}
 \usepackage{xcolor}
-\usepackage[margin=1.0in]{geometry}
 \usepackage{fancyhdr}
 \usepackage{pgf}
 \usepackage{qrcode}
-\usepackage{geometry}
-\geometry{margin=0.8in}
+\geometry{left=2.5cm, right=2.5cm, bottom=0.8in, top=2cm} %zmeneny top a sirka left right aby to slo viac do stredu
 
 \definecolor{mygray}{rgb}{0.8, 0.8, 0.8}
 
 \setlength{\headheight}{110pt}
-\addtolength{\topmargin}{-25pt}
+\addtolength{\topmargin}{20pt}
 
 \pagestyle{fancy}
 \fancyhf{}
 \renewcommand{\headrulewidth}{0pt}
 
 \fancyhead[C]{%
-    \begin{tikzpicture}[remember picture,overlay]
+    \begin{tikzpicture}[remember picture,overlay, scale=0.937]
         \node[anchor=west] at (-9.2,0.7) {\includegraphics[width=3.2cm]{assets/latex/stu-fei-vector-logo.png}};
 
         \node[anchor=west] at (2.5,3.1) {\textbf{ID:}};
@@ -53,13 +58,13 @@
 
         \foreach \x/\label in {-3.5/A, -2.5/B, -1.5/C, -0.5/D, 0.5/E, 1.5/F, 2.5/G, 3.5/H} {
            \node at (\x,1.6) {\textbf{\label}};
-           \node[mygray] at (\x,1) {\scalebox{2}{\textbf{$\times$}}};
+           \node[black!8] at (\x,1) {\scalebox{2}{\textbf{$\times$}}};
            \node[draw, rectangle, minimum size=0.45cm, inner sep=0pt] at (\x,1) {};
         }
 
         \foreach \x/\label in {-2.0/1, -1.0/2, 0/3, 1/4, 2/5} {
             \node at (\x,0.35) {\textbf{\label}};
-            \node[mygray] at (\x,-0.25) {\scalebox{2}{\textbf{$\times$}}};
+            \node[black!8] at (\x,-0.25) {\scalebox{2}{\textbf{$\times$}}};
             \node[draw, rectangle, minimum size=0.45cm, inner sep=0pt] at (\x,-0.25) {};
         }
 
@@ -86,7 +91,7 @@
 \newcommand{\generateBlock}[2]{%
     \setcounter{rowPosition}{1}
 
-    \begin{tikzpicture}[font=\small]
+    \begin{tikzpicture}[font=\small, scale=0.937]
         \draw[thick, black] (-1,-17) rectangle (15.5,-2);
 
         \foreach \position/\letter in {1/A,2/B,3/C,4/D,5/E,6/F,7/G,8/H} {
@@ -99,7 +104,7 @@
             \node at (0,\y) {\normalsize\textbf{\arabic{rowCounter}}};
 
             \foreach \position in {1,2,3,4,5,6,7,8} {
-                \node[mygray] at ({\position * 1.75},\y) {\scalebox{2}{\textbf{$\times$}}};
+                \node[black!8] at ({\position * 1.75},\y) {\scalebox{2}{\textbf{$\times$}}};
                 \node[draw, rectangle, minimum size=0.45cm, inner sep=0pt] at ({\position * 1.75}, \y) {};
             }
 
