@@ -205,7 +205,11 @@ func scanProcess(t *UploadTab, db *gorm.DB) {
 			errorLogger.Error("Chyba pri konverzii cesty", slog.String("error", err.Error()))
 			return
 		}
-		failedPath := filepath.Join(absDirPath, common.FAILED_PAGES_DIR, fmt.Sprintf("%s%d_failed_pages.pdf", safeTitle, t.examID))
+		failedPath := filepath.Join(absDirPath, fmt.Sprintf("FailedPages_%s", safeTitle), fmt.Sprintf("%s_failed_pages.pdf", func() string {
+			base := filepath.Base(t.filePath)
+			ext := filepath.Ext(base)
+			return base[:len(base)-len(ext)]
+		}()))
 		t.progressChan <- fmt.Sprintf("Niektoré strany sa nepodarilo spracovať\nPDF bolo uložené do: %s", failedPath)
 	} else {
 		t.progressChan <- "Spracovanie dokončené."

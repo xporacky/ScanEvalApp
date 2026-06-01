@@ -173,6 +173,7 @@ func isUpsideDown(pdfPath string) bool {
 
 // ExportFailedPagesToPDF extracts a subset of pages (marked as failed) from the input PDF
 // and saves them into a separate output PDF file.
+// The output folder is FailedPages_{examTitle} and the file is named after the input scan file.
 func ExportFailedPagesToPDF(examTitle string, examID uint, pages []int, inputPDF string) error {
 	logger := logging.GetLogger()
 	errorLogger := logging.GetErrorLogger()
@@ -199,13 +200,16 @@ func ExportFailedPagesToPDF(examTitle string, examID uint, pages []int, inputPDF
 		return err
 	}
 
-	failedPagesDir := filepath.Join(absDirPath, common.FAILED_PAGES_DIR)
+	failedPagesDir := filepath.Join(absDirPath, fmt.Sprintf("FailedPages_%s", examTitle))
 	if err := os.MkdirAll(failedPagesDir, 0755); err != nil {
 		errorLogger.Error("Chyba pri vytváraní priečinka pre chybné strany", slog.String("error", err.Error()))
 		return err
 	}
 
-	outputPDF := filepath.Join(failedPagesDir, fmt.Sprintf("%s%d_failed_pages.pdf", examTitle, examID))
+	base := filepath.Base(inputPDF)
+	ext := filepath.Ext(base)
+	nameNoExt := base[:len(base)-len(ext)]
+	outputPDF := filepath.Join(failedPagesDir, fmt.Sprintf("%s_failed_pages.pdf", nameNoExt))
 	cmdArgs = append(cmdArgs, "output", outputPDF)
 
 	cmd := exec.Command("pdftk", cmdArgs...)
@@ -216,5 +220,43 @@ func ExportFailedPagesToPDF(examTitle string, examID uint, pages []int, inputPDF
 	}
 
 	logger.Info("Chybné strany uložené do PDF", "output", outputPDF)
+	return nil
+}
+
+// WriteFailedPagesLog writes a text log of failed pages (same info as the modal) into
+// FailedPages_{examTitle}/{scanBasename}_failed_pages.txt
+func WriteFailedPagesLog(examTitle string, inputPDF string, lines []string) error {
+	errorLogger := logging.GetErrorLogger()
+
+	dirPath, err := config.LoadLastPath()
+	if err != nil {
+		errorLogger.Error("Chyba načítania configu", slog.String("error", err.Error()))
+		return err
+	}
+
+	absDirPath, err := filepath.Abs(dirPath)
+	if err != nil {
+		errorLogger.Error("Chyba pri konverzii cesty", slog.String("error", err.Error()))
+		return err
+	}
+
+	failedPagesDir := filepath.Join(absDirPath, fmt.Sprintf("FailedPages_%s", examTitle))
+	if err := os.MkdirAll(failedPagesDir, 0755); err != nil {
+		errorLogger.Error("Chyba pri vytváraní priečinka pre log", slog.String("error", err.Error()))
+		return err
+	}
+
+	base := filepath.Base(inputPDF)
+	ext := filepath.Ext(base)
+	nameNoExt := base[:len(base)-len(ext)]
+	logPath := filepath.Join(failedPagesDir, fmt.Sprintf("%s_failed_pages.txt", nameNoExt))
+
+	content := strings.Join(lines, "\n") + "\n"
+	if err := os.WriteFile(logPath, []byte(content), 0644); err != nil {
+		errorLogger.Error("Chyba pri zápise logu chybných strán", slog.String("error", err.Error()))
+		return err
+	}
+
+	logging.GetLogger().Info("Log chybných strán uložený", "path", logPath)
 	return nil
 }

@@ -5,6 +5,7 @@ import (
 	"ScanEvalApp/internal/logging"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -90,8 +91,19 @@ func DeleteFile(filePath string) error {
 	return nil
 }
 
+func resolveConfigsDir() string {
+	exePath, err := os.Executable()
+	if err == nil {
+		if resolved, err := filepath.EvalSymlinks(exePath); err == nil {
+			exePath = resolved
+		}
+		return filepath.Join(filepath.Dir(exePath), "configs")
+	}
+	return "./configs"
+}
+
 func GetFilesFromConfigs() ([]string, error) {
-	files, err := os.ReadDir("./configs")
+	files, err := os.ReadDir(resolveConfigsDir())
 	if err != nil {
 		return nil, err
 	}

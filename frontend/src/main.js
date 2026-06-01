@@ -90,7 +90,7 @@ function renderShell() {
       </header>
       <nav class="tabs">
         <button class="tab" data-tab="exams">Písomky</button>
-        <button class="tab" data-tab="create">Vytvoriť písomku</button>
+        <button class="tab" data-tab="create" style="display:none">Vytvoriť písomku</button>
         <button class="tab" data-tab="multiday">Multi-termín</button>
         <button class="tab" data-tab="students">Študenti</button>
         <button class="tab" data-tab="upload">Vyhodnotiť písomku</button>
@@ -1861,6 +1861,7 @@ async function init() {
         extra += '<table style="width: 100%; border-collapse: collapse; font-size: 12px;">';
         extra += '<thead><tr style="background: #f0f0f0; position: sticky; top: 0; color: #333;">';
         extra += '<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Strana PDF</th>';
+        extra += '<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Reg. číslo</th>';
         extra += '<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Test / Čas</th>';
         extra += '<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Dôvod</th>';
         extra += '<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Detail</th>';
@@ -1893,6 +1894,7 @@ async function init() {
           
           extra += `<tr>`;
           extra += `<td style="border: 1px solid #ddd; padding: 8px;">${pageNum}</td>`;
+          extra += `<td style="border: 1px solid #ddd; padding: 8px;">${page.registrationNumber || '-'}</td>`;
           extra += `<td style="border: 1px solid #ddd; padding: 8px;">${examInfo}</td>`;
           extra += `<td style="border: 1px solid #ddd; padding: 8px;">${reason}</td>`;
           extra += `<td style="border: 1px solid #ddd; padding: 8px;">${detail}</td>`;

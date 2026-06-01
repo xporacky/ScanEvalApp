@@ -234,6 +234,24 @@ func MergePDFs(pdf1Path, pdf2Path, outputPath string) error {
 	return nil
 }
 
+// generateBlankPagePDF generates a single blank A4 page PDF and returns its file path.
+func generateBlankPagePDF() (string, error) {
+	blankLatex := []byte(`\documentclass{article}
+\usepackage[a4paper,margin=1in]{geometry}
+\begin{document}
+\null
+\end{document}`)
+	pdfBytes, err := CompileLatexToPDF(blankLatex)
+	if err != nil {
+		return "", fmt.Errorf("failed to compile blank page PDF: %w", err)
+	}
+	blankPath := filepath.Join(common.TEMPORARY_PDF_PATH, "blank_page.pdf")
+	if err := os.WriteFile(blankPath, pdfBytes, common.FILE_PERMISSION); err != nil {
+		return "", fmt.Errorf("failed to write blank page PDF: %w", err)
+	}
+	return blankPath, nil
+}
+
 // generateStudentPDFs generates PDFs for the given students in parallel, merges them, and saves to outputPath.
 func generateStudentPDFs(students []models.Student, exam models.Exam, templatePath string, outputPath string) error {
 	errorLogger := logging.GetErrorLogger()
@@ -256,6 +274,24 @@ func generateStudentPDFs(students []models.Student, exam models.Exam, templatePa
 	var wg sync.WaitGroup
 	var genErrMu sync.Mutex
 	var genErr error
+
+	// If pages per student is odd, each student's PDF needs a trailing blank page
+	// so that double-sided printing does not mix pages from different students.
+	// pages per student = ceil(QuestionCount / 20)
+	pagesPerStudent := (exam.QuestionCount + 19) / 20
+	needsBlankPage := pagesPerStudent%2 != 0
+
+	var blankPDFPath string
+	if needsBlankPage {
+		var blankErr error
+		blankPDFPath, blankErr = generateBlankPagePDF()
+		if blankErr != nil {
+			errorLogger.Error("Failed to generate blank page PDF", "error", blankErr.Error())
+			return fmt.Errorf("failed to generate blank page PDF: %w", blankErr)
+		}
+		defer os.Remove(blankPDFPath)
+		logger.Info("Blank page PDF prepared for odd page count", "pages_per_student", pagesPerStudent)
+	}
 
 	for i, student := range students {
 		wg.Add(1)
@@ -288,6 +324,25 @@ func generateStudentPDFs(students []models.Student, exam models.Exam, templatePa
 				}
 				genErrMu.Unlock()
 				return
+			}
+			if needsBlankPage {
+				withBlankPath := filepath.Join(common.TEMPORARY_PDF_PATH, fmt.Sprintf("student_%d_blank.pdf", s.ID))
+				if err := MergePDFs(pdfPath, blankPDFPath, withBlankPath); err != nil {
+					genErrMu.Lock()
+					if genErr == nil {
+						genErr = fmt.Errorf("failed to append blank page for student %d: %w", s.ID, err)
+					}
+					genErrMu.Unlock()
+					return
+				}
+				if err := os.Rename(withBlankPath, pdfPath); err != nil {
+					genErrMu.Lock()
+					if genErr == nil {
+						genErr = fmt.Errorf("failed to rename blank-appended PDF for student %d: %w", s.ID, err)
+					}
+					genErrMu.Unlock()
+					return
+				}
 			}
 			results[idx] = studentPDFResult{index: idx, pdfPath: pdfPath, id: s.ID}
 			logger.Debug("PDF vygenerované", "student_id", s.ID)

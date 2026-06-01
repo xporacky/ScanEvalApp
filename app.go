@@ -514,7 +514,10 @@ func (a *App) EvaluateExam(examID uint, pdfPath, configName string) error {
 			if dirPath, err := config.LoadLastPath(); err == nil {
 				if absDirPath, err := filepath.Abs(dirPath); err == nil {
 					safeTitle := common.SanitizeFilename(exam.Title)
-					failedPath = filepath.Join(absDirPath, common.FAILED_PAGES_DIR, fmt.Sprintf("%s%d_failed_pages.pdf", safeTitle, exam.ID))
+					scanBase := filepath.Base(pdfPath)
+					scanExt := filepath.Ext(scanBase)
+					scanNameNoExt := scanBase[:len(scanBase)-len(scanExt)]
+					failedPath = filepath.Join(absDirPath, fmt.Sprintf("FailedPages_%s", safeTitle), fmt.Sprintf("%s_failed_pages.pdf", scanNameNoExt))
 				}
 			}
 		}
