@@ -243,7 +243,8 @@ func ProcessPage(wg *sync.WaitGroup, docMutex *sync.Mutex, doc *fitz.Document, p
 	logger.Info("Našiel sa študent v databáze", "studentID", student.ID, "name", student.Name)
 
 	// Detekcia skupiny/podskupiny z hlavičky (len pre multiday testy)
-	if exam.IsMultiDay && student.Subgroup == "" {
+	//	if exam.IsMultiDay && student.Subgroup == "" {
+	if exam.IsMultiDay {
 		if groupCode := DetectGroupFromHeader(&mat, pageNumber+1); groupCode != "" {
 			if err := repository.UpdateStudentSubgroup(db, student.ID, exam.ID, groupCode); err != nil {
 				errorLogger.Error("Chyba pri ukladaní skupiny študenta", "studentID", student.ID, "groupCode", groupCode, "error", err.Error())

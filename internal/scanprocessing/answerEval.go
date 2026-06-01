@@ -188,9 +188,7 @@ func CropGroupFromHeader(mat *gocv.Mat) (gocv.Mat, error) {
 		return gocv.NewMat(), fmt.Errorf("hlavny obdlznik nebol najdeny")
 	}
 
-	// Vyrezeme pas nad hlavnym obdlznikom.
-	// Sirka ostane rovnaka ako hlavny obdlznik, vyska je len male pasmo nad nim.
-	headerRect := image.Rectangle{
+	/*headerRect := image.Rectangle{
 		Min: image.Point{
 			X: rect.Min.X + GROUP_SIDE_PADDING,
 			Y: rect.Min.Y - GROUP_HEADER_HEIGHT,
@@ -199,7 +197,22 @@ func CropGroupFromHeader(mat *gocv.Mat) (gocv.Mat, error) {
 			X: rect.Max.X - GROUP_SIDE_PADDING,
 			Y: rect.Min.Y - GROUP_BOTTOM_PADDING,
 		},
+	}*/
+
+	centerX := rect.Min.X + (rect.Max.X-rect.Min.X)/2
+
+	headerRect := image.Rectangle{
+		Min: image.Point{
+			X: centerX - GROUP_HALF_WIDTH,
+			Y: rect.Min.Y - GROUP_HEADER_HEIGHT,
+		},
+		Max: image.Point{
+			X: centerX + GROUP_HALF_WIDTH,
+			Y: rect.Min.Y - GROUP_BOTTOM_PADDING,
+		},
 	}
+
+	//fmt.Println(headerRect.Min.X, headerRect.Max.X)
 
 	// Ochrana proti vybehnutiu mimo obrazka
 	if headerRect.Min.X < 0 {
@@ -230,9 +243,7 @@ func CropSubGroupFromHeader(mat *gocv.Mat) (gocv.Mat, error) {
 		return gocv.NewMat(), fmt.Errorf("hlavny obdlznik nebol najdeny")
 	}
 
-	// Vyrezeme pas nad hlavnym obdlznikom.
-	// Sirka ostane rovnaka ako hlavny obdlznik, vyska je len male pasmo nad nim.
-	headerRect := image.Rectangle{
+	/*headerRect := image.Rectangle{
 		Min: image.Point{
 			X: rect.Min.X + SUBGROUP_SIDE_PADDING,
 			Y: rect.Min.Y - SUBGROUP_HEADER_HEIGHT,
@@ -241,7 +252,22 @@ func CropSubGroupFromHeader(mat *gocv.Mat) (gocv.Mat, error) {
 			X: rect.Max.X - SUBGROUP_SIDE_PADDING,
 			Y: rect.Min.Y - SUBGROUP_BOTTOM_PADDING,
 		},
+	}*/
+
+	centerX := rect.Min.X + rect.Dx()/2
+
+	headerRect := image.Rectangle{
+		Min: image.Point{
+			X: centerX - SUBGROUP_HALF_WIDTH,
+			Y: rect.Min.Y - SUBGROUP_HEADER_HEIGHT,
+		},
+		Max: image.Point{
+			X: centerX + SUBGROUP_HALF_WIDTH,
+			Y: rect.Min.Y - SUBGROUP_BOTTOM_PADDING,
+		},
 	}
+
+	//fmt.Println(headerRect.Min.X, headerRect.Max.X)
 
 	// Ochrana proti vybehnutiu mimo obrazka
 	if headerRect.Min.X < 0 {
