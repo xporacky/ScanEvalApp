@@ -20,7 +20,7 @@ import (
 func GenerateStatistics(selectedStats []string, exam *models.Exam) (string, error) {
 	errorLogger := logging.GetErrorLogger()
 
-	students := exam.Students
+	students := filterParticipatingStudents(exam.Students)
 
 	scores := getScores(students)
 	statsData := make(map[string]interface{})
@@ -141,6 +141,18 @@ func getScores(students []models.Student) []int {
 	return scores
 }
 
+// filterParticipatingStudents keeps only students whose answer sheet was processed.
+// Pages is set during scan processing even when the student scores 0 points.
+func filterParticipatingStudents(students []models.Student) []models.Student {
+	participating := make([]models.Student, 0, len(students))
+	for _, s := range students {
+		if strings.TrimSpace(s.Pages) != "" {
+			participating = append(participating, s)
+		}
+	}
+	return participating
+}
+
 // calculateMax calculates and returns the maximum score from the list of scores.
 func calculateMax(scores []int) int {
 	if len(scores) == 0 {
@@ -200,6 +212,9 @@ func calculateOverallSuccess(students []models.Student, totalQuestions int) (int
 	totalCorrect := 0
 	for _, s := range students {
 		totalCorrect += s.Score
+	}
+	if totalPossible == 0 {
+		return totalCorrect, 0
 	}
 	relative := float64(totalCorrect) / float64(totalPossible)
 	return totalCorrect, relative
