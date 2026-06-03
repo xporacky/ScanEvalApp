@@ -104,8 +104,8 @@ func ensureStudentRegistrationIndex(db *gorm.DB) error {
 		steps := []string{
 			"PRAGMA foreign_keys = OFF",
 			"ALTER TABLE students RENAME TO students_old",
-			"CREATE TABLE students (`id` integer PRIMARY KEY AUTOINCREMENT,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`name` text NOT NULL,`surname` text NOT NULL,`birth_date` datetime NOT NULL,`registration_number` integer NOT NULL,`room` text NOT NULL,`score` integer,`answers` text,`exam_id` integer NOT NULL,`pages` text,CONSTRAINT `fk_exams_students` FOREIGN KEY (`exam_id`) REFERENCES `exams`(`id`))",
-			"INSERT INTO students (`id`,`created_at`,`updated_at`,`deleted_at`,`name`,`surname`,`birth_date`,`registration_number`,`room`,`score`,`answers`,`exam_id`,`pages`) SELECT `id`,`created_at`,`updated_at`,`deleted_at`,`name`,`surname`,`birth_date`,`registration_number`,`room`,`score`,`answers`,`exam_id`,`pages` FROM students_old",
+			"CREATE TABLE students (`id` integer PRIMARY KEY AUTOINCREMENT,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`name` text NOT NULL,`surname` text NOT NULL,`birth_date` datetime NOT NULL,`registration_number` integer NOT NULL,`room` text NOT NULL,`score` integer,`answers` text,`exam_id` integer NOT NULL,`pages` text,`exam_date` datetime DEFAULT NULL,`exam_time` text,`subgroup` text,CONSTRAINT `fk_exams_students` FOREIGN KEY (`exam_id`) REFERENCES `exams`(`id`))",
+			"INSERT INTO students (`id`,`created_at`,`updated_at`,`deleted_at`,`name`,`surname`,`birth_date`,`registration_number`,`room`,`score`,`answers`,`exam_id`,`pages`,`exam_date`,`exam_time`,`subgroup`) SELECT `id`,`created_at`,`updated_at`,`deleted_at`,`name`,`surname`,`birth_date`,`registration_number`,`room`,`score`,`answers`,`exam_id`,`pages`,`exam_date`,`exam_time`,`subgroup` FROM students_old",
 			"DROP TABLE students_old",
 			"CREATE INDEX IF NOT EXISTS `idx_students_deleted_at` ON `students`(`deleted_at`)",
 			"CREATE UNIQUE INDEX IF NOT EXISTS `idx_students_exam_registration` ON `students`(`exam_id`,`registration_number`)",

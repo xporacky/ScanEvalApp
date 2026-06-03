@@ -19,6 +19,7 @@ import (
 	"ScanEvalApp/internal/database/models"
 	"ScanEvalApp/internal/files"
 	"ScanEvalApp/internal/logging"
+	"ScanEvalApp/internal/scanprocessing"
 )
 
 func buildIDDigits(registrationNumber int) []string {
@@ -278,8 +279,8 @@ func generateStudentPDFs(students []models.Student, exam models.Exam, templatePa
 	// If pages per student is odd, each student's PDF needs a trailing blank page
 	// so that double-sided printing does not mix pages from different students.
 	// pages per student = ceil(QuestionCount / 20)
-	pagesPerStudent := (exam.QuestionCount + 19) / 20
-	needsBlankPage := pagesPerStudent%2 != 0
+	pagesPerStudent := (exam.QuestionCount + scanprocessing.NUMBER_OF_QUESTIONS_PER_PAGE - 1) / scanprocessing.NUMBER_OF_QUESTIONS_PER_PAGE
+	needsBlankPage := pagesPerStudent > 1 && pagesPerStudent%2 != 0
 
 	var blankPDFPath string
 	if needsBlankPage {

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -42,8 +43,60 @@ func NewApp() *App {
 // so we can call the runtime methods
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	if err := prepareRuntimeEnvironment(); err != nil {
+		fmt.Println("Runtime preparation failed:", err)
+	}
 	logging.InitLogger()
 	a.db, a.dbErr = migrations.MigrateDB()
+}
+
+func prepareRuntimeEnvironment() error {
+	exePath, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	if resolved, err := filepath.EvalSymlinks(exePath); err == nil {
+		exePath = resolved
+	}
+
+	baseDir := filepath.Dir(exePath)
+	if err := os.Chdir(baseDir); err != nil {
+		return err
+	}
+
+	requiredDirs := []string{
+		"database",
+		"logs",
+		filepath.Join("assets", "tmp"),
+		filepath.Join("assets", "tmp", "temp", "scans"),
+	}
+	for _, dir := range requiredDirs {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return err
+		}
+	}
+
+	return fs.WalkDir(runtimeFiles, ".", func(path string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if path == "." {
+			return nil
+		}
+
+		if d.IsDir() {
+			return os.MkdirAll(path, 0755)
+		}
+
+		data, err := runtimeFiles.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			return err
+		}
+		return os.WriteFile(path, data, 0644)
+	})
 }
 
 // Greet returns a greeting for the given name

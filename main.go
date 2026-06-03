@@ -11,6 +11,9 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
+//go:embed all:configs all:assets/latex
+var runtimeFiles embed.FS
+
 func main() {
 	// Create an instance of the app structure
 	app := NewApp()

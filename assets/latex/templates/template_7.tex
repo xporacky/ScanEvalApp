@@ -84,7 +84,7 @@
 \newcounter{blocksNeeded}
 
 \newcommand{\ceilDiv}[1]{%
-    \pgfmathtruncatemacro{\tempResult}{(#1 + 19)/20}%
+    \pgfmathtruncatemacro{\tempResult}{(#1 + 14)/15}%
     \setcounter{blocksNeeded}{\tempResult}%
 }
 
@@ -92,7 +92,7 @@
     \setcounter{rowPosition}{1}
 
     \begin{tikzpicture}[font=\small, scale=0.937]
-        \draw[thick, black] (-1,-22) rectangle (15.5,-2);
+        \draw[thick, black] (-1,-17) rectangle (15.5,-2);
 
         \foreach \position/\letter in {1/A,2/B,3/C,4/D,5/E,6/F,7/G} {
             \node at ({\position * 2}, -1.5) {\letter};
@@ -117,9 +117,6 @@
             \ifnum\value{rowPosition}=15
                 \draw[thin, black] (-1,-17.0) -- (15.5,-17.0);
             \fi
-            \ifnum\value{rowPosition}=20
-                \draw[thin, black] (-1,-22.0) -- (15.5,-22.0);
-            \fi
 
             \stepcounter{rowPosition}
             \stepcounter{rowCounter}
@@ -132,7 +129,7 @@
     \ceilDiv{#1}
     \foreach \blockIndex in {1,...,\theblocksNeeded} {
         \pgfmathtruncatemacro{\startQuestion}{\value{rowCounter}}
-        \pgfmathtruncatemacro{\endQuestion}{min(\value{rowCounter}+19,#1)}
+        \pgfmathtruncatemacro{\endQuestion}{min(\value{rowCounter}+14,#1)}
 
         \generateBlock{\startQuestion}{\endQuestion}
 
